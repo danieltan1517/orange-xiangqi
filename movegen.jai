@@ -10,11 +10,6 @@ main :: () {
              1, 1, 0, 1];
   val = col_bits(col);
   print("%\n", formatInt(val, 2));
-
-  array: [10] int;
-  array[0] = 100;
-  array[1] = 200;
-  function(array);
 }
 
 row_bits :: (row: [9] s8) -> u64 {
@@ -49,14 +44,6 @@ col_bits :: (col: [10] s8) -> u64 {
   } 
 
   return value;
-}
-
-function :: (array: [10] int) {
-  value: s64;
-  #asm {
-    mov [array + 8], 100;
-  }
-  print("%\n", value);
 }
 
 #import "Basic";
