@@ -52,7 +52,7 @@ main :: () {
     hsq := sq / 2.0; //hsq = half square
     board_x := center_x - sq * 4.5;
     board_y := center_y - sq * 5.0;
-    color := Vector4.{.9, .9, .8, 1.};
+    color := Vector4.{1., 1., 1., 1.};
     simp.immediate_quad(board_x, board_y, board_x + 9.0 * sq, board_y + 10.0 * sq, color);
     simp.set_shader_for_images(*sprites);
 
