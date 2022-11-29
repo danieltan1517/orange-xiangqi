@@ -10,6 +10,8 @@ main :: () {
              1, 1, 0, 1];
   val = col_bits(col);
   print("%\n", formatInt(val, 2));
+  val2 := min(100, 0);
+  print("%\n", val2);
 }
 
 row_bits :: (row: [9] s8) -> u64 {
@@ -44,6 +46,26 @@ col_bits :: (col: [10] s8) -> u64 {
   } 
 
   return value;
+}
+
+max :: (a: int, b: int) -> int {
+  c: int;
+  #asm {
+    cmp a, b;
+    mov c, a;
+    cmovle c, b;
+  }
+  return c;
+}
+
+min :: (a: int, b: int) -> int {
+  c: int;
+  #asm {
+    cmp a, b;
+    mov c, a;
+    cmovge c, b;
+  }
+  return c;
 }
 
 #import "Basic";
