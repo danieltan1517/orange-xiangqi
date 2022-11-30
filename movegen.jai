@@ -1,16 +1,12 @@
 main :: () {
   xiangqi: Xiangqi;
   xiangqi.pieces[0].advisors[1] = 100;
-  //byte := xiangqi.pieces[0].advisors[1];
-  print("xiangqi = %\n", size_of(Xiangqi));
+}
 
-  advisors := *xiangqi.pieces[0].advisors;
-  append(advisors, 0);
-  append(advisors, 1);
-  for advisor: xiangqi.pieces[0].advisors {
-    print("%\n", advisor);
-    continue;
-  }
+xiangqi_startpos :: () -> Xiangqi {
+  xiangqi: Xiangqi;
+
+  return xiangqi;
 }
 
 Xiangqi :: struct {
@@ -41,6 +37,20 @@ Pieces :: struct {
   rook: Array(2, s8);
   soldier: Array(5, s8); 
 }
+
+G :: 0; // general
+A :: 1; // advisor
+E :: 2; // elephant
+H :: 3; // horse / knight
+R :: 4; // rook / chariot
+C :: 5; // cannon
+S :: 6; // soldier
+
+RED :: 0;   // red goes first...
+BLACK :: 1; // black goes second...
+
+NONE :: 0;
+OCCUPIED :: 1;
 
 Array :: struct(capacity: int, T: Type) {
   array: [capacity] T;
