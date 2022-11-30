@@ -2,13 +2,15 @@ main :: () {
   xiangqi := xiangqi_startpos();
   print_board(xiangqi);
 
-  from := index_of(3, 0);
-  to   := index_of(4, 1);
+  from := index_of(0, 0);
+  to   := index_of(0, 2);
   capture : s8 = NONE;
-  piece : s8 = A;
+  piece : s8 = R;
 
   move := Move32.{from, to, capture, piece};
   make_move(*xiangqi, move);
+  print_board(xiangqi);
+  unmake_move(*xiangqi, move);
   print_board(xiangqi);
 }
 
@@ -185,6 +187,33 @@ make_move :: (xiangqi: *Xiangqi, move: Move32) {
     array := *xiangqi.pieces[xiangqi.turn].piece[capture];
     remove_piece_from_array(<<array, to);
   }
+}
+
+unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
+  piece := move.piece;
+  from  := move.from;
+  to    := move.to;
+
+  // from:
+  row, col := row_col_of(from);
+  piece_code := encode_piece(piece, xiangqi.turn ^ 1);
+  xiangqi.board_9x10[row][col] = piece_code;
+  xiangqi.board_10x9[col][row] = piece_code;
+
+  array := *xiangqi.pieces[xiangqi.turn].piece[piece];
+  update_piece_array(<<array, to, from);
+
+  // to:
+  capture := move.capture;
+  row, col = row_col_of(to);
+  xiangqi.board_9x10[row][col] = capture;
+  xiangqi.board_10x9[col][row] = capture;
+  if capture != 0 then {
+    capture = capture >> 2;
+    array := *xiangqi.pieces[xiangqi.turn].piece[capture];
+    append(array, to);
+  }
+  xiangqi.turn ^= 1;
 }
 
 G :: 0; // general
