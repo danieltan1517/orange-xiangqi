@@ -1,12 +1,26 @@
 main :: () {
-  board: [9][10] s8;
-  //advisor_moves(4, 1, board);
-  //advisor_moves(5, 2, board);
-  //advisor_moves(3, 0, board);
-  //advisor_moves(3, 2, board);
-  //advisor_moves(4, 8, board);
-  elephant_moves(2, 0, board);
-  elephant_moves(6, 4, board);
+  xiangqi: Xiangqi;
+  xiangqi.pieces[0].advisors[1] = 100;
+  //byte := xiangqi.pieces[0].advisors[1];
+  print("xiangqi = %\n", size_of(Xiangqi));
+
+  advisors := *xiangqi.pieces[0].advisors;
+  append(advisors, 0);
+  append(advisors, 1);
+  for advisor: xiangqi.pieces[0].advisors {
+    print("%\n", advisor);
+    continue;
+  }
+}
+
+Xiangqi :: struct {
+  board_9x10: [9][10] s8;
+  board_10x9: [10][9] s8;
+  pieces: [2] Pieces;
+  #place pieces;
+  red: Pieces;
+  black: Pieces;
+  turn: s8;
 }
 
 Move32 :: struct {
@@ -16,6 +30,44 @@ Move32 :: struct {
   piece: s8;
   #place from;
   #as move: s32;
+}
+
+Pieces :: struct {
+  general: s8;
+  advisors: Array(2, s8);
+  elephants: Array(2, s8);
+  knights: Array(2, s8);
+  cannons: Array(2, s8);
+  rook: Array(2, s8);
+  soldier: Array(5, s8); 
+}
+
+Array :: struct(capacity: int, T: Type) {
+  array: [capacity] T;
+  count: s8;
+}
+
+append :: (a: *Array($N, $T), item: T) #expand {
+  a.array[a.count] = item;
+  a.count += 1;
+}
+
+operator [] :: (a: Array($N, $T), index: int) -> T #expand {
+  return a.array[index];
+}
+
+operator []= :: (a: *Array($N, $T), index: int, item: T) #expand {
+  a.array[index] = item;
+}
+
+for_expansion :: (a: *Array($N, $T), body: Code, flags: For_Flags) #expand {
+  `it_index := 0;
+  count := a.count;
+  while it_index < count {
+    `it := a.array[it_index];
+    defer it_index += 1;
+    #insert body;
+  }
 }
 
 general_moves :: (row: s8, col: s8, board: [9][10] s8) {
@@ -99,6 +151,7 @@ elephant_moves :: (row: s8, col: s8, board: [9][10] s8) {
   print("from (%,%)\n", row, col);
   row_mask :: 0b1_1111_1111;
   col_mask :: 0b_00000_11111;
+  // col_mask :: 0b_11111_00000;
 
   piece := board[row][col];
   bit_horizontal := 1 << row;
@@ -149,6 +202,51 @@ elephant_moves :: (row: s8, col: s8, board: [9][10] s8) {
   }
 }
 
+soldier_moves :: (row: s8, col: s8, board: [9][10] s8) {
+  // TODO: Make sure BSF works correctly...
+  print("from (%,%)\n", row, col);
+  row_mask :: 0b1_1111_1111;
+  // col_mask :: 0b_00000_11111;
+  // row >= 1 && row <= 6
+  // col_mask :: 0b_00011_11110;
+  col_mask :: 0b_01111_11000;
+  horizontal_mask :: 0b_11111_00000;
+  col_bit := 1 << col;
+  piece := board[row][col];
+
+  if col_bit & col_mask {
+    from := index_of(row, col);
+    col_to := col + 1;
+    to := index_of(row, col_to);
+    capture := board[row][col_to];
+    move := Move32.{from, to, capture, piece};
+    print("to (%,%)\n", row, col_to);
+  }
+
+  // col >= 1 && col <= 6
+  if col_bit & horizontal_mask then {
+    bit_horizontal := 1 << row;
+    bit_h1 := (bit_horizontal << 1) | (bit_horizontal >> 1);
+    bit_h1 &= row_mask;
+    while bit_h1 {
+      row_to: s8;
+      #asm BMI1 {
+        bsf row_to, bit_h1;
+        blsr bit_h1, bit_h1;
+      }
+      from := index_of(row, col);
+      to := index_of(row_to, col);
+      capture := board[row_to][col];
+      move := Move32.{from, to, capture, piece};
+      print("to (%,%)\n", row_to, col);
+    }
+  }
+}
+
+knight_moves :: (row: s8, col: s8, board: [9][10] s8) {
+
+}
+
 index_of :: (row: s8, col: s8) -> s8 #expand {
   return (row << 4) | col;
 }
@@ -157,7 +255,7 @@ row_of :: (index: s8) -> s8 #expand {
   return index >> 4;
 }
 
-col_of :: (index: u8) -> u8 #expand {
+col_of :: (index: s8) -> s8 #expand {
   return index & 0xF;
 }
 
