@@ -1,12 +1,30 @@
 main :: () {
-  xiangqi: Xiangqi;
-  xiangqi.pieces[0].advisors[1] = 100;
+  xiangqi := xiangqi_startpos();
+  
 }
 
 xiangqi_startpos :: () -> Xiangqi {
   xiangqi: Xiangqi;
-
+  add_piece(*xiangqi, 0, 0, 4);
   return xiangqi;
+
+  add_piece :: (xiangqi: *Xiangqi, piece: s8, side: s8, row: s8, col: s8) {
+    piece_code := encode_piece(piece, side);
+    xiangqi.board_9x10[row][col] = piece_code;
+    xiangqi.board_10x9[col][row] = piece_code;
+    xiangqi.pieces[side].piece[piece] = index_of(row, col);
+  }
+}
+
+encode_piece :: (piece: s8, side: s8) -> s8 #expand {
+  return (piece << 2) | (side << 1) | 1;
+}
+
+print_board :: (xiangqi: Xiangqi) {
+  for row: board_10x9 {
+    for piece: row {
+    }
+  }
 }
 
 Xiangqi :: struct {
@@ -29,6 +47,7 @@ Move32 :: struct {
 }
 
 Pieces :: struct {
+/*
   general: s8;
   advisors: Array(2, s8);
   elephants: Array(2, s8);
@@ -36,6 +55,17 @@ Pieces :: struct {
   cannons: Array(2, s8);
   rook: Array(2, s8);
   soldier: Array(5, s8); 
+*/
+  general:   Array(7, s8);
+  advisors:  Array(7, s8);
+  elephants: Array(7, s8);
+  knights:   Array(7, s8);
+  cannons:   Array(7, s8);
+  rook:      Array(7, s8);
+  soldier:   Array(7, s8); 
+
+  #place general;
+  piece: [7] Array(7, s8);
 }
 
 G :: 0; // general
@@ -47,14 +77,14 @@ C :: 5; // cannon
 S :: 6; // soldier
 
 RED :: 0;   // red goes first...
-BLACK :: 1; // black goes second...
+BLACK :: 2; // black goes second...
 
 NONE :: 0;
 OCCUPIED :: 1;
 
 Array :: struct(capacity: int, T: Type) {
-  array: [capacity] T;
   count: s8;
+  array: [capacity] T;
 }
 
 append :: (a: *Array($N, $T), item: T) #expand {
