@@ -1,6 +1,15 @@
 main :: () {
   xiangqi := xiangqi_startpos();
   print_board(xiangqi);
+
+  from := index_of(3, 0);
+  to   := index_of(4, 1);
+  capture : s8 = NONE;
+  piece : s8 = A;
+
+  move := Move32.{from, to, capture, piece};
+  make_move(*xiangqi, move);
+  print_board(xiangqi);
 }
 
 xiangqi_startpos :: () -> Xiangqi {
@@ -64,7 +73,7 @@ encode_piece :: (piece: s8, side: s8) -> s8 #expand {
 }
 
 print_board :: (xiangqi: Xiangqi) {
-  for row: xiangqi.board_10x9 {
+  for < row: xiangqi.board_10x9 {
     for piece: row {
       if (piece & 1) == 0 {
         print("- ");
@@ -72,23 +81,6 @@ print_board :: (xiangqi: Xiangqi) {
       }
       index := piece >> 2;
       if piece & 2 {
-        if index == {
-        case G;
-          print("G ");
-        case A;
-          print("A ");
-        case E;
-          print("E ");
-        case H;
-          print("H ");
-        case R;
-          print("R ");
-        case C;
-          print("C ");
-        case S;
-          print("S ");
-        }
-      } else {
         if index == {
         case G;
           print("g ");
@@ -105,10 +97,32 @@ print_board :: (xiangqi: Xiangqi) {
         case S;
           print("s ");
         }
+      } else {
+        if index == {
+        case G;
+          print("G ");
+        case A;
+          print("A ");
+        case E;
+          print("E ");
+        case H;
+          print("H ");
+        case R;
+          print("R ");
+        case C;
+          print("C ");
+        case S;
+          print("S ");
+        }
 
       }
     }
     print("\n");
+  }
+  if xiangqi.turn == 0 then {
+    print("Turn: RED\n\n");
+  } else {
+    print("Turn: BLACK\n\n");
   }
 }
 
@@ -144,6 +158,35 @@ Pieces :: struct {
   piece: [7] Array(7, s8);
 }
 
+make_move :: (xiangqi: *Xiangqi, move: Move32) {
+  piece := move.piece;
+  from := move.from;
+
+  // from:
+  row, col := row_col_of(from);
+  xiangqi.board_9x10[row][col] = NONE;
+  xiangqi.board_10x9[col][row] = NONE;
+
+  // to:
+  to := move.to;
+  row, col = row_col_of(to);
+  piece_code := encode_piece(piece, xiangqi.turn);
+  xiangqi.board_9x10[row][col] = piece_code;
+  xiangqi.board_10x9[col][row] = piece_code;
+
+  array := *xiangqi.pieces[xiangqi.turn].piece[piece];
+  update_piece_array(<<array, from, to);
+  xiangqi.turn ^= 1;
+
+  // we already flipped the turn.
+  capture := move.capture;
+  if capture != 0 then {
+    capture = capture >> 2;
+    array := *xiangqi.pieces[xiangqi.turn].piece[capture];
+    remove_piece_from_array(<<array, to);
+  }
+}
+
 G :: 0; // general
 A :: 1; // advisor
 E :: 2; // elephant
@@ -161,6 +204,33 @@ OCCUPIED :: 1;
 Array :: struct(capacity: int, T: Type) {
   count: s8;
   array: [capacity] T;
+}
+
+update_piece_array :: (array: Array($N, s8), from: s8, to: s8) {
+  for item, index: array {
+    if item == from {
+      array[index] = to;
+      break;
+    }
+  }
+}
+
+remove_piece_from_array :: (array: Array($N, s8), index: s8) {
+  for item, index: array {
+    if item == index {
+      end := array.count-1;
+      array[index] = array[end];
+      array[end] = 0;
+      (*array).count -= 1; // hack
+      break;
+    }
+  }
+
+  swap :: (a: Code, b: Code) #expand {
+    t := (#insert a);
+    (#insert a) = (#insert b);
+    (#insert b) = t;
+  }
 }
 
 append :: (a: *Array($N, $T), item: T) #expand {
@@ -373,6 +443,10 @@ row_of :: (index: s8) -> s8 #expand {
 
 col_of :: (index: s8) -> s8 #expand {
   return index & 0xF;
+}
+
+row_col_of :: (index: s8) -> s8, s8 #expand {
+  return row_of(index), col_of(index);
 }
 
 row_bits :: (row: [9] s8) -> u64 {
