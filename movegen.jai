@@ -1,18 +1,61 @@
 main :: () {
   xiangqi := xiangqi_startpos();
-  
+  print_board(xiangqi);
 }
 
 xiangqi_startpos :: () -> Xiangqi {
   xiangqi: Xiangqi;
-  add_piece(*xiangqi, 0, 0, 4);
+  // red
+  add_piece(*xiangqi, G, RED, 4, 0);
+  add_piece(*xiangqi, A, RED, 3, 0);
+  add_piece(*xiangqi, A, RED, 5, 0);
+  add_piece(*xiangqi, E, RED, 2, 0);
+  add_piece(*xiangqi, E, RED, 6, 0);
+  add_piece(*xiangqi, H, RED, 1, 0);
+  add_piece(*xiangqi, H, RED, 7, 0);
+  add_piece(*xiangqi, R, RED, 0, 0);
+  add_piece(*xiangqi, R, RED, 8, 0);
+
+  // cannon
+  add_piece(*xiangqi, C, RED, 1, 2);
+  add_piece(*xiangqi, C, RED, 7, 2);
+
+  // pawn
+  add_piece(*xiangqi, S, RED, 0, 3);
+  add_piece(*xiangqi, S, RED, 2, 3);
+  add_piece(*xiangqi, S, RED, 4, 3);
+  add_piece(*xiangqi, S, RED, 6, 3);
+  add_piece(*xiangqi, S, RED, 8, 3);
+
+  // black
+  add_piece(*xiangqi, G, BLACK, 4, 9);
+  add_piece(*xiangqi, A, BLACK, 3, 9);
+  add_piece(*xiangqi, A, BLACK, 5, 9);
+  add_piece(*xiangqi, E, BLACK, 2, 9);
+  add_piece(*xiangqi, E, BLACK, 6, 9);
+  add_piece(*xiangqi, H, BLACK, 1, 9);
+  add_piece(*xiangqi, H, BLACK, 7, 9);
+  add_piece(*xiangqi, R, BLACK, 0, 9);
+  add_piece(*xiangqi, R, BLACK, 8, 9);
+
+  // cannon
+  add_piece(*xiangqi, C, BLACK, 1, 7);
+  add_piece(*xiangqi, C, BLACK, 7, 7);
+
+  // pawn
+  add_piece(*xiangqi, S, BLACK, 0, 6);
+  add_piece(*xiangqi, S, BLACK, 2, 6);
+  add_piece(*xiangqi, S, BLACK, 4, 6);
+  add_piece(*xiangqi, S, BLACK, 6, 6);
+  add_piece(*xiangqi, S, BLACK, 8, 6);
   return xiangqi;
 
   add_piece :: (xiangqi: *Xiangqi, piece: s8, side: s8, row: s8, col: s8) {
     piece_code := encode_piece(piece, side);
     xiangqi.board_9x10[row][col] = piece_code;
     xiangqi.board_10x9[col][row] = piece_code;
-    xiangqi.pieces[side].piece[piece] = index_of(row, col);
+    index := index_of(row, col);
+    append(*xiangqi.pieces[side].piece[piece], index);
   }
 }
 
@@ -21,9 +64,51 @@ encode_piece :: (piece: s8, side: s8) -> s8 #expand {
 }
 
 print_board :: (xiangqi: Xiangqi) {
-  for row: board_10x9 {
+  for row: xiangqi.board_10x9 {
     for piece: row {
+      if (piece & 1) == 0 {
+        print("- ");
+        continue;
+      }
+      index := piece >> 2;
+      if piece & 2 {
+        if index == {
+        case G;
+          print("G ");
+        case A;
+          print("A ");
+        case E;
+          print("E ");
+        case H;
+          print("H ");
+        case R;
+          print("R ");
+        case C;
+          print("C ");
+        case S;
+          print("S ");
+        }
+      } else {
+        if index == {
+        case G;
+          print("g ");
+        case A;
+          print("a ");
+        case E;
+          print("e ");
+        case H;
+          print("h ");
+        case R;
+          print("r ");
+        case C;
+          print("c ");
+        case S;
+          print("s ");
+        }
+
+      }
     }
+    print("\n");
   }
 }
 
@@ -47,22 +132,13 @@ Move32 :: struct {
 }
 
 Pieces :: struct {
-/*
-  general: s8;
-  advisors: Array(2, s8);
-  elephants: Array(2, s8);
-  knights: Array(2, s8);
-  cannons: Array(2, s8);
-  rook: Array(2, s8);
-  soldier: Array(5, s8); 
-*/
-  general:   Array(7, s8);
-  advisors:  Array(7, s8);
-  elephants: Array(7, s8);
-  knights:   Array(7, s8);
-  cannons:   Array(7, s8);
-  rook:      Array(7, s8);
-  soldier:   Array(7, s8); 
+  general:   Array(7, s8); // only be 1
+  advisors:  Array(7, s8); // at most 2
+  elephants: Array(7, s8); // at most 2
+  knights:   Array(7, s8); // at most 2
+  cannons:   Array(7, s8); // at most 2
+  rook:      Array(7, s8); // at most 2
+  soldier:   Array(7, s8); // at most 5
 
   #place general;
   piece: [7] Array(7, s8);
@@ -77,7 +153,7 @@ C :: 5; // cannon
 S :: 6; // soldier
 
 RED :: 0;   // red goes first...
-BLACK :: 2; // black goes second...
+BLACK :: 1; // black goes second...
 
 NONE :: 0;
 OCCUPIED :: 1;

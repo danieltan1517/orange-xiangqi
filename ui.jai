@@ -84,7 +84,6 @@ main :: () {
 
       row += 1.0;
     }
-
     board_x -= hsq;
     board_y -= hsq;
 
@@ -147,8 +146,6 @@ main :: () {
     render_piece(board_x, board_y, sq, 4.0, 6.0, 6.0, 1.0, color);
     render_piece(board_x, board_y, sq, 6.0, 6.0, 6.0, 1.0, color);
     render_piece(board_x, board_y, sq, 8.0, 6.0, 6.0, 1.0, color);
-
-
   }
 
   render_palace :: (board_x: float, board_y: float, sq: float, color: Vector4) #expand {
