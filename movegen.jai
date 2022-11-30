@@ -1,6 +1,9 @@
 main :: () {
   board: [9][10] s8;
-  general_moves(4, 2, board);
+  advisor_moves(4, 1, board);
+  advisor_moves(5, 2, board);
+  advisor_moves(3, 0, board);
+  advisor_moves(3, 2, board);
 }
 
 Move32 :: struct {
@@ -51,6 +54,43 @@ general_moves :: (row: s8, col: s8, board: [9][10] s8) {
     move := Move32.{from, to, capture, piece};
     print("to (%,%)\n", row_of(move.to), col_of(move.to));
   } 
+}
+
+advisor_moves :: (row: s8, col: s8, board: [9][10] s8) {
+  row_mask :: 0b000_111_000;
+  col_mask :: 0b111_00_00_111;
+  piece := board[row][col];
+  print("from (%,%)\n", row, col);
+
+  // horizontal row movements.
+  bits1 := 1 << row;
+  bits1 = (bits1 << 1) | (bits1 >> 1);
+  bits1 &= row_mask;
+
+  // vertical row movements.
+  bits2 := 1 << col;
+  bits2 = (bits2 << 1) | (bits2 >> 1);
+  bits2 &= col_mask;
+  while bits1 {
+    row_to: s8;
+    #asm BMI1 {
+      bsf row_to, bits1; 
+      blsr bits1, bits1;
+    }
+    bits_col := bits2;
+    while bits_col {
+      col_to: s8;
+      #asm BMI1 {
+        bsf col_to, bits_col; 
+        blsr bits_col, bits_col;
+      }
+      from := index_of(row, col);
+      to := index_of(row_to, col_to);
+      capture := board[row_to][col_to];
+      move := Move32.{from, to, capture, piece};
+      print("to (%,%)\n", row_of(move.to), col_of(move.to));
+    }
+  }
 }
 
 index_of :: (row: s8, col: s8) -> s8 #expand {
