@@ -1,17 +1,7 @@
 main :: () {
   xiangqi := xiangqi_startpos();
   print_board(xiangqi);
-
-  from := index_of(0, 0);
-  to   := index_of(0, 2);
-  capture : s8 = NONE;
-  piece : s8 = R;
-
-  move := Move32.{from, to, capture, piece};
-  make_move(*xiangqi, move);
-  print_board(xiangqi);
-  unmake_move(*xiangqi, move);
-  print_board(xiangqi);
+  rook_moves(0, 0, xiangqi.board_9x10, xiangqi.board_10x9);
 }
 
 xiangqi_startpos :: () -> Xiangqi {
@@ -254,12 +244,6 @@ remove_piece_from_array :: (array: Array($N, s8), index: s8) {
       break;
     }
   }
-
-  swap :: (a: Code, b: Code) #expand {
-    t := (#insert a);
-    (#insert a) = (#insert b);
-    (#insert b) = t;
-  }
 }
 
 append :: (a: *Array($N, $T), item: T) #expand {
@@ -459,7 +443,105 @@ soldier_moves :: (row: s8, col: s8, board: [9][10] s8) {
 }
 
 knight_moves :: (row: s8, col: s8, board: [9][10] s8) {
+  print("from (%,%)\n", row, col);
+  piece := board[row][col];
+  row_bit := 1 << row;
+  col_bit := 1 << col;
 
+  // horizontal 2, diagonal 1
+  bit_horizontal_1 := ((row_bit << 1) | (row_bit >> 1)) & 0b_011_111_110;
+  bit_horizontal_2 := ((row_bit << 2) | (row_bit >> 2)) & 0b_111_111_111;
+  bit_vertical_1 := ((col_bit << 1) | (col_bit >> 1)) &   0b_11111_11111;
+  while bit_horizontal_2 {
+    h1: s8;
+    h2: s8;
+    #asm BMI1 {
+      bsf h1, bit_horizontal_1;
+      bsf h2, bit_horizontal_2;
+      blsr bit_horizontal_1, bit_horizontal_1;
+      blsr bit_horizontal_2, bit_horizontal_2;
+    }
+
+    // check that the path is not blocked.
+    if board[h1][col] == 0 {
+      bits := bit_vertical_1;
+      while bits {
+        vert: s8;
+        #asm BMI1 {
+          bsf  vert, bits;
+          blsr bits, bits;
+        }
+        from := index_of(row, col);
+        to := index_of(h2, vert);
+        capture := board[h2][vert];
+        move := Move32.{from, to, capture, piece};
+        print("to (%,%)\n", h2, vert);
+      }
+    }
+  }
+
+  horizontal_1 := ((row_bit << 1) | (row_bit >> 1)) & 0b_111_111_111;
+  vertical_1 := ((col_bit << 1) | (col_bit >> 1)) &   0b_01111_11110;
+  vertical_2 := ((col_bit << 2) | (col_bit >> 2)) &   0b_11111_11111;
+  while vertical_2 {
+    v1: s8;
+    v2: s8;
+    #asm BMI1 {
+      bsf v1, vertical_1;
+      bsf v2, vertical_2;
+      blsr vertical_1, vertical_1;
+      blsr vertical_2, vertical_2;
+    }
+
+    // check that the path is not blocked.
+    if board[row][v1] == 0 {
+      bits := horizontal_1;
+      while bits {
+        horizontal: s8;
+        #asm BMI1 {
+          bsf horizontal, bits;
+          blsr bits, bits;
+        }
+        from := index_of(row, col);
+        to := index_of(horizontal, v2);
+        capture := board[horizontal][v2];
+        move := Move32.{from, to, capture, piece};
+        print("to (%,%)\n", horizontal, v2);
+      }
+    }
+  }
+}
+
+rook_moves :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8) {
+  forward: s16 = 0x8000;
+  backward: s16 = ---;
+  row_bits: u64;
+  col_bits: u64;
+  row_data := board10x9[col].data;
+  col_data := board9x10[row].data;
+
+  #asm BMI2 {
+    // forwards row, backwards row.
+    mov.b gpr1: gpr === c, 16;
+    sub.b gpr1, row;
+    sar.w forward, gpr1;
+    mov.w backward, forward;
+    not.w backward;
+    and.w forward, 0x1FF;
+
+    // row bits.
+    mov.q  row_bits, [row_data];
+    mov.q  gpr2: gpr, [row_data + 1];
+    mov.q  mask0: gpr, 0x0101_0101_0101_0101;
+    mov.q  mask1: gpr, 0x0100_0000_0000_00FF;
+    pext.q row_bits, row_bits, mask0;
+    pext.q gpr2, gpr2, mask1;
+    and.q  gpr2, 0x100;
+    or.q   row_bits, gpr2;
+  }
+
+  print("forward = 0b%\nbackward = 0b%\n", formatInt(forward, 2), formatInt(backward, 2));
+  print("row_bits = 0b%\n", formatInt(row_bits, 2));
 }
 
 index_of :: (row: s8, col: s8) -> s8 #expand {
@@ -502,10 +584,10 @@ col_bits :: (col: [10] s8) -> u64 {
     mov.q  value, [data];
     mov.q  reg1: gpr, [data + 2];
     mov.q  mask0: gpr, 0x0101_0101_0101_0101;
-    mov.q  mask1: gpr, 0x0100_0000_0000_01FF;
+    mov.q  mask1: gpr, 0x0101_0000_0000_00FF;
     pext.q value, value, mask0;
     pext.q reg1, reg1, mask1;
-    and.q  reg1, 0x200;
+    and.q  reg1, 0x300;
     or.q   value, reg1;
   } 
 
