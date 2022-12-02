@@ -2,7 +2,9 @@ main :: () {
   xiangqi := xiangqi_startpos();
   print_board(xiangqi);
   // 9-7
-  rook_moves(0, 7, xiangqi.board_9x10, xiangqi.board_10x9);
+  //cannon_quiet_moves(7, 2, xiangqi.board_9x10, xiangqi.board_10x9);
+  //rook_captures(
+  rook_captures(4, 7, xiangqi.board_9x10, xiangqi.board_10x9);
 }
 
 xiangqi_startpos :: () -> Xiangqi {
@@ -18,6 +20,7 @@ xiangqi_startpos :: () -> Xiangqi {
   add_piece(*xiangqi, R, RED, 0, 0);
   add_piece(*xiangqi, R, RED, 8, 0);
 
+  add_piece(*xiangqi, R, RED, 4, 7);
   // cannon
   add_piece(*xiangqi, C, RED, 1, 2);
   add_piece(*xiangqi, C, RED, 7, 2);
@@ -513,7 +516,28 @@ knight_moves :: (row: s8, col: s8, board: [9][10] s8) {
   }
 }
 
+rook_captures :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8) {
+  piece := board10x9[col][row];
+  print("from = (%,%) piece = %\n", row, col, piece);
+
+  forward := 0xFFFF << row;
+  backward := ~forward & 0x1FF;
+  forward <<= 1;
+  forward &= 0x1FF;
+  print("forward  = %\n", formatInt(forward, 2, 9));
+  print("backward = %\n", formatInt(backward, 2, 9));
+
+  bits := row_bits(board10x9[col]);
+  forward &= bits;
+  backward &= bits;
+  print("forward  = %\n", formatInt(forward, 2, 9));
+  print("backward = %\n", formatInt(backward, 2, 9));
+
+}
+
 rook_moves :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8) {
+
+  // TODO: re-use this code for cannon quiet moves. do captures in different function.
   piece := board10x9[col][row];
   print("from = (%,%) piece = %\n", row, col, piece);
   forward := 0xFFFF << row;
@@ -605,8 +629,91 @@ rook_moves :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8) {
     } else {
       if (capture & 0x2) != (piece & 0x2) {
         move := Move32.{from, to, capture, piece};
-        print("to: (%,%), capture = %, piece = %\n", row, index, formatInt(capture, 2, 8), formatInt(piece, 2, 8));
+        print("to: (%,%), capture = %, piece = %\n", row, index, formatInt(capture, 2, 9), formatInt(piece, 2, 9));
       }
+      break;
+    }
+  }
+}
+
+cannon_quiet_moves :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8) {
+  piece := board10x9[col][row];
+  print("from = (%,%) piece = %\n", row, col, piece);
+  forward := 0xFFFF << row;
+  backward := ~forward & 0x1FF;
+  forward <<= 1;
+  forward &= 0x1FF;
+  print("forward  = 0b%\nbackward = 0b%\n", formatInt(forward, 2, 9), formatInt(backward, 2, 9));
+
+  while backward {
+    index: s8;
+    #asm {
+      bsr index, backward;
+    }
+    backward >>= 1;
+    from := index_of(row, col);
+    to := index_of(index, col);
+    capture := board10x9[col][index];
+    if capture == 0 {
+      move := Move32.{from, to, capture, piece};
+      print("to: (%,%), capture = %\n", index, col, capture);
+    } else {
+      break;
+    }
+  }
+
+  while forward {
+    index: s8;
+    #asm {
+      bsf index, forward;
+      blsr forward, forward;
+    }
+    capture := board10x9[col][index];
+    from := index_of(row, col);
+    to := index_of(index, col);
+    if capture == 0 {
+      move := Move32.{from, to, capture, piece};
+      print("to: (%,%), capture = %\n", index, col, capture);
+    } else {
+      break;
+    }
+  }
+
+  forward = 0xFFFF << col;
+  backward = ~forward & 0x3FF;
+  forward <<= 1;
+  forward &= 0x3FF;
+  print("forward  = 0b%\nbackward = 0b%\n", formatInt(forward, 2, 10), formatInt(backward, 2, 10));
+  while backward {
+    index: s8;
+    #asm {
+      bsr index, backward;
+    }
+    backward >>= 1;
+    capture := board9x10[row][index];
+    from := index_of(row, col);
+    to := index_of(row, index);
+    if capture == 0 {
+      move := Move32.{from, to, capture, piece};
+      print("to: (%,%), capture = %\n", row, index, capture);
+    } else {
+      break;
+    }
+  }
+
+  while forward {
+    index: s8;
+    #asm {
+      bsf index, forward;
+      blsr forward, forward;
+    }
+    from := index_of(row, col);
+    to := index_of(row, index);
+    capture := board9x10[row][index];
+    if capture == 0 {
+      move := Move32.{from, to, capture, piece};
+      print("to: (%,%), capture = %\n", row, index, capture);
+    } else {
       break;
     }
   }
@@ -628,9 +735,9 @@ row_col_of :: (index: s8) -> s8, s8 #expand {
   return row_of(index), col_of(index);
 }
 
-row_bits :: (row: [9] s8) -> u64 {
+row_bits :: (row: [9] s8) -> s64 {
   data := row.data;
-  value: u64;
+  value: s64;
   #asm BMI2 {
     mov.q  value, [data];
     mov.q  reg1: gpr, [data + 1];
