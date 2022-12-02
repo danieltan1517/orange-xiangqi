@@ -1,57 +1,60 @@
 main :: () {
-  xiangqi := xiangqi_startpos();
+  xiangqi: Xiangqi;
+  xiangqi_startpos(*xiangqi);
+
   print_board(xiangqi);
+  moves: Moves;
+  generate_moves(*xiangqi, *moves);
+  print("go perft 1 [startpos] = %\n", moves.count);
 }
 
-xiangqi_startpos :: () -> Xiangqi {
-  xiangqi: Xiangqi;
+xiangqi_startpos :: (xiangqi: *Xiangqi) {
+  memset(xiangqi, 0, size_of(Xiangqi));
   // red
-  add_piece(*xiangqi, G, RED, 4, 0);
-  add_piece(*xiangqi, A, RED, 3, 0);
-  add_piece(*xiangqi, A, RED, 5, 0);
-  add_piece(*xiangqi, E, RED, 2, 0);
-  add_piece(*xiangqi, E, RED, 6, 0);
-  add_piece(*xiangqi, H, RED, 1, 0);
-  add_piece(*xiangqi, H, RED, 7, 0);
-  add_piece(*xiangqi, R, RED, 0, 0);
-  add_piece(*xiangqi, R, RED, 8, 0);
+  add_piece(xiangqi, G, RED, 4, 0);
+  add_piece(xiangqi, A, RED, 3, 0);
+  add_piece(xiangqi, A, RED, 5, 0);
+  add_piece(xiangqi, E, RED, 2, 0);
+  add_piece(xiangqi, E, RED, 6, 0);
+  add_piece(xiangqi, H, RED, 1, 0);
+  add_piece(xiangqi, H, RED, 7, 0);
+  add_piece(xiangqi, R, RED, 0, 0);
+  add_piece(xiangqi, R, RED, 8, 0);
 
   // cannon
-  add_piece(*xiangqi, C, RED, 1, 2);
-  add_piece(*xiangqi, C, RED, 7, 2);
+  add_piece(xiangqi, C, RED, 1, 2);
+  add_piece(xiangqi, C, RED, 7, 2);
 
-  add_piece(*xiangqi, C, RED, 1, 6);
   // pawn
-  add_piece(*xiangqi, S, RED, 0, 3);
-  add_piece(*xiangqi, S, RED, 2, 3);
-  add_piece(*xiangqi, S, RED, 4, 3);
-  add_piece(*xiangqi, S, RED, 6, 3);
-  add_piece(*xiangqi, S, RED, 8, 3);
+  add_piece(xiangqi, S, RED, 0, 3);
+  add_piece(xiangqi, S, RED, 2, 3);
+  add_piece(xiangqi, S, RED, 4, 3);
+  add_piece(xiangqi, S, RED, 6, 3);
+  add_piece(xiangqi, S, RED, 8, 3);
 
   // black
-  add_piece(*xiangqi, G, BLACK, 4, 9);
-  add_piece(*xiangqi, A, BLACK, 3, 9);
-  add_piece(*xiangqi, A, BLACK, 5, 9);
-  add_piece(*xiangqi, E, BLACK, 2, 9);
-  add_piece(*xiangqi, E, BLACK, 6, 9);
-  add_piece(*xiangqi, H, BLACK, 1, 9);
-  add_piece(*xiangqi, H, BLACK, 7, 9);
-  add_piece(*xiangqi, R, BLACK, 0, 9);
-  add_piece(*xiangqi, R, BLACK, 8, 9);
+  add_piece(xiangqi, G, BLACK, 4, 9);
+  add_piece(xiangqi, A, BLACK, 3, 9);
+  add_piece(xiangqi, A, BLACK, 5, 9);
+  add_piece(xiangqi, E, BLACK, 2, 9);
+  add_piece(xiangqi, E, BLACK, 6, 9);
+  add_piece(xiangqi, H, BLACK, 1, 9);
+  add_piece(xiangqi, H, BLACK, 7, 9);
+  add_piece(xiangqi, R, BLACK, 0, 9);
+  add_piece(xiangqi, R, BLACK, 8, 9);
 
   // cannon
-  add_piece(*xiangqi, C, BLACK, 1, 7);
-  add_piece(*xiangqi, C, BLACK, 7, 7);
+  add_piece(xiangqi, C, BLACK, 1, 7);
+  add_piece(xiangqi, C, BLACK, 7, 7);
 
   // pawn
-  add_piece(*xiangqi, S, BLACK, 0, 6);
-  add_piece(*xiangqi, S, BLACK, 2, 6);
-  add_piece(*xiangqi, S, BLACK, 4, 6);
-  add_piece(*xiangqi, S, BLACK, 6, 6);
-  add_piece(*xiangqi, S, BLACK, 8, 6);
-  return xiangqi;
+  add_piece(xiangqi, S, BLACK, 0, 6);
+  add_piece(xiangqi, S, BLACK, 2, 6);
+  add_piece(xiangqi, S, BLACK, 4, 6);
+  add_piece(xiangqi, S, BLACK, 6, 6);
+  add_piece(xiangqi, S, BLACK, 8, 6);
 
-  add_piece :: (xiangqi: *Xiangqi, piece: s8, side: s8, row: s8, col: s8) {
+  add_piece :: (xiangqi: *Xiangqi, piece: u8, side: u8, row: u8, col: u8) {
     piece_code := encode_piece(piece, side);
     xiangqi.board_9x10[row][col] = piece_code;
     xiangqi.board_10x9[col][row] = piece_code;
@@ -60,7 +63,7 @@ xiangqi_startpos :: () -> Xiangqi {
   }
 }
 
-encode_piece :: (piece: s8, side: s8) -> s8 #expand {
+encode_piece :: (piece: u8, side: u8) -> u8 #expand {
   return (piece << 2) | (side << 1) | 1;
 }
 
@@ -119,36 +122,38 @@ print_board :: (xiangqi: Xiangqi) {
 }
 
 Xiangqi :: struct {
-  board_9x10: [9][10] s8;
-  board_10x9: [10][9] s8;
+  board_9x10: [9][10] u8;
+  board_10x9: [10][9] u8;
   pieces: [2] Pieces;
   #place pieces;
   red: Pieces;
   black: Pieces;
-  turn: s8;
+  turn: u8;
 }
 
 Move32 :: struct {
-  from: s8;
-  to: s8;
-  capture: s8;
-  piece: s8;
+  from: u8;
+  to: u8;
+  capture: u8;
+  piece: u8;
   #place from;
-  #as move: s32;
+  #as move: u32;
 }
 
 Pieces :: struct {
-  general:   Array(7, s8); // only be 1
-  advisors:  Array(7, s8); // at most 2
-  elephants: Array(7, s8); // at most 2
-  knights:   Array(7, s8); // at most 2
-  cannons:   Array(7, s8); // at most 2
-  rook:      Array(7, s8); // at most 2
-  soldier:   Array(7, s8); // at most 5
+  general:   Array(7, u8); // only be 1
+  advisors:  Array(7, u8); // at most 2
+  elephants: Array(7, u8); // at most 2
+  knights:   Array(7, u8); // at most 2
+  cannons:   Array(7, u8); // at most 2
+  rooks:     Array(7, u8); // at most 2
+  soldiers:  Array(7, u8); // at most 5
 
   #place general;
-  piece: [7] Array(7, s8);
+  piece: [7] Array(7, u8);
 }
+
+Moves :: #type Array(128, Move32);
 
 make_move :: (xiangqi: *Xiangqi, move: Move32) {
   piece := move.piece;
@@ -206,6 +211,46 @@ unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
   xiangqi.turn ^= 1;
 }
 
+generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
+  turn := xiangqi.turn;
+  piece_array := *xiangqi.pieces[turn];
+
+  general_moves(piece_array.general[0], xiangqi.board_9x10, moves);
+
+  for advisor: piece_array.advisors {
+    advisor_moves(advisor, xiangqi.board_9x10, moves);
+  }
+
+  for elephant: piece_array.elephants {
+    elephant_moves(elephant, xiangqi.board_9x10, moves);
+  }
+
+  for knight: piece_array.knights {
+    knight_moves(knight, xiangqi.board_9x10, moves);
+  }
+
+  for cannon: piece_array.cannons {
+    cannon_moves(cannon, xiangqi.board_9x10, xiangqi.board_10x9, moves);
+  }
+
+  for rook: piece_array.rooks {
+    rook_moves(rook, xiangqi.board_9x10, xiangqi.board_10x9, moves);
+  }
+
+  advance: s8 = 1;
+  col_mask: u64 = 0b_01111_11000;
+  horizontal_mask: u64 = 0b_11111_00000;
+  if turn == 1 {
+    advance = -1;
+    col_mask = 0b_00011_11110;
+    horizontal_mask = 0b_00000_11111;
+  }
+
+  for soldier: piece_array.soldiers {
+    soldier_moves(soldier, advance, col_mask, horizontal_mask, xiangqi.board_9x10, moves);
+  }
+}
+
 G :: 0; // general
 A :: 1; // advisor
 E :: 2; // elephant
@@ -225,7 +270,7 @@ Array :: struct(capacity: int, T: Type) {
   array: [capacity] T;
 }
 
-update_piece_array :: (array: Array($N, s8), from: s8, to: s8) {
+update_piece_array :: (array: Array($N, u8), from: u8, to: u8) {
   for item, index: array {
     if item == from {
       array[index] = to;
@@ -234,7 +279,7 @@ update_piece_array :: (array: Array($N, s8), from: s8, to: s8) {
   }
 }
 
-remove_piece_from_array :: (array: Array($N, s8), index: s8) {
+remove_piece_from_array :: (array: Array($N, u8), index: u8) {
   for item, index: array {
     if item == index {
       end := array.count-1;
@@ -269,27 +314,29 @@ for_expansion :: (a: *Array($N, $T), body: Code, flags: For_Flags) #expand {
   }
 }
 
-general_moves :: (row: s8, col: s8, board: [9][10] s8) {
+general_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
   row_mask :: 0b000_111_000;
   col_mask :: 0b111_00_00_111;
+
+  row, col := row_col_of(from);
   piece := board[row][col];
-  print("from (%,%)\n", row, col);
 
   // horizontal row movements.
   bits := 1 << row;
   bits = (bits << 1) | (bits >> 1);
   bits &= row_mask;
   while bits {
-    row_to: s8;
+    row_to: u8;
     #asm BMI1 {
       bsf row_to, bits; 
       blsr bits, bits;
     }
-    from := index_of(row, col);
     to := index_of(row_to, col);
     capture := board[row_to][col];
-    move := Move32.{from, to, capture, piece};
-    print("to (%,%)\n", row_of(move.to), col_of(move.to));
+    if (capture & 0x2) != (piece & 0x2) {
+      move := Move32.{from, to, capture, piece};
+      append(moves, move);
+    }
   } 
 
   // vertical row movements.
@@ -297,25 +344,27 @@ general_moves :: (row: s8, col: s8, board: [9][10] s8) {
   bits = (bits << 1) | (bits >> 1);
   bits &= col_mask;
   while bits {
-    col_to: s8;
+    col_to: u8;
     #asm BMI1 {
       bsf col_to, bits; 
       blsr bits, bits;
     }
-    from := index_of(row, col);
-    to := index_of(row, col_to);
     capture := board[row][col_to];
-    move := Move32.{from, to, capture, piece};
-    print("to (%,%)\n", row_of(move.to), col_of(move.to));
+    to := index_of(row, col_to);
+    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+      move := Move32.{from, to, capture, piece};
+      append(moves, move);
+    }
   } 
 
 }
 
-advisor_moves :: (row: s8, col: s8, board: [9][10] s8) {
+advisor_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
   row_mask :: 0b000_111_000;
   col_mask :: 0b111_00_00_111;
+
+  row, col := row_col_of(from);
   piece := board[row][col];
-  print("from (%,%)\n", row, col);
 
   bits1 := 1 << row;
   bits1 = (bits1 << 1) | (bits1 >> 1);
@@ -336,22 +385,23 @@ advisor_moves :: (row: s8, col: s8, board: [9][10] s8) {
         bsf col_to, bits_col; 
         blsr bits_col, bits_col;
       }
-      from := index_of(row, col);
-      to := index_of(row_to, col_to);
       capture := board[row_to][col_to];
-      move := Move32.{from, to, capture, piece};
-      print("to (%,%)\n", row_of(move.to), col_of(move.to));
+      to := cast(u8) index_of(row_to, col_to);
+      if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+        move := Move32.{from, to, capture, piece};
+        append(moves, move);
+      }
     }
   }
 
 }
 
-elephant_moves :: (row: s8, col: s8, board: [9][10] s8) {
-  print("from (%,%)\n", row, col);
+elephant_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
   row_mask :: 0b1_1111_1111;
   col_mask :: 0b_00000_11111;
   // col_mask :: 0b_11111_00000;
 
+  row, col := row_col_of(from);
   piece := board[row][col];
   bit_horizontal := 1 << row;
   bit_vertical   := 1 << col;
@@ -389,37 +439,37 @@ elephant_moves :: (row: s8, col: s8, board: [9][10] s8) {
         blsr cols2, cols2;
       }
       if board[row_to1][col_to1] == 0 {
-        from := index_of(row, col);
-        to := index_of(row_to2, col_to2);
+        to := index_of(cast(u8)row_to2, cast(u8)col_to2);
         capture := board[row_to2][col_to2];
-        move := Move32.{from, to, capture, piece};
-        //print("to (%,%)\n", formatInt(row_of(move.to), 2), formatInt(col_of(move.to),2));
-        //print("to (%,%)\n", row_of(move.to), col_of(move.to));
-        print("to (%,%)\n", row_to2, col_to2);
+        if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+          move := Move32.{from, to, capture, piece};
+          append(moves, move);
+        }
       }
     }
   }
 }
 
-soldier_moves :: (row: s8, col: s8, board: [9][10] s8) {
+soldier_moves :: (from: u8, advance: s8, col_mask: u64, horizontal_mask: u64, board: [9][10] u8, moves: *Moves) {
   // TODO: Make sure BSF works correctly...
-  print("from (%,%)\n", row, col);
   row_mask :: 0b1_1111_1111;
-  // col_mask :: 0b_00000_11111;
-  // row >= 1 && row <= 6
-  // col_mask :: 0b_00011_11110;
-  col_mask :: 0b_01111_11000;
-  horizontal_mask :: 0b_11111_00000;
-  col_bit := 1 << col;
+  
+  //col_mask :: 0b_01111_11000;
+  //horizontal_mask :: 0b_11111_00000;
+
+  row, col := row_col_of(from);
+  col_bit: u64 = cast(u64) (1 << col);
   piece := board[row][col];
 
   if col_bit & col_mask {
     from := index_of(row, col);
-    col_to := col + 1;
+    col_to := cast(u8)(cast(s8)col + advance);
     to := index_of(row, col_to);
     capture := board[row][col_to];
-    move := Move32.{from, to, capture, piece};
-    print("to (%,%)\n", row, col_to);
+    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+      move := Move32.{from, to, capture, piece};
+      append(moves, move);
+    }
   }
 
   // col >= 1 && col <= 6
@@ -433,17 +483,18 @@ soldier_moves :: (row: s8, col: s8, board: [9][10] s8) {
         bsf row_to, bit_h1;
         blsr bit_h1, bit_h1;
       }
-      from := index_of(row, col);
-      to := index_of(row_to, col);
+      to := index_of(cast(u8)row_to, col);
       capture := board[row_to][col];
-      move := Move32.{from, to, capture, piece};
-      print("to (%,%)\n", row_to, col);
+      if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+        move := Move32.{from, to, capture, piece};
+        append(moves, move);
+      }
     }
   }
 }
 
-knight_moves :: (row: s8, col: s8, board: [9][10] s8) {
-  print("from (%,%)\n", row, col);
+knight_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
+  row, col := row_col_of(from);
   piece := board[row][col];
   row_bit := 1 << row;
   col_bit := 1 << col;
@@ -471,11 +522,12 @@ knight_moves :: (row: s8, col: s8, board: [9][10] s8) {
           bsf  vert, bits;
           blsr bits, bits;
         }
-        from := index_of(row, col);
-        to := index_of(h2, vert);
+        to := index_of(cast(u8)h2, cast(u8)vert);
         capture := board[h2][vert];
-        move := Move32.{from, to, capture, piece};
-        print("to (%,%)\n", h2, vert);
+        if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+          move := Move32.{from, to, capture, piece};
+          append(moves, move);
+        }
       }
     }
   }
@@ -502,25 +554,26 @@ knight_moves :: (row: s8, col: s8, board: [9][10] s8) {
           bsf horizontal, bits;
           blsr bits, bits;
         }
-        from := index_of(row, col);
-        to := index_of(horizontal, v2);
+        to := index_of(cast(u8)horizontal, cast(u8)v2);
         capture := board[horizontal][v2];
-        move := Move32.{from, to, capture, piece};
-        print("to (%,%)\n", horizontal, v2);
+        if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+          move := Move32.{from, to, capture, piece};
+          append(moves, move);
+        }
       }
     }
   }
 }
 
-rook_moves :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8) {
-  rook_captures(row, col, board9x10, board10x9);
-  quiet_sliding_moves(row, col, board9x10, board10x9);
+rook_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: *Moves) {
+  rook_captures(from, board9x10, board10x9, moves);
+  quiet_sliding_moves(from, board9x10, board10x9, moves);
 }
 
-rook_captures :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8) {
+rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: *Moves) {
+  row, col := row_col_of(from);
   piece := board10x9[col][row];
-  print("from = (%,%) piece = %\n", row, col, piece);
-  forward := 0xFFFF << row;
+  forward: u64 = cast(u64)0xFFFF << row;
   backward := ~forward & 0x1FF;
   forward <<= 1;
   forward &= 0x1FF;
@@ -536,26 +589,24 @@ rook_captures :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8
   }
 
   if row_back != -1 {
-    from := index_of(row, col);
-    to := index_of(row_back, col);
+    to := index_of(cast(u8)row_back, col);
     capture := board9x10[row_back][col];
-    if (capture & 0x2) != (piece & 0x2) {
+    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
-      print("to: (%,%), capture = %\n", row_back, col, capture);
+      append(moves, move);
     }
   }
 
   if row_forward != -1 {
-    from := index_of(row, col);
-    to := index_of(row_forward, col);
+    to := index_of(cast(u8)row_forward, col);
     capture := board9x10[row_forward][col];
-    if (capture & 0x2) != (piece & 0x2) {
+    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
-      print("to: (%,%), capture = %\n", row_forward, col, capture);
+      append(moves, move);
     }
   }
 
-  forward = 0xFFFF << col;
+  forward = cast(u64)0xFFFF << col;
   backward = ~forward & 0x3FF;
   forward <<= 1;
   forward &= 0x3FF;
@@ -570,30 +621,28 @@ rook_captures :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8
   }
 
   if col_back != -1 {
-    from := index_of(row, col);
-    to := index_of(row, col_back);
+    to := index_of(row, cast(u8)col_back);
     capture := board9x10[row][col_back];
-    if (capture & 0x2) != (piece & 0x2) {
+    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
-      print("to: (%,%), capture = %\n", row, col_back, capture);
+      append(moves, move);
     }
   }
 
   if col_forward != -1 {
-    from := index_of(row, col);
-    to := index_of(row, col_forward);
+    to := index_of(row, cast(u8)col_forward);
     capture := board9x10[row][col_forward];
-    if (capture & 0x2) != (piece & 0x2) {
+    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
-      print("to: (%,%), capture = %\n", row, col_forward, capture);
+      append(moves, move);
     }
   }
 }
 
-cannon_captures :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8) {
+cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: *Moves) {
+  row, col := row_col_of(from);
   piece := board10x9[col][row];
-  print("from = (%,%) piece = %\n", row, col, piece);
-  forward := 0xFFFF << row;
+  forward: u64 = cast(u64)0xFFFF << row;
   backward := ~forward & 0x1FF;
   forward <<= 1;
   forward &= 0x1FF;
@@ -614,26 +663,22 @@ cannon_captures :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] 
   }
 
   if row_back != -1 {
-    from := index_of(row, col);
-    to := index_of(row_back, col);
+    to := index_of(cast(u8)row_back, col);
     capture := board9x10[row_back][col];
-    if (capture & 0x2) != (piece & 0x2) {
+    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
-      print("to: (%,%), capture = %\n", row_back, col, capture);
     }
   }
 
   if row_forward != -1 {
-    from := index_of(row, col);
-    to := index_of(row_forward, col);
+    to := index_of(cast(u8)row_forward, col);
     capture := board9x10[row_forward][col];
-    if (capture & 0x2) != (piece & 0x2) {
+    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
-      print("to: (%,%), capture = %\n", row_forward, col, capture);
     }
   }
 
-  forward = 0xFFFF << col;
+  forward = cast(u64)0xFFFF << col;
   backward = ~forward & 0x3FF;
   forward <<= 1;
   forward &= 0x3FF;
@@ -652,64 +697,56 @@ cannon_captures :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] 
   }
 
   if col_back != -1 {
-    from := index_of(row, col);
-    to := index_of(row, col_back);
+    to := index_of(row, cast(u8)col_back);
     capture := board9x10[row][col_back];
-    if (capture & 0x2) != (piece & 0x2) {
+    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
-      print("to: (%,%), capture = %\n", row, col_back, capture);
     }
   }
 
   if col_forward != -1 {
-    from := index_of(row, col);
-    to := index_of(row, col_forward);
+    to := index_of(row, cast(u8)col_forward);
     capture := board9x10[row][col_forward];
-    if (capture & 0x2) != (piece & 0x2) {
+    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
-      print("to: (%,%), capture = %\n", row, col_forward, capture);
     }
   }
 }
 
-
-
-quiet_sliding_moves :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8) {
-  // TODO: re-use this code for cannon quiet moves. do captures in different function.
+quiet_sliding_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: *Moves) {
+  // this function is used for both rook and cannon quiet moves.
+  row, col := row_col_of(from);
   piece := board10x9[col][row];
-  print("from = (%,%) piece = %\n", row, col, piece);
   forward := 0xFFFF << row;
   backward := ~forward & 0x1FF;
   forward <<= 1;
   forward &= 0x1FF;
   while backward {
-    index: s8;
+    index: u8;
     #asm {
       bsr index, backward;
     }
     backward >>= 1;
-    from := index_of(row, col);
     to := index_of(index, col);
     capture := board10x9[col][index];
     if capture != 0 then
       break;
     move := Move32.{from, to, capture, piece};
-    print("to: (%,%), capture = %\n", row, index, capture);
+    append(moves, move);
   }
 
   while forward {
-    index: s8;
+    index: u8;
     #asm {
       bsf index, forward;
       blsr forward, forward;
     }
     capture := board10x9[col][index];
-    from := index_of(row, col);
     to := index_of(index, col);
     if capture != 0 then
       break;
     move := Move32.{from, to, capture, piece};
-    print("to: (%,%), capture = %\n", row, index, capture);
+    append(moves, move);
   }
 
   forward = 0xFFFF << col;
@@ -717,61 +754,63 @@ quiet_sliding_moves :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10]
   forward <<= 1;
   forward &= 0x3FF;
   while backward {
-    index: s8;
+    index: u8;
     #asm {
       bsr index, backward;
     }
     backward >>= 1;
     capture := board9x10[row][index];
-    from := index_of(row, col);
     to := index_of(row, index);
     if capture != 0 then
       break;
     move := Move32.{from, to, capture, piece};
-    print("to: (%,%), capture = %\n", row, index, capture);
+    append(moves, move);
   }
 
   while forward {
-    index: s8;
+    index: u8;
     #asm {
       bsf index, forward;
       blsr forward, forward;
     }
     capture := board9x10[row][index];
-    from := index_of(row, col);
     to := index_of(row, index);
     if capture != 0 then
       break;
     move := Move32.{from, to, capture, piece};
-    print("to: (%,%), capture = %\n", row, index, capture);
+    append(moves, move);
   }
 
 }
 
-cannon_moves :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8) {
-  cannon_captures(row, col, board9x10, board10x9);
-  quiet_sliding_moves(row, col, board9x10, board10x9);
+cannon_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: *Moves) {
+  cannon_captures(from, board9x10, board10x9, moves);
+  quiet_sliding_moves(from, board9x10, board10x9, moves);
+}
+
+index_of :: (row: u8, col: u8) -> u8 #expand {
+  return (row << 4) | col;
 }
 
 index_of :: (row: s8, col: s8) -> s8 #expand {
   return (row << 4) | col;
 }
 
-row_of :: (index: s8) -> s8 #expand {
+row_of :: (index: u8) -> u8 #expand {
   return index >> 4;
 }
 
-col_of :: (index: s8) -> s8 #expand {
+col_of :: (index: u8) -> u8 #expand {
   return index & 0xF;
 }
 
-row_col_of :: (index: s8) -> s8, s8 #expand {
+row_col_of :: (index: u8) -> u8, u8 #expand {
   return row_of(index), col_of(index);
 }
 
-row_bits :: (row: [9] s8) -> s64 {
+row_bits :: (row: [9] u8) -> u64 {
   data := row.data;
-  value: s64;
+  value: u64;
   #asm BMI2 {
     mov.q  value, [data];
     mov.q  reg1: gpr, [data + 1];
@@ -786,9 +825,9 @@ row_bits :: (row: [9] s8) -> s64 {
   return value;
 }
 
-col_bits :: (col: [10] s8) -> s64 {
+col_bits :: (col: [10] u8) -> u64 {
   data := col.data;
-  value: s64;
+  value: u64;
   #asm BMI2 {
     mov.q  value, [data];
     mov.q  reg1: gpr, [data + 2];
@@ -803,7 +842,7 @@ col_bits :: (col: [10] s8) -> s64 {
   return value;
 }
 
-max :: (a: int, b: int) -> int {
+max :: (a: int, b: int) -> int #expand {
   c: int;
   #asm {
     cmp a, b;
@@ -813,7 +852,7 @@ max :: (a: int, b: int) -> int {
   return c;
 }
 
-min :: (a: int, b: int) -> int {
+min :: (a: int, b: int) -> int #expand {
   c: int;
   #asm {
     cmp a, b;
