@@ -1,7 +1,8 @@
 main :: () {
   xiangqi := xiangqi_startpos();
   print_board(xiangqi);
-  rook_moves(0, 0, xiangqi.board_9x10, xiangqi.board_10x9);
+  // 9-7
+  rook_moves(0, 7, xiangqi.board_9x10, xiangqi.board_10x9);
 }
 
 xiangqi_startpos :: () -> Xiangqi {
@@ -513,35 +514,102 @@ knight_moves :: (row: s8, col: s8, board: [9][10] s8) {
 }
 
 rook_moves :: (row: s8, col: s8, board9x10: [9][10] s8, board10x9: [10][9] s8) {
-  forward: s16 = 0x8000;
-  backward: s16 = ---;
-  row_bits: u64;
-  col_bits: u64;
-  row_data := board10x9[col].data;
-  col_data := board9x10[row].data;
+  piece := board10x9[col][row];
+  print("from = (%,%) piece = %\n", row, col, piece);
+  forward := 0xFFFF << row;
+  backward := ~forward & 0x1FF;
+  forward <<= 1;
+  forward &= 0x1FF;
+  print("forward  = 0b%\nbackward = 0b%\n", formatInt(forward, 2, 9), formatInt(backward, 2, 9));
 
-  #asm BMI2 {
-    // forwards row, backwards row.
-    mov.b gpr1: gpr === c, 16;
-    sub.b gpr1, row;
-    sar.w forward, gpr1;
-    mov.w backward, forward;
-    not.w backward;
-    and.w forward, 0x1FF;
-
-    // row bits.
-    mov.q  row_bits, [row_data];
-    mov.q  gpr2: gpr, [row_data + 1];
-    mov.q  mask0: gpr, 0x0101_0101_0101_0101;
-    mov.q  mask1: gpr, 0x0100_0000_0000_00FF;
-    pext.q row_bits, row_bits, mask0;
-    pext.q gpr2, gpr2, mask1;
-    and.q  gpr2, 0x100;
-    or.q   row_bits, gpr2;
+  while backward {
+    index: s8;
+    #asm {
+      bsr index, backward;
+    }
+    backward >>= 1;
+    from := index_of(row, col);
+    to := index_of(index, col);
+    capture := board10x9[col][index];
+    if capture == 0 {
+      move := Move32.{from, to, capture, piece};
+      print("to: (%,%), capture = %\n", index, col, capture);
+    } else {
+      if (capture & 0x2) != (piece & 0x2) {
+        move := Move32.{from, to, capture, piece};
+        print("to: (%,%), capture = %\n", index, col, capture);
+      }
+      break;
+    }
   }
 
-  print("forward = 0b%\nbackward = 0b%\n", formatInt(forward, 2), formatInt(backward, 2));
-  print("row_bits = 0b%\n", formatInt(row_bits, 2));
+  while forward {
+    index: s8;
+    #asm {
+      bsf index, forward;
+      blsr forward, forward;
+    }
+    capture := board10x9[col][index];
+    from := index_of(row, col);
+    to := index_of(index, col);
+    if capture == 0 {
+      move := Move32.{from, to, capture, piece};
+      print("to: (%,%), capture = %\n", index, col, capture);
+    } else {
+      if (capture & 0x2) != (piece & 0x2) {
+        move := Move32.{from, to, capture, piece};
+        print("to: (%,%), capture = %\n", index, col, capture);
+      }
+      break;
+    }
+  }
+
+  forward = 0xFFFF << col;
+  backward = ~forward & 0x3FF;
+  forward <<= 1;
+  forward &= 0x3FF;
+  print("forward  = 0b%\nbackward = 0b%\n", formatInt(forward, 2, 10), formatInt(backward, 2, 10));
+  while backward {
+    index: s8;
+    #asm {
+      bsr index, backward;
+    }
+    backward >>= 1;
+    capture := board9x10[row][index];
+    from := index_of(row, col);
+    to := index_of(row, index);
+    if capture == 0 {
+      move := Move32.{from, to, capture, piece};
+      print("to: (%,%), capture = %\n", row, index, capture);
+    } else {
+      if (capture & 0x2) != (piece & 0x2) {
+        move := Move32.{from, to, capture, piece};
+        print("to: (%,%), capture = %\n", row, index, capture);
+      }
+      break;
+    }
+  }
+
+  while forward {
+    index: s8;
+    #asm {
+      bsf index, forward;
+      blsr forward, forward;
+    }
+    from := index_of(row, col);
+    to := index_of(row, index);
+    capture := board9x10[row][index];
+    if capture == 0 {
+      move := Move32.{from, to, capture, piece};
+      print("to: (%,%), capture = %\n", row, index, capture);
+    } else {
+      if (capture & 0x2) != (piece & 0x2) {
+        move := Move32.{from, to, capture, piece};
+        print("to: (%,%), capture = %, piece = %\n", row, index, formatInt(capture, 2, 8), formatInt(piece, 2, 8));
+      }
+      break;
+    }
+  }
 }
 
 index_of :: (row: s8, col: s8) -> s8 #expand {
