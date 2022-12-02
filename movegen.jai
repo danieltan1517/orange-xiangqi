@@ -1,7 +1,6 @@
 main :: () {
   xiangqi: Xiangqi;
   xiangqi_startpos(*xiangqi);
-
   print_board(xiangqi);
   moves: Moves;
   generate_moves(*xiangqi, *moves);
@@ -145,8 +144,8 @@ Pieces :: struct {
   advisors:  Array(7, u8); // at most 2
   elephants: Array(7, u8); // at most 2
   knights:   Array(7, u8); // at most 2
-  cannons:   Array(7, u8); // at most 2
   rooks:     Array(7, u8); // at most 2
+  cannons:   Array(7, u8); // at most 2
   soldiers:  Array(7, u8); // at most 5
 
   #place general;
@@ -215,15 +214,29 @@ generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   turn := xiangqi.turn;
   piece_array := *xiangqi.pieces[turn];
 
+  // soldier related parameters.
+  advance: s8 = 1;
+  col_mask: u64 = 0b_01111_11000;
+  horizontal_mask: u64 = 0b_11111_00000;
+  ele_col_mask: s64 = 0b_00000_11111;
+  if turn == 1 {
+    advance = -1;
+    col_mask = 0b_00011_11110;
+    horizontal_mask = 0b_00000_11111;
+    ele_col_mask = 0b_11111_00000;
+  }
+
   general_moves(piece_array.general[0], xiangqi.board_9x10, moves);
 
   for advisor: piece_array.advisors {
     advisor_moves(advisor, xiangqi.board_9x10, moves);
   }
 
+  print("%\n", moves.count);
   for elephant: piece_array.elephants {
-    elephant_moves(elephant, xiangqi.board_9x10, moves);
+    elephant_moves(elephant, ele_col_mask, xiangqi.board_9x10, moves);
   }
+  print("%\n", moves.count);
 
   for knight: piece_array.knights {
     knight_moves(knight, xiangqi.board_9x10, moves);
@@ -235,15 +248,6 @@ generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
 
   for rook: piece_array.rooks {
     rook_moves(rook, xiangqi.board_9x10, xiangqi.board_10x9, moves);
-  }
-
-  advance: s8 = 1;
-  col_mask: u64 = 0b_01111_11000;
-  horizontal_mask: u64 = 0b_11111_00000;
-  if turn == 1 {
-    advance = -1;
-    col_mask = 0b_00011_11110;
-    horizontal_mask = 0b_00000_11111;
   }
 
   for soldier: piece_array.soldiers {
@@ -396,9 +400,9 @@ advisor_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
 
 }
 
-elephant_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
+elephant_moves :: (from: u8, col_mask: s64, board: [9][10] u8, moves: *Moves) {
   row_mask :: 0b1_1111_1111;
-  col_mask :: 0b_00000_11111;
+  // col_mask :: 0b_00000_11111;
   // col_mask :: 0b_11111_00000;
 
   row, col := row_col_of(from);
@@ -667,6 +671,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
     capture := board9x10[row_back][col];
     if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
+      append(moves, move);
     }
   }
 
@@ -675,6 +680,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
     capture := board9x10[row_forward][col];
     if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
+      append(moves, move);
     }
   }
 
@@ -701,6 +707,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
     capture := board9x10[row][col_back];
     if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
+      append(moves, move);
     }
   }
 
@@ -709,6 +716,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
     capture := board9x10[row][col_forward];
     if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
+      append(moves, move);
     }
   }
 }
