@@ -1,12 +1,3 @@
-main :: () {
-  xiangqi: Xiangqi;
-  xiangqi_startpos(*xiangqi);
-  print_board(xiangqi);
-  moves: Moves;
-  generate_moves(*xiangqi, *moves);
-  print("go perft 1 [startpos] = %\n", moves.count);
-}
-
 xiangqi_startpos :: (xiangqi: *Xiangqi) {
   memset(xiangqi, 0, size_of(Xiangqi));
   // red
@@ -214,11 +205,11 @@ generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   turn := xiangqi.turn;
   piece_array := *xiangqi.pieces[turn];
 
-  // soldier related parameters.
+  // soldier/elephant related parameters.
   advance: s8 = 1;
   col_mask: u64 = 0b_01111_11000;
   horizontal_mask: u64 = 0b_11111_00000;
-  ele_col_mask: s64 = 0b_00000_11111;
+  ele_col_mask: s64 = 0b_00000_11111; // elephant column mask.
   if turn == 1 {
     advance = -1;
     col_mask = 0b_00011_11110;
@@ -232,11 +223,9 @@ generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
     advisor_moves(advisor, xiangqi.board_9x10, moves);
   }
 
-  print("%\n", moves.count);
   for elephant: piece_array.elephants {
     elephant_moves(elephant, ele_col_mask, xiangqi.board_9x10, moves);
   }
-  print("%\n", moves.count);
 
   for knight: piece_array.knights {
     knight_moves(knight, xiangqi.board_9x10, moves);
@@ -253,6 +242,42 @@ generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   for soldier: piece_array.soldiers {
     soldier_moves(soldier, advance, col_mask, horizontal_mask, xiangqi.board_9x10, moves);
   }
+}
+
+generate_moves_for_piece :: (xiangqi: *Xiangqi, moves: *Moves, row: u8, col: u8) {
+  piece := xiangqi.board_9x10[row][col];
+  // no piece at the square.
+  if piece == 0 then
+    return;
+  piece >>= 2;
+  from := index_of(row, col);
+  if piece == {
+  case G;
+    general_moves(from, xiangqi.board_9x10, moves);
+  case A;
+    advisor_moves(from, xiangqi.board_9x10, moves);
+  case E;
+    col_mask: s64 = 0b_00000_11111;
+    ifx xiangqi.turn == 1 then col_mask = 0b_11111_00000;
+    elephant_moves(from, col_mask, xiangqi.board_9x10, moves);
+  case H;
+    knight_moves(from, xiangqi.board_9x10, moves);
+  case R;
+    rook_moves(from, xiangqi.board_9x10, xiangqi.board_10x9, moves);
+  case C;
+    cannon_moves(from, xiangqi.board_9x10, xiangqi.board_10x9, moves);
+  case S;
+    advance: s8 = 1;
+    col_mask: u64 = 0b_01111_11000;
+    horizontal_mask: u64 = 0b_11111_00000;
+    if xiangqi.turn == 1 {
+      advance = -1;
+      col_mask = 0b_00011_11110;
+      horizontal_mask = 0b_00000_11111;
+    }
+    soldier_moves(from, advance, col_mask, horizontal_mask, xiangqi.board_9x10, moves);
+  }
+
 }
 
 G :: 0; // general
@@ -293,6 +318,12 @@ remove_piece_from_array :: (array: Array($N, u8), index: u8) {
       break;
     }
   }
+}
+
+reset :: (array: *Array($N, $T)) {
+  array.count = 0;
+  data := array.array.data;
+  memset(data, 0, size_of(T) * N);
 }
 
 append :: (a: *Array($N, $T), item: T) #expand {
@@ -794,6 +825,13 @@ quiet_sliding_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, 
 cannon_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: *Moves) {
   cannon_captures(from, board9x10, board10x9, moves);
   quiet_sliding_moves(from, board9x10, board10x9, moves);
+}
+
+// flip the index.
+orient_index :: (index: u8) -> u8 {
+  row, col := row_col_of(index);
+  col = 9 - col;
+  return index_of(row, col);
 }
 
 index_of :: (row: u8, col: u8) -> u8 #expand {
