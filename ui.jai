@@ -233,7 +233,7 @@ main :: () {
       turn := (index & 2) >> 1;
       index >>= 2;
       sprite_index := ren_idx[index];
-      render_piece_drag(mouse_x, mouse_y, sq/2.0, sq, from_index, sprite_index, turn, color);
+      render_piece_drag(mouse_x, mouse_y, sq/2.0, sq, orient_piece(from_index), sprite_index, turn, color);
     }
   }
 
@@ -276,7 +276,7 @@ main :: () {
   }
 
   render_piece :: (board_x: float, board_y: float, sq: float, from: u8, sprite_x: float, turn: s64, color: Vector4) {
-    if xiangqi_mouse == XiangqiMouse.Drag && from == from_index then {
+    if xiangqi_mouse == XiangqiMouse.Drag && from == orient_piece(from_index) then {
       return;
     }
 
@@ -300,16 +300,21 @@ main :: () {
 
   render_possible_move :: (board_x: float, board_y: float, sq: float, from: u8) {
     row, col := row_col_of(from);
+    sprite_x := 3.0;
+    piece := xiangqi.board_9x10[row][col];
+    if piece != 0 then
+      sprite_x -= 1.0;
+    sprite_y := 0.0;
+
+
+    row, col = row_col_of(orient_piece(from));
+
     index_x := cast(float) row;
     index_y := cast(float) col;
     gridx := board_x + index_x*sq; 
     gridy := board_y + index_y*sq;
 
     color := Vector4.{1.0, .55, 0.0, 0.75};
-    sprite_x := 3.0;
-    if xiangqi.board_9x10[row][col] != 0 then
-      sprite_x -= 1.0;
-    sprite_y := 0.0;
 
     uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/5.0);
     uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/5.0);
@@ -317,7 +322,7 @@ main :: () {
     uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
 
     // enlarge or make it smaller to make the move highlighting more aesthetically pleasing... 
-    if xiangqi.board_9x10[row][col] != 0 then {
+    if piece != 0 then {
       immediate_quad(gridx - .05*sq, gridy - .05*sq, gridx + 1.05*sq, gridy + 1.05*sq, color, uv0, uv1, uv2, uv3);
     } else {
       immediate_quad(gridx + 0.25 * sq, gridy + 0.25 * sq, gridx + 0.75 * sq, gridy + 0.75 * sq, color, uv0, uv1, uv2, uv3);
@@ -339,6 +344,7 @@ main :: () {
     uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
 
     immediate_quad(mousex - hsq, mousey - hsq, mousex + hsq, mousey + hsq, color, uv0, uv1, uv2, uv3);
+
   }
 
 }

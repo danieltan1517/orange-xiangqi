@@ -838,6 +838,7 @@ cannon_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: 
 // flip the index.
 orient_index :: (index: u8) -> u8 {
   row, col := row_col_of(index);
+  row = 8 - row;
   col = 9 - col;
   return index_of(row, col);
 }
