@@ -44,7 +44,6 @@ main :: () {
     reset_temporary_storage();
   }
 
-  
   init_textures :: () #expand {
     success := simp.texture_load_from_file(*sprites, "data/xiangqi.png");
     assert(success);
@@ -67,7 +66,6 @@ main :: () {
         row = 8 - row;
         col = 9 - col;
       }
-      // print("%\n", xiangqi_mouse);
       if xiangqi_mouse == {
       case XiangqiMouse.Idle;
         if key_pressed == 1 then {
@@ -176,6 +174,10 @@ main :: () {
 
     board_x -= hsq;
     board_y -= hsq;
+    for move: moves {
+      to := move.to;
+      render_possible_move(board_x, board_y, sq, to);
+    }
 
     // draw all the pieces.
     for piece_array, turn: xiangqi.pieces {
@@ -285,6 +287,32 @@ main :: () {
     uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
 
     immediate_quad(gridx, gridy, gridx + sq, gridy + sq, color, uv0, uv1, uv2, uv3);
+  }
+
+  render_possible_move :: (board_x: float, board_y: float, sq: float, from: u8) {
+    row, col := row_col_of(from);
+    index_x := cast(float) row;
+    index_y := cast(float) col;
+    gridx := board_x + index_x*sq; 
+    gridy := board_y + index_y*sq;
+
+    color := Vector4.{1.0, .55, 0.0, 0.75};
+    sprite_x := 3.0;
+    if xiangqi.board_9x10[row][col] != 0 then
+      sprite_x -= 1.0;
+    sprite_y := 0.0;
+
+    uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/5.0);
+    uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/5.0);
+    uv2 := make_vector2((sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
+    uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
+
+    // enlarge or make it smaller to make the move highlighting more aesthetically pleasing... 
+    if xiangqi.board_9x10[row][col] != 0 then {
+      immediate_quad(gridx - .05*sq, gridy - .05*sq, gridx + 1.05*sq, gridy + 1.05*sq, color, uv0, uv1, uv2, uv3);
+    } else {
+      immediate_quad(gridx + 0.25 * sq, gridy + 0.25 * sq, gridx + 0.75 * sq, gridy + 0.75 * sq, color, uv0, uv1, uv2, uv3);
+    }
   }
 
   render_piece_drag :: (mousex: float, mousey: float, hsq: float, sq: float, from: u8, sprite_x: float, turn: s64, color: Vector4) {

@@ -286,10 +286,6 @@ generate_moves_for_piece :: (xiangqi: *Xiangqi, moves: *Moves, row: u8, col: u8)
     }
     soldier_moves(from, advance, col_mask, horizontal_mask, xiangqi.board_9x10, moves);
   }
-  /*print("moves added: %\n", moves.count);
-  for mov: moves {
-    print("(%,%)\n", formatInt(mov.from, 0x10), formatInt(mov.to, 0x10));
-  }*/
 }
 
 G :: 0; // general
