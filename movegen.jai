@@ -249,6 +249,12 @@ generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
 
 generate_moves_for_piece :: (xiangqi: *Xiangqi, moves: *Moves, row: u8, col: u8) {
   piece := xiangqi.board_9x10[row][col];
+  turn := xiangqi.turn;
+
+  if ((piece & 0x2) >> 1) != turn {
+    return;
+  }
+
   // no piece at the square.
   if piece == 0 then
     return;
@@ -261,7 +267,7 @@ generate_moves_for_piece :: (xiangqi: *Xiangqi, moves: *Moves, row: u8, col: u8)
     advisor_moves(from, xiangqi.board_9x10, moves);
   case E;
     col_mask: s64 = 0b_00000_11111;
-    ifx xiangqi.turn == 1 then col_mask = 0b_11111_00000;
+    ifx turn == 1 then col_mask = 0b_11111_00000;
     elephant_moves(from, col_mask, xiangqi.board_9x10, moves);
   case H;
     knight_moves(from, xiangqi.board_9x10, moves);
@@ -273,14 +279,17 @@ generate_moves_for_piece :: (xiangqi: *Xiangqi, moves: *Moves, row: u8, col: u8)
     advance: s8 = 1;
     col_mask: u64 = 0b_01111_11000;
     horizontal_mask: u64 = 0b_11111_00000;
-    if xiangqi.turn == 1 {
+    if turn == 1 {
       advance = -1;
       col_mask = 0b_00011_11110;
       horizontal_mask = 0b_00000_11111;
     }
     soldier_moves(from, advance, col_mask, horizontal_mask, xiangqi.board_9x10, moves);
   }
-
+  /*print("moves added: %\n", moves.count);
+  for mov: moves {
+    print("(%,%)\n", formatInt(mov.from, 0x10), formatInt(mov.to, 0x10));
+  }*/
 }
 
 G :: 0; // general
@@ -371,7 +380,7 @@ general_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
     }
     to := index_of(row_to, col);
     capture := board[row_to][col];
-    if (capture & 0x2) != (piece & 0x2) {
+    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
     }
