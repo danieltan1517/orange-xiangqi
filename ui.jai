@@ -20,14 +20,24 @@ main :: () {
       }
     }
 
-    for event: events_this_frame {
-      if event.type == .QUIT then {
+    mouse_x, mouse_y := get_mouse_pointer_position(win, true);
+    mouse_event := false;
+    key_pressed := 0;
+    for e: events_this_frame {
+      if e.type == .QUIT then {
         break render_loop;
       }
-      getrect_handle_event(event);
+      getrect_handle_event(e);
+      if e.type == .KEYBOARD then {
+        if e.key_code == .MOUSE_BUTTON_LEFT {
+          key_pressed = e.key_pressed;
+          mouse_event = true;
+          xiangqi_board_click(cast(float) mouse_x, cast(float) mouse_y, mouse_event, key_pressed);
+        }
+      }
     }
 
-    render_xiangqiboard();
+    render_xiangqiboard(cast(float)mouse_x, cast(float)mouse_y, mouse_event);
     render_ui();
     sleep_milliseconds(10);
     simp.swap_buffers(win);
@@ -40,11 +50,31 @@ main :: () {
     assert(success);
   }
 
+  xiangqi_board_click :: (x: float, y: float, mouse_event: bool, key_pressed: int) {
+    board_margin := min(center_x, center_y) * .925;
+    sq := board_margin / 5.0;
+    hsq := sq / 2.0; //hsq = half square
+    board_x := center_x - sq * 4.5;
+    board_y := center_y - sq * 5.0;
+
+    end_x := board_x + sq * 9.0;
+    end_y := board_y + sq * 10.0;
+
+    if mouse_event && x >= board_x && x <= end_x && y >= board_y && y <= end_y then {
+      row := cast(u8) ((x - board_x) / sq);
+      col := cast(u8) ((y - board_y) / sq);
+      if orient then {
+        row = 8 - row;
+        col = 9 - col;
+      }
+    }
+  }
+
   render_ui :: () #expand {
     time := get_time();
     ui_per_frame_update(win, width, height, time);
     k := height * 0.05;
-    r := get_rect(5.0, height - 5.0 - k, 8.5*k, k);
+    r := get_rect(5.0, height - 5.0 - k, 4.5*k, k);
     if base_checkbox(r, "Romanized", !chinese_pieces) then {
       chinese_pieces = !chinese_pieces;
     }
@@ -54,7 +84,7 @@ main :: () {
     }
   }
 
-  render_xiangqiboard :: () #expand {
+  render_xiangqiboard :: (mouse_x: float, mouse_y: float, mouse_event: bool) #expand {
     simp.clear_render_target(.15, .15, .15, 1.0);
     simp.set_shader_for_color();
     board_margin := min(center_x, center_y) * .925;
