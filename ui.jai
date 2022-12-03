@@ -5,10 +5,13 @@ main :: () {
 
   center_x = cast(float) width / 2.0;
   center_y = cast(float) height / 2.0;
+  init_sound(win);
   init_textures();
   ui_init();
 
   while render_loop := true {
+    dt = looptime_end - looptime_begin;
+    looptime_begin = looptime_end;
     update_window_events();
     for get_window_resizes() {
       if it.window == win {
@@ -39,9 +42,16 @@ main :: () {
 
     render_xiangqiboard(cast(float)mouse_x, cast(float)mouse_y, mouse_event);
     render_ui();
+
+    // sound effects.
+    pre_entity_update(sound_player);
+    for sound_player.streams  it.marked = true;
+    post_entity_update(sound_player, dt);
+
     sleep_milliseconds(10);
     simp.swap_buffers(win);
     reset_temporary_storage();
+    looptime_end = cast(float)get_time();
   }
 
   init_textures :: () #expand {
@@ -83,13 +93,7 @@ main :: () {
           piece := xiangqi.board_9x10[row_of(from_index)][col_of(from_index)];
           capture := xiangqi.board_9x10[row][col];
           move := Move32.{from_index, to_index, capture, piece};
-
-          for m: moves {
-            if m == move then {
-              make_move(*xiangqi, move);
-              break;
-            }
-          }
+          gui_make_move(move);
           xiangqi_mouse = XiangqiMouse.Idle;
           from_index = 0xFF;
           reset(*moves);
@@ -102,12 +106,7 @@ main :: () {
         piece := xiangqi.board_9x10[row_of(from_index)][col_of(from_index)];
         capture := xiangqi.board_9x10[row][col];
         move := Move32.{from_index, to_index, capture, piece};
-        for m: moves {
-          if m == move then {
-            make_move(*xiangqi, move);
-            break;
-          }
-        }
+        gui_make_move(move);
         xiangqi_mouse = XiangqiMouse.Idle;
         from_index = 0xFF;
         reset(*moves);
@@ -126,6 +125,14 @@ main :: () {
     r.y -= k + 5.0;
     if base_checkbox(r, "Orientation", !orient) then {
       orient = !orient;
+    }
+    r.y -= k + 5.0;
+    if base_checkbox(r, "Show Moves", show_moves) then {
+      show_moves = !show_moves;
+    }
+    r.y -= k + 5.0;
+    if base_checkbox(r, "Audio", sound) then {
+      sound = !sound;
     }
   }
 
@@ -174,9 +181,11 @@ main :: () {
 
     board_x -= hsq;
     board_y -= hsq;
-    for move: moves {
-      to := move.to;
-      render_possible_move(board_x, board_y, sq, to);
+    if show_moves == true then {
+      for move: moves {
+        to := move.to;
+        render_possible_move(board_x, board_y, sq, to);
+      }
     }
 
     // draw all the pieces.
@@ -340,8 +349,90 @@ height: s32 = 480;
 sprites: simp.Texture;
 center_x: float = 0.0;
 center_y: float = 0.0;
+chinese_pieces := false;
+orient := false;
+dt: float = 0.0;
+looptime_begin: float = 0;
+looptime_end: float = 0;
 xiangqi: Xiangqi;
 moves: Moves;
+sound: bool = true;
+
+// mouse moves.
+xiangqi_mouse := XiangqiMouse.Idle;
+from_index: u8 = 0xFF;
+show_moves: bool = true;
+
+// sound player.
+sound_player : *Sound_Player;
+sound_quiet_move: *Mixer_Sound_Data;
+sound_capture_move: *Mixer_Sound_Data;
+
+init_sound :: (win: Window_Type) {
+  sound_player = New(Sound_Player);
+  sound_player.update_history = true;
+  sound_quiet_move = load_wav_file("data/quiet_move.wav");
+  assert(sound_quiet_move != null);
+
+  sound_capture_move = load_wav_file("data/capture_move.wav");
+  assert(sound_capture_move != null);
+
+  // initialize sound player
+  init(sound_player, win, true, true);
+
+  // wav file.
+  load_wav_file :: (name: string) -> *Mixer_Sound_Data {
+    file_data, success := read_entire_file(name);
+    assert(success);
+    data := New(Mixer_Sound_Data);
+    data.name = copy_string(name);
+    data.buffer = file_data;
+
+    format, samples, success2, extra := get_wav_header(data.buffer);
+    if !success2 {
+      log("Unable to parse '%' as wav.\n", data.full_path);
+      return data;
+    }
+
+    if format.wFormatTag == WAVE_FORMAT_PCM {
+      data.type = Mixer_Sound_Data.Type.LINEAR_SAMPLE_ARRAY;
+      data.nchannels = cast(u16) format.nChannels;
+      data.nsamples_times_nchannels = samples.count/2;
+    } else if format.wFormatTag == WAVE_FORMAT_DVI_ADPCM {
+      data.type = Mixer_Sound_Data.Type.ADPCM_COMPRESSED;
+      data.wSamplesPerBlock = extra.wSamplesPerBlock;
+      data.nBlockAlign = format.nBlockAlign;
+      data.nchannels = cast(u16) format.nChannels;
+      data.nsamples_times_nchannels = extra.wSamplesAccordingToFactChunk * data.nchannels;
+    } else {
+      assert(false);
+    }
+
+    data.samples = cast(*s16) samples.data;
+    data.sampling_rate = cast(u32) format.nSamplesPerSec;
+    return data;
+  }
+}
+
+play_sound :: (data: *Mixer_Sound_Data, perturb: bool = true) -> *Sound_Stream {
+  stream := make_stream(sound_player, data);
+
+  if stream {
+    stream.sound_data = data;
+  }
+
+  if perturb && stream {
+    stream.user_volume_scale = random_get_within_range(0.7, 1.0);
+    stream.desired_rate = random_get_within_range(0.7, 1.22);
+  }
+
+  if stream {
+    // @Temporary @Hack! We do not get the duration by default from an ogg file...
+    stream.repeat_end_position = cast(int)(data.sampling_rate * 234.475);
+  }
+  
+  return stream;
+}
 
 immediate_quad :: (x0: float, y0: float, x1: float, y1: float, color: Vector4, uv0: Vector2, uv1: Vector2, uv2: Vector2, uv3: Vector2) {
   p0 := make_vector2(x0, y0);    
@@ -351,13 +442,29 @@ immediate_quad :: (x0: float, y0: float, x1: float, y1: float, color: Vector4, u
   simp.immediate_quad(p0, p1, p2, p3, color, uv0, uv1, uv2, uv3);
 }
 
-chinese_pieces := false;
-orient := false;
-
 orient_piece :: (index: u8) -> u8 {
   if orient == true then
     return orient_index(index);
   return index;
+}
+
+gui_make_move :: (move: Move32) {
+  for m: moves {
+    if m == move then {
+      make_move(*xiangqi, move);
+      sound_data: *Mixer_Sound_Data;
+      if move.capture == 0 {
+        sound_data = sound_quiet_move;
+      } else {
+        sound_data = sound_capture_move;
+      }
+
+      if sound == true then {
+        play_sound(sound_data);
+      }
+      break;
+    }
+  }
 }
 
 XiangqiMouse :: enum {
@@ -366,9 +473,6 @@ XiangqiMouse :: enum {
   Select;
 }
 
-xiangqi_mouse := XiangqiMouse.Idle;
-from_index: u8 = 0xFF;
-
 #import "Window_Creation";
 #import "System";
 #import "Basic";
@@ -376,4 +480,8 @@ simp :: #import "Simp";
 #import "Input";
 #import "Math";
 #import "GetRect";
+#import "Sound_Player";
+#import "Wav_File";
+#import "File";
+#import "Random";
 #load "movegen.jai";
