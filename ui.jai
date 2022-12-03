@@ -428,8 +428,8 @@ play_sound :: (data: *Mixer_Sound_Data, perturb: bool = true) -> *Sound_Stream {
   }
 
   if perturb && stream {
-    stream.user_volume_scale = random_get_within_range(0.7, 1.0);
-    stream.desired_rate = random_get_within_range(0.7, 1.22);
+    stream.user_volume_scale = random_get_within_range(0.9, 1.0);
+    stream.desired_rate = random_get_within_range(0.85, 1.15);
   }
 
   if stream {
