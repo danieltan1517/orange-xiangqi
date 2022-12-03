@@ -145,8 +145,12 @@ Pieces :: struct {
 
 Moves :: #type Array(128, Move32);
 
+operator == :: (a: Move32, b: Move32) -> bool #expand {
+  return a.move == b.move;
+}
+
 make_move :: (xiangqi: *Xiangqi, move: Move32) {
-  piece := move.piece;
+  piece := move.piece >> 2;
   from := move.from;
 
   // from:
@@ -160,9 +164,8 @@ make_move :: (xiangqi: *Xiangqi, move: Move32) {
   piece_code := encode_piece(piece, xiangqi.turn);
   xiangqi.board_9x10[row][col] = piece_code;
   xiangqi.board_10x9[col][row] = piece_code;
-
   array := *xiangqi.pieces[xiangqi.turn].piece[piece];
-  update_piece_array(<<array, from, to);
+  update_piece_array(array, from, to);
   xiangqi.turn ^= 1;
 
   // we already flipped the turn.
@@ -170,12 +173,12 @@ make_move :: (xiangqi: *Xiangqi, move: Move32) {
   if capture != 0 then {
     capture = capture >> 2;
     array := *xiangqi.pieces[xiangqi.turn].piece[capture];
-    remove_piece_from_array(<<array, to);
+    remove_piece_from_array(array, to);
   }
 }
 
 unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
-  piece := move.piece;
+  piece := move.piece >> 2;
   from  := move.from;
   to    := move.to;
 
@@ -186,7 +189,7 @@ unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
   xiangqi.board_10x9[col][row] = piece_code;
 
   array := *xiangqi.pieces[xiangqi.turn].piece[piece];
-  update_piece_array(<<array, to, from);
+  update_piece_array(array, to, from);
 
   // to:
   capture := move.capture;
@@ -299,22 +302,22 @@ Array :: struct(capacity: int, T: Type) {
   array: [capacity] T;
 }
 
-update_piece_array :: (array: Array($N, u8), from: u8, to: u8) {
+update_piece_array :: (array: *Array($N, u8), from: u8, to: u8) {
   for item, index: array {
     if item == from {
-      array[index] = to;
+      array.array[index] = to;
       break;
     }
   }
 }
 
-remove_piece_from_array :: (array: Array($N, u8), index: u8) {
+remove_piece_from_array :: (array: *Array($N, u8), value: u8) {
   for item, index: array {
-    if item == index {
+    if item == value {
       end := array.count-1;
-      array[index] = array[end];
-      array[end] = 0;
-      (*array).count -= 1; // hack
+      array.array[index] = array.array[end];
+      array.array[end] = 0;
+      array.count -= 1; // hack
       break;
     }
   }

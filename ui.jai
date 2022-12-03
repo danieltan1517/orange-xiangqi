@@ -67,6 +67,53 @@ main :: () {
         row = 8 - row;
         col = 9 - col;
       }
+      // print("%\n", xiangqi_mouse);
+      if xiangqi_mouse == {
+      case XiangqiMouse.Idle;
+        if key_pressed == 1 then {
+          piece := xiangqi.board_9x10[row][col];
+          if piece != 0 then {
+            xiangqi_mouse = XiangqiMouse.Drag;
+            generate_moves_for_piece(*xiangqi, *moves, row, col);
+            from_index = index_of(row, col);
+          }
+        }
+
+      case XiangqiMouse.Drag;
+        to_index := index_of(row, col);
+        if from_index != to_index then {
+          piece := xiangqi.board_9x10[row_of(from_index)][col_of(from_index)];
+          capture := xiangqi.board_9x10[row][col];
+          move := Move32.{from_index, to_index, capture, piece};
+
+          for m: moves {
+            if m == move then {
+              make_move(*xiangqi, move);
+              break;
+            }
+          }
+          xiangqi_mouse = XiangqiMouse.Idle;
+          from_index = 0xFF;
+          reset(*moves);
+        } else {
+          xiangqi_mouse = XiangqiMouse.Select;
+        }
+
+      case XiangqiMouse.Select;
+        to_index := index_of(row, col);
+        piece := xiangqi.board_9x10[row_of(from_index)][col_of(from_index)];
+        capture := xiangqi.board_9x10[row][col];
+        move := Move32.{from_index, to_index, capture, piece};
+        for m: moves {
+          if m == move then {
+            make_move(*xiangqi, move);
+            break;
+          }
+        }
+        xiangqi_mouse = XiangqiMouse.Idle;
+        from_index = 0xFF;
+        reset(*moves);
+      }
     }
   }
 
@@ -165,7 +212,17 @@ main :: () {
         sol = orient_piece(sol);
         render_piece(board_x, board_y, sq, sol, 6.0, turn, color);
       }
+    }
 
+    // dragged piece.
+    if xiangqi_mouse == XiangqiMouse.Drag then {
+      ren_idx :: float.[0.0,1.0,3.0,2.0,4.0,5.0,6.0];
+      row, col := row_col_of(from_index);
+      index := xiangqi.board_9x10[row][col];
+      turn := (index & 2) >> 1;
+      index >>= 2;
+      sprite_index := ren_idx[index];
+      render_piece_drag(mouse_x, mouse_y, sq/2.0, sq, from_index, sprite_index, turn, color);
     }
   }
 
@@ -208,6 +265,9 @@ main :: () {
   }
 
   render_piece :: (board_x: float, board_y: float, sq: float, from: u8, sprite_x: float, turn: s64, color: Vector4) {
+    if xiangqi_mouse == XiangqiMouse.Drag && from == from_index then {
+      return;
+    }
 
     row, col := row_col_of(from);
     index_x := cast(float) row;
@@ -226,6 +286,24 @@ main :: () {
 
     immediate_quad(gridx, gridy, gridx + sq, gridy + sq, color, uv0, uv1, uv2, uv3);
   }
+
+  render_piece_drag :: (mousex: float, mousey: float, hsq: float, sq: float, from: u8, sprite_x: float, turn: s64, color: Vector4) {
+
+    row, col := row_col_of(from);
+    index_x := cast(float) row;
+    index_y := cast(float) col;
+    sprite_y := 2.0 - cast(float)turn;
+    if chinese_pieces then
+      sprite_y += 2.0;
+
+    uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/5.0);
+    uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/5.0);
+    uv2 := make_vector2((sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
+    uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
+
+    immediate_quad(mousex - hsq, mousey - hsq, mousex + hsq, mousey + hsq, color, uv0, uv1, uv2, uv3);
+  }
+
 }
 
 #scope_file
@@ -253,6 +331,15 @@ orient_piece :: (index: u8) -> u8 {
     return orient_index(index);
   return index;
 }
+
+XiangqiMouse :: enum {
+  Idle;
+  Drag;
+  Select;
+}
+
+xiangqi_mouse := XiangqiMouse.Idle;
+from_index: u8 = 0xFF;
 
 #import "Window_Creation";
 #import "System";
