@@ -131,6 +131,7 @@ Move32 :: struct {
 }
 
 Pieces :: struct {
+  // padding out the arrays to the alignment.
   general:   Array(7, u8); // only be 1
   advisors:  Array(7, u8); // at most 2
   elephants: Array(7, u8); // at most 2
@@ -354,6 +355,93 @@ for_expansion :: (a: *Array($N, $T), body: Code, flags: For_Flags) #expand {
     `it := a.array[it_index];
     defer it_index += 1;
     #insert body;
+  }
+}
+
+is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
+  turn := xiangqi.turn;
+  adv := ifx turn == 0 cast(u8)1 else cast(u8)0xFF; 
+  gen := xiangqi.pieces[turn].general[0];
+  soldier_code := encode_piece(S, turn ^ 1);
+  if move.from == gen {
+    gen = move.to;
+  }
+  row, col := row_col_of(gen);
+ 
+  // soldier checks the king. 
+  if xiangqi.board_9x10[row][col+adv] == soldier_code && index_of(row,col+adv) != move.to then {
+    return false;
+  }
+  if xiangqi.board_9x10[row+1][col] == soldier_code && index_of(row+1,col) != move.to then {
+    return false;
+  }
+  if xiangqi.board_9x10[row-1][col] == soldier_code && index_of(row-1,col) != move.to then {
+    return false;
+  }
+
+  // knight checks the king...
+
+  // hmmmm.... foreach knight in knights:
+  //   check the distance to king
+  //   if halfway point == (2,1) or (1,2) then wrong.
+  knight_code := encode_piece(H, turn ^ 1);
+  col1 := col + adv;
+  if (xiangqi.board_9x10[row+1][col1] == 0 || index_of(row+1,col1) == move.from) && index_of(row+1,col1) != move.to {
+    if xiangqi.board_9x10[row+2][col1] == knight_code && index_of(row+2, col1) != move.to {
+      return false;
+    }
+    if xiangqi.board_9x10[row+1][col1+adv] == knight_code && index_of(row+1, col1+adv) != move.to {
+      return false;
+    }
+  }
+  if (xiangqi.board_9x10[row-1][col1] == 0 || index_of(row-1,col1) == move.from) && index_of(row-1,col1) != move.to {
+    if xiangqi.board_9x10[row-2][col1] == knight_code && index_of(row-2, col1) != move.to {
+      return false;
+    }
+    if xiangqi.board_9x10[row-1][col1+adv] == knight_code && index_of(row-1, col1+adv) != move.to {
+      return false;
+    }
+  }
+
+  col1 = col - adv;
+  if col1 >= 0 && col1 <= 9 {
+    if (xiangqi.board_9x10[row+1][col1] == 0 || index_of(row+1,col1) == move.from) && index_of(row+1,col1) != move.to {
+      if xiangqi.board_9x10[row+2][col1] == knight_code && index_of(row+2, col1) != move.to {
+        return false;
+      }
+      col2 := col1-adv;
+      if col2 >= 0 && col2 <= 9 
+        && xiangqi.board_9x10[row+1][col1-adv] == knight_code 
+        && index_of(row+1, col1-adv) != move.to {
+        return false;
+      }
+    }
+    if (xiangqi.board_9x10[row-1][col1] == 0 || index_of(row-1,col1) == move.from) && index_of(row-1,col1) != move.to {
+      if xiangqi.board_9x10[row-2][col1] == knight_code && index_of(row-2, col1) != move.to {
+        return false;
+      }
+      col2 := col1-adv;
+      if col2 >= 0 && col2 <= 9 
+         && xiangqi.board_9x10[row-1][col1-adv] == knight_code 
+         && index_of(row-1, col1-adv) != move.to {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+filter_legal_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
+  i := 0;
+  while i < moves.count {
+    move := moves.array[i];
+    if !is_legal(xiangqi, move) {
+      moves.count -= 1;
+      moves.array[i] = moves.array[moves.count];
+      continue;
+    }
+    i += 1;
   }
 }
 
@@ -915,6 +1003,16 @@ min :: (a: int, b: int) -> int #expand {
     cmovge c, b;
   }
   return c;
+}
+
+abs :: (a: int) -> int #expand {
+  eax: int;
+  #asm {
+    mov eax, a;
+    neg eax;
+    cmovs eax, a;
+  }
+  return eax;
 }
 
 #import "Basic";

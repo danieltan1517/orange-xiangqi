@@ -83,6 +83,7 @@ main :: () {
           if piece != 0 then {
             xiangqi_mouse = XiangqiMouse.Drag;
             generate_moves_for_piece(*xiangqi, *moves, row, col);
+            filter_legal_moves(*xiangqi, *moves);
             from_index = index_of(row, col);
           }
         }
@@ -111,6 +112,11 @@ main :: () {
         from_index = 0xFF;
         reset(*moves);
       }
+    } else {
+      // outside of the board.
+      xiangqi_mouse = XiangqiMouse.Idle; 
+      from_index = 0xFF;
+      reset(*moves);
     }
   }
 
