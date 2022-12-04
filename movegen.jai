@@ -179,30 +179,31 @@ make_move :: (xiangqi: *Xiangqi, move: Move32) {
 }
 
 unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
-  piece := move.piece >> 2;
-  from  := move.from;
   to    := move.to;
+  capture := move.capture;
+  if capture != 0 then {
+    cap := capture >> 2;
+    array := *xiangqi.pieces[xiangqi.turn].piece[cap];
+    append(array, to);
+  }
+
+  xiangqi.turn ^= 1;
+  piece := move.piece;
+  from  := move.from;
 
   // from:
   row, col := row_col_of(from);
-  piece_code := encode_piece(piece, xiangqi.turn ^ 1);
-  xiangqi.board_9x10[row][col] = piece_code;
-  xiangqi.board_10x9[col][row] = piece_code;
+  xiangqi.board_9x10[row][col] = piece;
+  xiangqi.board_10x9[col][row] = piece;
 
+  piece >>= 2;
   array := *xiangqi.pieces[xiangqi.turn].piece[piece];
   update_piece_array(array, to, from);
 
   // to:
-  capture := move.capture;
   row, col = row_col_of(to);
   xiangqi.board_9x10[row][col] = capture;
   xiangqi.board_10x9[col][row] = capture;
-  if capture != 0 then {
-    capture = capture >> 2;
-    array := *xiangqi.pieces[xiangqi.turn].piece[capture];
-    append(array, to);
-  }
-  xiangqi.turn ^= 1;
 }
 
 // generate pseudo legal moves for xiangqi.
@@ -337,6 +338,7 @@ reset :: (array: *Array($N, $T)) {
 }
 
 append :: (a: *Array($N, $T), item: T) #expand {
+  assert(a.count < a.capacity);
   a.array[a.count] = item;
   a.count += 1;
 }
