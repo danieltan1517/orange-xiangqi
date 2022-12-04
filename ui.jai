@@ -125,6 +125,10 @@ main :: () {
     ui_per_frame_update(win, width, height, time);
     k := height * 0.05;
     r := get_rect(5.0, height - 5.0 - k, 4.5*k, k);
+    if button(r, "New Game") then {
+      xiangqi_startpos(*xiangqi);
+    }
+    r.y -= k + 5.0;
     if base_checkbox(r, "Romanized", !chinese_pieces) then {
       chinese_pieces = !chinese_pieces;
     }

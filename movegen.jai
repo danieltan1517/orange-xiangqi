@@ -380,7 +380,6 @@ is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   }
 
   // knight checks the king...
-
   // hmmmm.... foreach knight in knights:
   //   check the distance to king
   //   if halfway point == (2,1) or (1,2) then wrong.
@@ -427,6 +426,112 @@ is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
         return false;
       }
     }
+  }
+
+  // rooks, cannons, flying general rule...
+  bit_rows := row_bits(xiangqi.board_10x9[col]);
+  if col == col_of(move.from) {
+    bit_rows &= cast(u64) ~(1 << row_of(move.from));
+  }
+
+  if col == col_of(move.to) {
+    bit_rows |= cast(u64) (1 << row_of(move.to));
+  }
+
+  gen_code := encode_piece(G, turn ^ 1);
+  rook_code := encode_piece(R, turn ^ 1);
+  cannon_code := encode_piece(C, turn ^ 1);
+
+  forward: u64 = cast(u64)0xFFFF << row;
+  backward := ~forward & 0x1FF;
+  forward <<= 1;
+  forward &= 0x1FF;
+  forward &= bit_rows;
+  backward &= bit_rows;
+  index1: s8 = -1;
+  index2: s8 = -1;
+  #asm {
+    bsf index1, forward;
+    bsr index2, backward;
+    blsr forward, forward;
+    btr backward, index2;
+  }
+
+  if index1 != -1 && move.to != index_of(cast(u8)index1,col) && xiangqi.board_9x10[index1][col] == rook_code {
+    return false;
+  }
+  if index2 != -1 && move.to != index_of(cast(u8)index2,col) && xiangqi.board_9x10[index2][col] == rook_code {
+    return false;
+  }
+
+  index1 = -1;
+  index2 = -1;
+  #asm {
+    bsf index1, forward;
+    bsr index2, backward;
+    blsr forward, forward;
+    btr backward, index2;
+  }
+
+  if index1 != -1 && move.to != index_of(cast(u8)index1,col) && xiangqi.board_9x10[index1][col] == cannon_code {
+    return false;
+  }
+  if index2 != -1 && move.to != index_of(cast(u8)index2,col) && xiangqi.board_9x10[index2][col] == cannon_code {
+    return false;
+  }
+
+  bit_cols := col_bits(xiangqi.board_9x10[row]);
+  if row == row_of(move.from) {
+    bit_cols &= cast(u64) ~(1 << col_of(move.from));
+  }
+
+  if row == row_of(move.to) {
+    bit_cols |= cast(u64) (1 << col_of(move.to));
+  }
+
+  forward = cast(u64)0xFFFF << col;
+  backward = ~forward & 0x3FF;
+  forward <<= 1;
+  forward &= 0x3FF;
+  forward &= bit_cols;
+  backward &= bit_cols;
+
+  index1 = -1;
+  index2 = -1;
+  #asm {
+    bsf index1, forward;
+    bsr index2, backward;
+    blsr forward, forward;
+    btr backward, index2;
+  }
+
+  if index1 != -1 && move.to != index_of(row,cast(u8)index1) {
+    code := xiangqi.board_9x10[row][index1];
+    if (code == rook_code || code == gen_code) {
+      return false;
+    }
+  }
+  if index2 != -1 && move.to != index_of(row,cast(u8)index2) {
+    code := xiangqi.board_9x10[row][index2];
+    if (code == rook_code || code == gen_code) {
+      return false;
+    }
+  }
+
+  index1 = -1;
+  index2 = -1;
+  #asm {
+    bsf index1, forward;
+    bsr index2, backward;
+    blsr forward, forward;
+    btr backward, index2;
+  }
+
+  if index1 != -1 && move.to != index_of(row,cast(u8)index1) && xiangqi.board_9x10[row][index1] == cannon_code {
+    return false;
+  }
+  if index2 != -1 && move.to != index_of(row,cast(u8)index2) && xiangqi.board_9x10[row][index2] == cannon_code {
+    return false;
   }
 
   return true;
