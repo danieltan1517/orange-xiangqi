@@ -124,10 +124,12 @@ main :: () {
   render_ui :: () #expand {
     time := get_time();
     ui_per_frame_update(win, width, height, time);
-    k := height * 0.05;
-    r := get_rect(5.0, height - 5.0 - k, 4.5*k, k);
+    k := height * 0.025;
+    r := get_rect(5.0, height - 5.0 - k, 8.5*k, k);
     if button(r, "New Game") then {
       xiangqi_startpos(*xiangqi);
+      prev_from = 0xFF;
+      prev_to   = 0xFF;
     }
     r.y -= k + 5.0;
     if base_checkbox(r, "Romanized", !chinese_pieces) then {
@@ -144,6 +146,10 @@ main :: () {
     r.y -= k + 5.0;
     if base_checkbox(r, "Audio", sound) then {
       sound = !sound;
+    }
+    r.y -= k + 5.0;
+    if base_checkbox(r, "Highlight Move", highlight_move) then {
+      highlight_move = !highlight_move;
     }
   }
 
@@ -196,6 +202,16 @@ main :: () {
       for move: moves {
         to := move.to;
         render_possible_move(board_x, board_y, sq, to);
+      }
+    }
+
+    if highlight_move == true then {
+      if prev_from != 0xFF then {
+        render_possible_move(board_x, board_y, sq, prev_from);
+      }
+
+      if prev_to != 0xFF then {
+        render_possible_move(board_x, board_y, sq, prev_to);
       }
     }
 
@@ -379,6 +395,9 @@ sound: bool = true;
 xiangqi_mouse := XiangqiMouse.Idle;
 from_index: u8 = 0xFF;
 show_moves: bool = true;
+highlight_move: bool = true;
+prev_from: u8 = 0xFF;
+prev_to: u8 = 0xFF;
 
 // sound player.
 sound_player : *Sound_Player;
@@ -468,6 +487,8 @@ orient_piece :: (index: u8) -> u8 {
 gui_make_move :: (move: Move32) {
   for m: moves {
     if m == move then {
+      prev_from = move.from;
+      prev_to   = move.to;
       make_move(*xiangqi, move);
       sound_data: *Mixer_Sound_Data;
       if move.capture == 0 {
@@ -475,7 +496,6 @@ gui_make_move :: (move: Move32) {
       } else {
         sound_data = sound_capture_move;
       }
-
       if sound == true then {
         play_sound(sound_data);
       }
