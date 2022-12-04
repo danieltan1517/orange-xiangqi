@@ -205,6 +205,7 @@ unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
   xiangqi.turn ^= 1;
 }
 
+// generate pseudo legal moves for xiangqi.
 generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   turn := xiangqi.turn;
   piece_array := *xiangqi.pieces[turn];

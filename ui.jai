@@ -1,4 +1,5 @@
 main :: () {
+
   win := create_window(width, height, "Xiangqi");
   simp.set_render_target(win);
   xiangqi_startpos(*xiangqi);
