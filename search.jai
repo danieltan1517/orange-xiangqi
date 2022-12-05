@@ -14,6 +14,8 @@ main :: () {
   row1, col1 := row_col_of(from);
   row2, col2 := row_col_of(to);
   print("bestmove (%,%) => (%,%)\n", row1, col1, row2, col2);
+
+  perft_test_suite();
 }
 
 perft_test_suite :: () {

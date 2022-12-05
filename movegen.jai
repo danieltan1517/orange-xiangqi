@@ -363,6 +363,7 @@ for_expansion :: (a: *Array($N, $T), body: Code, flags: For_Flags) #expand {
 
 is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   turn := xiangqi.turn;
+  opp  := turn ^ 1;
   adv := ifx turn == 0 cast(u8)1 else cast(u8)0xFF; 
   gen := xiangqi.pieces[turn].general[0];
   soldier_code := encode_piece(S, turn ^ 1);
@@ -383,51 +384,39 @@ is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   }
 
   // knight checks the king...
-  // hmmmm.... foreach knight in knights:
-  //   check the distance to king
-  //   if halfway point == (2,1) or (1,2) then wrong.
-  knight_code := encode_piece(H, turn ^ 1);
-  col1 := col + adv;
-  if (xiangqi.board_9x10[row+1][col1] == 0 || index_of(row+1,col1) == move.from) && index_of(row+1,col1) != move.to {
-    if xiangqi.board_9x10[row+2][col1] == knight_code && index_of(row+2, col1) != move.to {
-      return false;
+  knights := *xiangqi.pieces[opp].knights;
+  for kni: knights {
+    if move.to == kni then {
+      continue;
     }
-    if xiangqi.board_9x10[row+1][col1+adv] == knight_code && index_of(row+1, col1+adv) != move.to {
-      return false;
-    }
-  }
-  if (xiangqi.board_9x10[row-1][col1] == 0 || index_of(row-1,col1) == move.from) && index_of(row-1,col1) != move.to {
-    if xiangqi.board_9x10[row-2][col1] == knight_code && index_of(row-2, col1) != move.to {
-      return false;
-    }
-    if xiangqi.board_9x10[row-1][col1+adv] == knight_code && index_of(row-1, col1+adv) != move.to {
-      return false;
-    }
-  }
 
-  col1 = col - adv;
-  if col1 >= 0 && col1 <= 9 {
-    if (xiangqi.board_9x10[row+1][col1] == 0 || index_of(row+1,col1) == move.from) && index_of(row+1,col1) != move.to {
-      if xiangqi.board_9x10[row+2][col1] == knight_code && index_of(row+2, col1) != move.to {
-        return false;
-      }
-      col2 := col1-adv;
-      if col2 >= 0 && col2 <= 9 
-        && xiangqi.board_9x10[row+1][col1-adv] == knight_code 
-        && index_of(row+1, col1-adv) != move.to {
-        return false;
-      }
+    row_knight, col_knight := row_col_of(kni);
+    row_diff := cast(s8)row - cast(s8)row_knight;
+    col_diff := cast(s8)col - cast(s8)col_knight;
+    row_diff_abs := cast(s8) abs(row_diff);
+    col_diff_abs := cast(s8) abs(col_diff);
+    index_diff := index_of(cast(u8)row_diff_abs, cast(u8) col_diff_abs);
+    if index_diff != 0x21 && index_diff != 0x12 then {
+      continue;
     }
-    if (xiangqi.board_9x10[row-1][col1] == 0 || index_of(row-1,col1) == move.from) && index_of(row-1,col1) != move.to {
-      if xiangqi.board_9x10[row-2][col1] == knight_code && index_of(row-2, col1) != move.to {
-        return false;
-      }
-      col2 := col1-adv;
-      if col2 >= 0 && col2 <= 9 
-         && xiangqi.board_9x10[row-1][col1-adv] == knight_code 
-         && index_of(row-1, col1-adv) != move.to {
-        return false;
-      }
+
+    // make sure the knight is blocked.
+    row_diff /= 2;
+    col_diff /= 2;
+    row_result := cast(u8)(cast(s8)row_knight + row_diff);
+    col_result := cast(u8)(cast(s8)col_knight + col_diff);
+    index_result := index_of(row_result, col_result);
+    if index_result == move.to then {
+      continue;
+    }
+
+    if index_result == move.from then {
+      return false;
+    }
+
+    occ := xiangqi.board_9x10[row_result][col_result];
+    if occ == 0 then {
+      return false;
     }
   }
 
@@ -572,10 +561,10 @@ general_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
     }
     to := index_of(row_to, col);
     capture := board[row_to][col];
-    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
-      move := Move32.{from, to, capture, piece};
-      append(moves, move);
-    }
+    if (capture & 0x3) == (piece & 0x3) then
+      continue;
+    move := Move32.{from, to, capture, piece};
+    append(moves, move);
   } 
 
   // vertical row movements.
@@ -590,10 +579,10 @@ general_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
     }
     capture := board[row][col_to];
     to := index_of(row, col_to);
-    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
-      move := Move32.{from, to, capture, piece};
-      append(moves, move);
-    }
+    if (capture & 0x3) == (piece & 0x3) then
+      continue;
+    move := Move32.{from, to, capture, piece};
+    append(moves, move);
   } 
 
 }
@@ -626,10 +615,10 @@ advisor_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
       }
       capture := board[row_to][col_to];
       to := cast(u8) index_of(row_to, col_to);
-      if capture == 0 || (capture & 0x2) != (piece & 0x2) {
-        move := Move32.{from, to, capture, piece};
-        append(moves, move);
-      }
+      if (capture & 0x3) == (piece & 0x3) then
+        continue;
+      move := Move32.{from, to, capture, piece};
+      append(moves, move);
     }
   }
 
@@ -680,10 +669,10 @@ elephant_moves :: (from: u8, col_mask: s64, board: [9][10] u8, moves: *Moves) {
       if board[row_to1][col_to1] == 0 {
         to := index_of(cast(u8)row_to2, cast(u8)col_to2);
         capture := board[row_to2][col_to2];
-        if capture == 0 || (capture & 0x2) != (piece & 0x2) {
-          move := Move32.{from, to, capture, piece};
-          append(moves, move);
-        }
+        if (capture & 0x3) == (piece & 0x3) then
+          continue;
+        move := Move32.{from, to, capture, piece};
+        append(moves, move);
       }
     }
   }
@@ -705,7 +694,7 @@ soldier_moves :: (from: u8, advance: s8, col_mask: u64, horizontal_mask: u64, bo
     col_to := cast(u8)(cast(s8)col + advance);
     to := index_of(row, col_to);
     capture := board[row][col_to];
-    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+    if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
     }
@@ -724,10 +713,10 @@ soldier_moves :: (from: u8, advance: s8, col_mask: u64, horizontal_mask: u64, bo
       }
       to := index_of(cast(u8)row_to, col);
       capture := board[row_to][col];
-      if capture == 0 || (capture & 0x2) != (piece & 0x2) {
-        move := Move32.{from, to, capture, piece};
-        append(moves, move);
-      }
+      if (capture & 0x3) == (piece & 0x3) then
+        continue;
+      move := Move32.{from, to, capture, piece};
+      append(moves, move);
     }
   }
 }
@@ -763,10 +752,10 @@ knight_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
         }
         to := index_of(cast(u8)h2, cast(u8)vert);
         capture := board[h2][vert];
-        if capture == 0 || (capture & 0x2) != (piece & 0x2) {
-          move := Move32.{from, to, capture, piece};
-          append(moves, move);
-        }
+        if (capture & 0x3) == (piece & 0x3) then
+          continue;
+        move := Move32.{from, to, capture, piece};
+        append(moves, move);
       }
     }
   }
@@ -795,10 +784,10 @@ knight_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
         }
         to := index_of(cast(u8)horizontal, cast(u8)v2);
         capture := board[horizontal][v2];
-        if capture == 0 || (capture & 0x2) != (piece & 0x2) {
-          move := Move32.{from, to, capture, piece};
-          append(moves, move);
-        }
+        if (capture & 0x3) == (piece & 0x3) then
+          continue;
+        move := Move32.{from, to, capture, piece};
+        append(moves, move);
       }
     }
   }
@@ -830,7 +819,7 @@ rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves:
   if row_back != -1 {
     to := index_of(cast(u8)row_back, col);
     capture := board9x10[row_back][col];
-    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+    if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
     }
@@ -839,7 +828,7 @@ rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves:
   if row_forward != -1 {
     to := index_of(cast(u8)row_forward, col);
     capture := board9x10[row_forward][col];
-    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+    if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
     }
@@ -862,7 +851,7 @@ rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves:
   if col_back != -1 {
     to := index_of(row, cast(u8)col_back);
     capture := board9x10[row][col_back];
-    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+    if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
     }
@@ -871,7 +860,7 @@ rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves:
   if col_forward != -1 {
     to := index_of(row, cast(u8)col_forward);
     capture := board9x10[row][col_forward];
-    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+    if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
     }
@@ -904,7 +893,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
   if row_back != -1 {
     to := index_of(cast(u8)row_back, col);
     capture := board9x10[row_back][col];
-    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+    if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
     }
@@ -913,7 +902,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
   if row_forward != -1 {
     to := index_of(cast(u8)row_forward, col);
     capture := board9x10[row_forward][col];
-    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+    if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
     }
@@ -940,7 +929,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
   if col_back != -1 {
     to := index_of(row, cast(u8)col_back);
     capture := board9x10[row][col_back];
-    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+    if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
     }
@@ -949,7 +938,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
   if col_forward != -1 {
     to := index_of(row, cast(u8)col_forward);
     capture := board9x10[row][col_forward];
-    if capture == 0 || (capture & 0x2) != (piece & 0x2) {
+    if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
     }
