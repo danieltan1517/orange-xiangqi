@@ -1,6 +1,7 @@
 main :: () {
   xiangqi: Xiangqi;
   xiangqi_startpos(*xiangqi);
+
   time := get_time();
   score := negamax(*xiangqi, 5, -MATE, MATE);
   time = get_time() - time;
@@ -36,6 +37,31 @@ perft_test_suite :: () {
     }
   }
 
+}
+
+perft_divide :: (xiangqi: *Xiangqi, depth: int) -> int {
+  moves: Moves;
+  generate_moves(xiangqi, *moves);
+
+  time := get_time();
+  count := 0;
+  for mov: moves {
+    if !is_legal(xiangqi, mov) then
+      continue;
+    make_move(xiangqi, mov);
+    num_moves := perft(xiangqi, depth-1);
+    from := mov.from;
+    to := mov.to;
+    row1, col1 := row_col_of(from);
+    row2, col2 := row_col_of(to);
+    print("move (%,%) => (%,%): %\n", row1, col1, row2, col2, num_moves);
+    count += num_moves;
+    unmake_move(xiangqi, mov);
+  }
+  time = get_time() - time;
+
+  print("Total Moves: %, Time Taken: %\n", count, time);
+  return count;
 }
 
 perft :: (xiangqi: *Xiangqi, depth: int) -> int {
