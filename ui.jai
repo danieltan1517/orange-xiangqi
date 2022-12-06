@@ -9,6 +9,7 @@ main :: () {
   init_sound(win);
   init_textures();
   ui_init();
+  ctrl_pressed := 0;
 
   while render_loop := true {
     dt = looptime_end - looptime_begin;
@@ -37,6 +38,12 @@ main :: () {
           key_pressed = e.key_pressed;
           mouse_event = true;
           xiangqi_board_click(cast(float) mouse_x, cast(float) mouse_y, mouse_event, key_pressed);
+        } else if e.key_code == .CTRL {
+          ctrl_pressed = e.key_pressed;
+        } else if e.key_pressed == 1 && e.key_code == #char "Z" && ctrl_pressed {
+          gui_undo_move();
+        } else if e.key_pressed == 1 && e.key_code == #char "Y" && ctrl_pressed {
+          gui_redo_move();
         }
       }
     }
@@ -130,6 +137,15 @@ main :: () {
       xiangqi_startpos(*xiangqi);
       prev_from = 0xFF;
       prev_to   = 0xFF;
+    }
+
+    r.y -= k + 5.0;
+    if button(r, "Undo (Ctrl+Z)") then {
+      gui_undo_move();
+    }
+    r.y -= k + 5.0;
+    if button(r, "Redo (Ctrl+Y)") then {
+      gui_redo_move();
     }
     r.y -= k + 5.0;
     if base_checkbox(r, "Romanized", !chinese_pieces) then {
@@ -373,7 +389,6 @@ main :: () {
     immediate_quad(mousex - hsq, mousey - hsq, mousex + hsq, mousey + hsq, color, uv0, uv1, uv2, uv3);
 
   }
-
 }
 
 #scope_file
@@ -403,6 +418,9 @@ prev_to: u8 = 0xFF;
 sound_player : *Sound_Player;
 sound_quiet_move: *Mixer_Sound_Data;
 sound_capture_move: *Mixer_Sound_Data;
+
+moves_made: [256] Move32;
+moves_made_count: int = 0;
 
 init_sound :: (win: Window_Type) {
   sound_player = New(Sound_Player);
@@ -484,12 +502,50 @@ orient_piece :: (index: u8) -> u8 {
   return index;
 }
 
+gui_undo_move :: () {
+  if moves_made_count <= 0 then {
+    print("No moves to undo.\n");
+    return;
+  }
+
+  moves_made_count -= 1;
+  move := moves_made[moves_made_count];
+  unmake_move(*xiangqi, move);
+
+  if moves_made_count > 0 then {
+    peek := moves_made_count - 1;
+    last_move := moves_made[moves_made_count];
+    prev_from = last_move.from;
+    prev_to   = last_move.to;
+  } else {
+    prev_from = 0xFF;
+    prev_to   = 0xFF;
+  }
+}
+
+gui_redo_move :: () {
+  mov := moves_made[moves_made_count];
+  if mov == 0 then return;
+  next := moves_made[moves_made_count+1];
+  reset(*moves);
+  append(*moves, mov);
+  gui_make_move(mov);
+  reset(*moves);
+  moves_made[moves_made_count] = next;
+}
+
 gui_make_move :: (move: Move32) {
   for m: moves {
     if m == move then {
       prev_from = move.from;
       prev_to   = move.to;
       make_move(*xiangqi, move);
+
+      // add another move.
+      assert (moves_made_count < moves_made.count);
+      moves_made[moves_made_count] = move;
+      moves_made_count += 1;
+
       sound_data: *Mixer_Sound_Data;
       if move.capture == 0 {
         sound_data = sound_quiet_move;

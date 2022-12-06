@@ -150,6 +150,10 @@ operator == :: (a: Move32, b: Move32) -> bool #expand {
   return a.move == b.move;
 }
 
+operator == :: (a: Move32, b: u32) -> bool #expand {
+  return a.move == b;
+}
+
 make_move :: (xiangqi: *Xiangqi, move: Move32) {
   piece := move.piece >> 2;
   from := move.from;
