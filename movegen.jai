@@ -88,6 +88,9 @@ xiangqi_fen :: (xiangqi: *Xiangqi, fen: string) -> bool {
       case #char "A";
         side = RED;
         piece = A;
+      case #char "B";
+        side = RED;
+        piece = E;
       case #char "E";
         side = RED;
         piece = E;
@@ -100,6 +103,9 @@ xiangqi_fen :: (xiangqi: *Xiangqi, fen: string) -> bool {
       case #char "H";
         side = RED;
         piece = H;
+      case #char "N";
+        side = BLACK;
+        piece = H;
       case #char "P";
         side = RED;
         piece = S;
@@ -110,6 +116,9 @@ xiangqi_fen :: (xiangqi: *Xiangqi, fen: string) -> bool {
       case #char "a";
         side = BLACK;
         piece = A;
+      case #char "b";
+        side = BLACK;
+        piece = E;
       case #char "e";
         side = BLACK;
         piece = E;
@@ -122,17 +131,24 @@ xiangqi_fen :: (xiangqi: *Xiangqi, fen: string) -> bool {
       case #char "h";
         side = BLACK;
         piece = H;
+      case #char "n";
+        side = BLACK;
+        piece = H;
       case #char "p";
         side = BLACK;
         piece = S;
       case;
-        if let < #char "1" && let > #char "9" then
+        if let < #char "1" || let > #char "9" then {
+          print("invalid letter %\n", let);
           return false;
+        }
         let -= #char "1";
+        print("%\n", let);
         row += let;
         piece = 0xFF;
       }
       if piece != 0xFF {
+        print("(%,%)\n", row, col);
         add_piece(xiangqi, piece, side, row, col);
       }
       row += 1;
@@ -232,6 +248,30 @@ Move32 :: struct {
   #place from;
   #as move: u32;
 }
+
+append :: (builder: *String_Builder, move: Move32) {
+  row_from, col_from := row_col_of(move.from);
+  row_to, col_to := row_col_of(move.to);
+  append(builder, (row_from + #char "a"));
+  append(builder, (col_from + #char "0"));
+  append(builder, (row_to + #char "a"));
+  append(builder, (col_to + #char "0"));
+}
+
+to_move32 :: (str: string) -> Move32 {
+  row_from := str[0] - #char "a";
+  col_from := str[1] - #char "0";
+  row_to   := str[2] - #char "a";
+  col_to   := str[3] - #char "0";
+
+  from := index_of(row_from, col_from);
+  to   := index_of(row_to, col_to);
+  move: Move32;
+  move.from = from;
+  move.to   = to;
+  return move;
+}
+
 
 Pieces :: struct {
   // padding out the arrays to the alignment.
