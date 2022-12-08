@@ -226,17 +226,20 @@ main :: () {
     if show_moves == true then {
       for move: moves {
         to := move.to;
-        render_possible_move(board_x, board_y, sq, to);
+        color := Vector4.{.45, .0, 1., 0.55};
+        render_possible_move(board_x, board_y, sq, to, color);
       }
     }
 
     if highlight_move == true then {
       if prev_from != 0xFF then {
-        render_possible_move(board_x, board_y, sq, prev_from);
+        color := Vector4.{1.0, .55, 0.0, 0.75};
+        render_possible_move(board_x, board_y, sq, prev_from, color);
       }
 
       if prev_to != 0xFF then {
-        render_possible_move(board_x, board_y, sq, prev_to);
+        color := Vector4.{1.0, .55, 0.0, 0.75};
+        render_possible_move(board_x, board_y, sq, prev_to, color);
       }
     }
 
@@ -350,7 +353,7 @@ main :: () {
     immediate_quad(gridx, gridy, gridx + sq, gridy + sq, color, uv0, uv1, uv2, uv3);
   }
 
-  render_possible_move :: (board_x: float, board_y: float, sq: float, from: u8) {
+  render_possible_move :: (board_x: float, board_y: float, sq: float, from: u8, color: Vector4) {
     row, col := row_col_of(from);
     sprite_x := 3.0;
     piece := xiangqi.board_9x10[row][col];
@@ -365,8 +368,6 @@ main :: () {
     index_y := cast(float) col;
     gridx := board_x + index_x*sq; 
     gridy := board_y + index_y*sq;
-
-    color := Vector4.{1.0, .55, 0.0, 0.75};
 
     uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/5.0);
     uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/5.0);
