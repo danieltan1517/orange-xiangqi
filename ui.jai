@@ -1,5 +1,6 @@
 main :: () {
 
+  set_default_theme(default_theme_procs[Default_Themes.Grayscale]());
   win := create_window(width, height, "Xiangqi");
   simp.set_render_target(win);
   xiangqi_startpos(*xiangqi);
@@ -129,9 +130,10 @@ main :: () {
   }
 
   render_ui :: () #expand {
+    text_theme: *Text_Input_Theme = *default_overall_theme.text_input_theme;
     time := get_time();
     ui_per_frame_update(win, width, height, time);
-    k := height * 0.025;
+    k := height * 0.05;
     r := get_rect(5.0, height - 5.0 - k, 8.5*k, k);
     if button(r, "New Game") then {
       xiangqi_startpos(*xiangqi);
@@ -166,6 +168,13 @@ main :: () {
     r.y -= k + 5.0;
     if base_checkbox(r, "Highlight Move", highlight_move) then {
       highlight_move = !highlight_move;
+    }
+
+    r.y -= k + 5.0;
+    action, str, state := text_input(r, "", text_theme);
+    if action & .ENTERED {
+      xiangqi_fen(*xiangqi, str);
+      reset(state);
     }
   }
 

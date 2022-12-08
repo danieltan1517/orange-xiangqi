@@ -44,13 +44,116 @@ xiangqi_startpos :: (xiangqi: *Xiangqi) {
   add_piece(xiangqi, S, BLACK, 6, 6);
   add_piece(xiangqi, S, BLACK, 8, 6);
 
-  add_piece :: (xiangqi: *Xiangqi, piece: u8, side: u8, row: u8, col: u8) {
-    piece_code := encode_piece(piece, side);
-    xiangqi.board_9x10[row][col] = piece_code;
-    xiangqi.board_10x9[col][row] = piece_code;
-    index := index_of(row, col);
-    append(*xiangqi.pieces[side].piece[piece], index);
+}
+
+add_piece :: (xiangqi: *Xiangqi, piece: u8, side: u8, row: u8, col: u8) {
+  piece_code := encode_piece(piece, side);
+  xiangqi.board_9x10[row][col] = piece_code;
+  xiangqi.board_10x9[col][row] = piece_code;
+  index := index_of(row, col);
+  append(*xiangqi.pieces[side].piece[piece], index);
+}
+
+xiangqi_fen :: (xiangqi: *Xiangqi, fen: string) -> bool {
+  // TODO: just get fen string working...no error checking until later...
+  // https://www.wxf-xiangqi.org/images/computer-xiangqi/fen-for-xiangqi-chinese-chess.pdf
+  // K = king
+  // A = advisor
+  // E = elephant
+  // R = rook
+  // C = cannon
+  // H = horse
+  // P = pawn
+  // "w" if white to move/"red" to move
+  // "b" if black to move
+
+  memset(xiangqi, 0, size_of(Xiangqi));
+  board_fen, success1 := parse_token(*fen);
+  if success1 == false then
+    return false;
+  for token, index: split(board_fen, "/") {
+    array:[] u8; 
+    array.data = token.data;
+    array.count = token.count;
+    col := cast(u8)(9 - index);
+    row: u8 = 0;
+    for let: array {
+      side: u8 = 0;
+      piece: u8 = 0;
+
+      if let == {
+      case #char "K";
+        side = RED;
+        piece = G;
+      case #char "A";
+        side = RED;
+        piece = A;
+      case #char "E";
+        side = RED;
+        piece = E;
+      case #char "R";
+        side = RED;
+        piece = R;
+      case #char "C";
+        side = RED;
+        piece = C;
+      case #char "H";
+        side = RED;
+        piece = H;
+      case #char "P";
+        side = RED;
+        piece = S;
+
+      case #char "k";
+        side = BLACK;
+        piece = G;
+      case #char "a";
+        side = BLACK;
+        piece = A;
+      case #char "e";
+        side = BLACK;
+        piece = E;
+      case #char "r";
+        side = BLACK;
+        piece = R;
+      case #char "c";
+        side = BLACK;
+        piece = C;
+      case #char "h";
+        side = BLACK;
+        piece = H;
+      case #char "p";
+        side = BLACK;
+        piece = S;
+      case;
+        if let < #char "1" && let > #char "9" then
+          return false;
+        let -= #char "1";
+        row += let;
+        piece = 0xFF;
+      }
+      if piece != 0xFF {
+        add_piece(xiangqi, piece, side, row, col);
+      }
+      row += 1;
+
+    }
   }
+
+  // get the turn.
+  turn_fen, success2 := parse_token(*fen);
+  if success2 == false then
+    return false;
+  if equal(turn_fen, "w") {
+    xiangqi.turn = 0;
+  } else if equal(turn_fen, "b") {
+    xiangqi.turn = 1;
+  } else {
+    return false;
+  }
+
+  // we do not care about the rest of string, so return true.
+  return true;
 }
 
 encode_piece :: (piece: u8, side: u8) -> u8 #expand {
@@ -1117,3 +1220,4 @@ abs :: (a: int) -> int #expand {
 }
 
 #import "Basic";
+#import "String";

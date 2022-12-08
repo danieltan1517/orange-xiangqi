@@ -1,20 +1,9 @@
 main :: () {
   xiangqi: Xiangqi;
-  xiangqi_startpos(*xiangqi);
-
-  time := get_time();
-  score := negamax(*xiangqi, 5, -MATE, MATE);
-  time = get_time() - time;
-  time_ms: int = xx (time*1000.0);
-  nps: int = xx (cast(float)nodes / time);
-  bmove := best_moves[0];
-  print("cp % nodes % time % nps %\n", score, nodes, time_ms, nps);
-  from := bmove.from;
-  to := bmove.to;
-  row1, col1 := row_col_of(from);
-  row2, col2 := row_col_of(to);
-  print("bestmove (%,%) => (%,%)\n", row1, col1, row2, col2);
-
+  xiangqi_fen(*xiangqi, "rheakaehr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RHEAKAEHR w - - 0 1");
+  print_board(*xiangqi);
+  xiangqi_fen(*xiangqi, "r1ea1a3/4kh3/2h1e4/pHp1p1p1p/4c4/6P2/P1P2R2P/1CcC5/9/2EAKAE2 w - - 0 1");
+  print_board(*xiangqi);
   perft_test_suite();
 }
 
@@ -26,6 +15,21 @@ perft_test_suite :: () {
   test(*xiangqi, "startpos", 3, 79_666);
   test(*xiangqi, "startpos", 4, 3_290_240);
   test(*xiangqi, "startpos", 5, 133_312_995);
+
+  fen := "r1ea1a3/4kh3/2h1e4/pHp1p1p1p/4c4/6P2/P1P2R2P/1CcC5/9/2EAKAE2 w - - 0 1";
+  xiangqi_fen(*xiangqi, fen);
+  test(*xiangqi, fen, 1, 38);
+  test(*xiangqi, fen, 2, 1_128);
+  test(*xiangqi, fen, 3, 43_929);
+  test(*xiangqi, fen, 4, 1_339_047);
+
+  fen = "1ceak4/9/h2a5/2p1p3p/5cp2/2h2H3/6PCP/3AE4/2C6/3A1K1H1 w - - 0 1";
+  xiangqi_fen(*xiangqi, fen);
+  test(*xiangqi, fen, 1, 7);
+  test(*xiangqi, fen, 2, 281);
+  test(*xiangqi, fen, 3, 8_620);
+  test(*xiangqi, fen, 4, 326_201);
+  test(*xiangqi, fen, 5, 10_369_923);
   
   test :: (xiangqi: *Xiangqi, title: string, depth: int, expected: int) {
     time := get_time();
