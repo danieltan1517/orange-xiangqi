@@ -258,7 +258,7 @@ append :: (builder: *String_Builder, move: Move32) {
   append(builder, (col_to + #char "0"));
 }
 
-to_move32 :: (str: string) -> Move32 {
+to_move32 :: (xiangqi: *Xiangqi, str: string) -> Move32 {
   row_from := str[0] - #char "a";
   col_from := str[1] - #char "0";
   row_to   := str[2] - #char "a";
@@ -269,6 +269,8 @@ to_move32 :: (str: string) -> Move32 {
   move: Move32;
   move.from = from;
   move.to   = to;
+  move.piece = xiangqi.board_9x10[row_from][col_from];
+  move.capture = xiangqi.board_9x10[row_to][col_to];
   return move;
 }
 

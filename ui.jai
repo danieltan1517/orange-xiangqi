@@ -6,6 +6,9 @@ main :: () {
   win := create_window(width, height, "Xiangqi");
   simp.set_render_target(win);
   xiangqi_startpos(*xiangqi);
+  reset(*moves);
+  generate_moves(*xiangqi, *moves);
+  filter_legal_moves(*xiangqi, *moves);
 
   center_x = cast(float) width / 2.0;
   center_y = cast(float) height / 2.0;
@@ -13,6 +16,11 @@ main :: () {
   init_textures();
   ui_init();
   ctrl_pressed := 0;
+
+
+  engine, tf := load_engine("ele_eye");
+  assert(tf);
+  defer close_engine(*engine);
 
   while render_loop := true {
     dt = looptime_end - looptime_begin;
@@ -50,6 +58,9 @@ main :: () {
         }
       }
     }
+
+    if moves.count then
+      update_ucci(*engine);
 
     render_xiangqiboard(cast(float)mouse_x, cast(float)mouse_y, mouse_event);
     render_ui();
@@ -93,8 +104,6 @@ main :: () {
           piece := xiangqi.board_9x10[row][col];
           if piece != 0 then {
             xiangqi_mouse = XiangqiMouse.Drag;
-            generate_moves_for_piece(*xiangqi, *moves, row, col);
-            filter_legal_moves(*xiangqi, *moves);
             from_index = index_of(row, col);
           }
         }
@@ -108,7 +117,6 @@ main :: () {
           gui_make_move(move);
           xiangqi_mouse = XiangqiMouse.Idle;
           from_index = 0xFF;
-          reset(*moves);
         } else {
           xiangqi_mouse = XiangqiMouse.Select;
         }
@@ -121,18 +129,17 @@ main :: () {
         gui_make_move(move);
         xiangqi_mouse = XiangqiMouse.Idle;
         from_index = 0xFF;
-        reset(*moves);
       }
     } else {
       // outside of the board.
       xiangqi_mouse = XiangqiMouse.Idle; 
       from_index = 0xFF;
-      reset(*moves);
     }
   }
 
   render_ui :: () #expand {
-    text_theme: *Text_Input_Theme = *default_overall_theme.text_input_theme;
+    text_theme  := *default_overall_theme.text_input_theme;
+    label_theme := *default_overall_theme.label_theme;
     time := get_time();
     ui_per_frame_update(win, width, height, time);
     k := height * 0.05;
@@ -176,7 +183,13 @@ main :: () {
     action, str, state := text_input(r, "", text_theme);
     if action & .ENTERED {
       xiangqi_fen(*xiangqi, str);
+      fen_string = copy_string(str);
       reset(state);
+    }
+
+    if status_string {
+      r = get_rect(5.0, 5.0, 8.5*k, k);
+      label(r, status_string, label_theme);
     }
   }
 
@@ -227,6 +240,9 @@ main :: () {
     board_y -= hsq;
     if show_moves == true then {
       for move: moves {
+        if move.from != from_index then {
+          continue;
+        }
         to := move.to;
         color := Vector4.{.45, .0, .45, 0.55};
         render_possible_move(board_x, board_y, sq, to, color);
@@ -435,6 +451,9 @@ sound_capture_move: *Mixer_Sound_Data;
 moves_made: [256] Move32;
 moves_made_count: int = 0;
 
+// status label.
+status_string: string;
+
 init_sound :: (win: Window_Type) {
   sound_player = New(Sound_Player);
   sound_player.update_history = true;
@@ -525,6 +544,10 @@ gui_undo_move :: () {
   move := moves_made[moves_made_count];
   unmake_move(*xiangqi, move);
 
+  reset(*moves);
+  generate_moves(*xiangqi, *moves);
+  filter_legal_moves(*xiangqi, *moves);
+
   if moves_made_count > 0 then {
     peek := moves_made_count - 1;
     last_move := moves_made[moves_made_count];
@@ -540,10 +563,7 @@ gui_redo_move :: () {
   mov := moves_made[moves_made_count];
   if mov == 0 then return;
   next := moves_made[moves_made_count+1];
-  reset(*moves);
-  append(*moves, mov);
   gui_make_move(mov);
-  reset(*moves);
   moves_made[moves_made_count] = next;
 }
 
@@ -568,6 +588,12 @@ gui_make_move :: (move: Move32) {
       if sound == true then {
         play_sound(sound_data);
       }
+      reset(*moves);
+      generate_moves(*xiangqi, *moves);
+      filter_legal_moves(*xiangqi, *moves);
+      if moves.count == 0 then {
+        status_string = "Checkmate.";  
+      }
       break;
     }
   }
@@ -582,12 +608,13 @@ XiangqiMouse :: enum {
 Engine :: struct {
   process: Process;
   state: EngineState;
+  timer: float;
 }
 
 EngineState :: enum {
-  uciok;
+  ucciok;
   isready;
-  ucinewgame;
+  uccinewgame;
   idle;
   go;
   bestmove;
@@ -604,6 +631,7 @@ load_engine :: (name: string) -> Engine, bool {
   engine: Engine;
   command := join(path, name, EXE);
   success := create_process(*engine.process, command, capture_and_return_output=true);
+  engine.state = .ucciok;
   return engine, success;
 }
 
@@ -611,13 +639,174 @@ update_ucci :: (engine: *Engine) {
   process := *engine.process;
   state := engine.state;
   defer engine.state = state;
+  SIZE :: 4096;
+  #if OS == .WINDOWS {
+    NEWLINE :: "\r\n";
+  } else {
+    NEWLINE :: "\n";
+  }
 
+  if state == {
 
+  case .ucciok;
+    out_buff := NewArray(SIZE, u8, allocator=temp);
+    err_buff: [] u8; // nothing.
+    success, output_bytes := read_from_process(process, out_buff, err_buff, timeout_ms=0);
+    messages: string;
+    messages.data = out_buff.data;
+    messages.count = output_bytes;
+    for msg, index: split(messages, NEWLINE) {
+      message := msg;
+      if message
+        print("%\n", message);
+      if equal(message, "ucciok") then {
+        state = .isready;
+        engine.timer = FLOAT32_INFINITY;
+      } 
+    }
 
+  case .isready;
+    out_buff := NewArray(SIZE, u8, allocator=temp);
+    err_buff: [] u8; // nothing.
+    success, output_bytes := read_from_process(process, out_buff, err_buff, timeout_ms=0);
+    messages: string;
+    messages.data = out_buff.data;
+    messages.count = output_bytes;
+    for msg, index: split(messages, NEWLINE) {
+      message := msg;
+      if message
+        print("%\n", message);
+      if equal(message, "readyok") then {
+        state = .uccinewgame;
+        engine.timer = FLOAT32_INFINITY;
+      } 
+    }
+  case .uccinewgame;
+    state = .idle;
+  case .idle;
+    if is_engine_turn() then {
+      state = .go;
+      engine.timer = FLOAT32_INFINITY;
+    }
+  case .go;
+    state = .bestmove;
+  case .bestmove;
+    if !is_engine_turn() then {
+      state = .idle;
+      engine.timer = FLOAT32_INFINITY;
+    } else {
+      out_buff := NewArray(SIZE, u8, allocator=temp);
+      err_buff: [] u8; // nothing.
+      success, output_bytes := read_from_process(process, out_buff, err_buff, timeout_ms=0);
+      messages: string;
+      messages.data = out_buff.data;
+      messages.count = output_bytes;
+      for msg, index: split(messages, NEWLINE) {
+        message := msg;
+        if message
+          print("%\n", message);
+        if starts_with(message, "bestmove ") then {
+          parse_token(*message);
+          message = eat_spaces(message);
+          mov_token := parse_token(*message);
+          mov := to_move32(*xiangqi, mov_token);
+          gui_make_move(mov);
+          state = .idle;
+        }
+      }
+    }
+  }
 
+  engine.timer += dt;
 
+  // write.
+  if state == {
+  case .ucciok;
+    if engine.timer > 3.0 then {
+      write_to_process(process, to_u8_array("ucci\n"));
+      engine.timer = 0.0;
+    } 
+  case .isready;
+    if engine.timer > 5.0 then {
+      write_to_process(process, to_u8_array("isready\n"));
+      engine.timer = 0.0;
+    } 
+  case .uccinewgame;
+    if engine.timer > 5.0 then {
+      write_to_process(process, to_u8_array("uccinewgame\n"));
+      engine.timer = 0.0;
+    }
+  case .idle;
+    engine.timer = FLOAT32_INFINITY;
+  case .go;
+    str := get_ucci_position();
+    gostr := "go depth 5\n";
+    write_to_process(process, to_u8_array(str));
+    write_to_process(process, to_u8_array(gostr));
+  case .bestmove;
+    // waiting to get the best move.
+    // don't do anything.
+  case .bug;
+
+  }
 }
 
+fen_string := "";
+
+get_ucci_position :: () -> string {
+  #if OS == .WINDOWS {
+    NEWLINE :: "\r\n";
+  } else {
+    NEWLINE :: "\n";
+  }
+
+  builder: String_Builder;
+  builder.allocator = temp;
+  if fen_string then
+    print_to_builder(*builder, "position fen %", fen_string);
+  else
+    append(*builder, "position startpos");
+  if moves_made_count > 0
+    append(*builder, " moves");
+  for index: 0..moves_made_count-1 {
+    move := moves_made[index];
+    append(*builder, " ");
+    append(*builder, move);
+  }
+  append(*builder, NEWLINE);
+  return builder_to_string(*builder, allocator=temp);
+}
+
+to_u8_array :: (str: string) -> [] u8 {
+  array: [] u8;
+  array.data = str.data;
+  array.count = str.count;
+  return array;
+}
+
+red_ai: bool = false;
+black_ai: bool = true;
+
+is_engine_turn :: () -> bool {
+  if xiangqi.turn == 0 && red_ai == true then
+    return true;
+  if xiangqi.turn == 1 && black_ai == true then
+    return true;
+  return false;
+}
+
+close_engine :: (engine: *Engine) {
+  // send a "quit" command before closing the chess engine.
+  process := *engine.process;
+  quit := "quit\n";
+  write_buffer: [] u8;
+  write_buffer.data = quit.data;
+  write_buffer.count = quit.count;
+  print("shutdown engine\n");
+  write_to_process(process, write_buffer);
+  deinit(process);
+  kill_process(process);
+}
 
 #import "Window_Creation";
 #import "System";
