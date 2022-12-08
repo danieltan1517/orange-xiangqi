@@ -1,5 +1,7 @@
 main :: () {
 
+  path = copy_string(path_strip_filename(get_path_of_running_executable()));
+  set_working_directory(path);
   set_default_theme(default_theme_procs[Default_Themes.Grayscale]());
   win := create_window(width, height, "Xiangqi");
   simp.set_render_target(win);
@@ -415,6 +417,7 @@ looptime_end: float = 0;
 xiangqi: Xiangqi;
 moves: Moves;
 sound: bool = true;
+path: string;
 
 // mouse moves.
 xiangqi_mouse := XiangqiMouse.Idle;
@@ -575,6 +578,46 @@ XiangqiMouse :: enum {
   Drag;
   Select;
 }
+
+Engine :: struct {
+  process: Process;
+  state: EngineState;
+}
+
+EngineState :: enum {
+  uciok;
+  isready;
+  ucinewgame;
+  idle;
+  go;
+  bestmove;
+  bug;
+}
+
+load_engine :: (name: string) -> Engine, bool {
+  #if OS == .WINDOWS {
+    EXE :: ".exe";
+  } else {
+    EXE "" "";
+  }
+
+  engine: Engine;
+  command := join(path, exe_name, EXE);
+  success := create_process(*engine.process, command, capture_and_return_output=true);
+  return engine, success;
+}
+
+update_ucci :: (engine: *Engine) {
+  process := *engine.process;
+  state := engine.state;
+  defer engine.state = state;
+
+
+
+
+
+}
+
 
 #import "Window_Creation";
 #import "System";
