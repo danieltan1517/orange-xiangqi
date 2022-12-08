@@ -228,7 +228,7 @@ main :: () {
     if show_moves == true then {
       for move: moves {
         to := move.to;
-        color := Vector4.{.45, .0, 1., 0.55};
+        color := Vector4.{.45, .0, .45, 0.55};
         render_possible_move(board_x, board_y, sq, to, color);
       }
     }
@@ -598,11 +598,11 @@ load_engine :: (name: string) -> Engine, bool {
   #if OS == .WINDOWS {
     EXE :: ".exe";
   } else {
-    EXE "" "";
+    EXE :: "";
   }
 
   engine: Engine;
-  command := join(path, exe_name, EXE);
+  command := join(path, name, EXE);
   success := create_process(*engine.process, command, capture_and_return_output=true);
   return engine, success;
 }
