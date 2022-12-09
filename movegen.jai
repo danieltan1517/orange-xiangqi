@@ -247,6 +247,10 @@ Move32 :: struct {
   #as move: u32;
 }
 
+is_quiet :: (mov: Move32) -> bool #expand {
+  return mov.capture == 0;
+}
+
 append :: (builder: *String_Builder, move: Move32) {
   row_from, col_from := row_col_of(move.from);
   row_to, col_to := row_col_of(move.to);

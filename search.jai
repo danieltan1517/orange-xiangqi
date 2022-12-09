@@ -2,6 +2,7 @@
 search :: (xiangqi: *Xiangqi, depth: int) -> Move32 {
 
   nodes = 0;
+  maxply = 0;
   time_taken := get_time();
   score := negamax(xiangqi, depth, -MATE, MATE);
   time_taken = get_time() - time_taken;
@@ -14,9 +15,11 @@ search :: (xiangqi: *Xiangqi, depth: int) -> Move32 {
   println("info depth % nodes % time % score cp % nps %", depth, nodes, t_ms, score, nps);
 
   return move;
+
 }
 
 perft_test_suite :: () {
+
   xiangqi: Xiangqi;
   xiangqi_startpos(*xiangqi);
   test(*xiangqi, "startpos", 1, 44);
@@ -55,6 +58,7 @@ perft_test_suite :: () {
 }
 
 perft_divide :: (xiangqi: *Xiangqi, depth: int) -> int {
+
   moves: Moves;
   generate_moves(xiangqi, *moves);
 
@@ -75,9 +79,11 @@ perft_divide :: (xiangqi: *Xiangqi, depth: int) -> int {
 
   println("Total Moves: %, Time Taken: %", count, time);
   return count;
+
 }
 
 perft :: (xiangqi: *Xiangqi, depth: int) -> int {
+
   if depth == 0 then
     return 1;
 
@@ -105,21 +111,25 @@ perft :: (xiangqi: *Xiangqi, depth: int) -> int {
   }
 
   return count;
+
 }
 
 negamax :: (xiangqi: *Xiangqi, depth: int, alpha: int, beta: int) -> eval: int {
   if depth <= 0 then {
-    return evaluate(xiangqi);
+    return quiescene(xiangqi, alpha, beta);
   }
 
   moves: Moves;
   generate_moves(xiangqi, *moves);
 
+  num_moves := 0;
   for mov: moves {
     if !is_legal(xiangqi, mov) then
       continue;
+    num_moves += 1;
     make_move(xiangqi, mov);
     ply += 1;
+    maxply = max(ply, maxply);
     nodes += 1;
 
     score := -negamax(xiangqi, depth-1, -beta, -alpha);
@@ -137,13 +147,56 @@ negamax :: (xiangqi: *Xiangqi, depth: int, alpha: int, beta: int) -> eval: int {
     }
   }
 
+  if num_moves == 0 then
+    return -MATE + ply;
+
   return alpha;
+}
+
+quiescene :: (xiangqi: *Xiangqi, alpha: int, beta: int) -> eval: int {
+
+  eval := evaluate(xiangqi);
+  if eval >= beta then
+    return beta;
+
+  alpha = max(alpha, eval);
+
+  moves: Moves;
+  generate_moves(xiangqi, *moves);
+
+  for mov: moves {
+    // quiescene search. ignore quiet moves.
+    if is_quiet(mov) then
+      continue;
+    if !is_legal(xiangqi, mov) then
+      continue;
+
+    make_move(xiangqi, mov);
+    ply += 1;
+    maxply = max(ply, maxply);
+    nodes += 1;
+
+    score := -quiescene(xiangqi, -beta, -alpha);
+
+    unmake_move(xiangqi, mov);
+    ply -= 1;
+
+    if score >= beta then
+      return beta;
+
+    if score > alpha
+      alpha = score;
+  }
+
+  return alpha;
+
 }
 
 MATE :: 20_000;
 
 nodes := 0;
 ply := 0;
+maxply := 0;
 
 best_moves: [64] Move32;
 

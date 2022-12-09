@@ -67,11 +67,21 @@ main :: () {
       token = parse_token(*str);
       if token == {
       case "perft";
-        depth := parse_int(*str);
+        depth, TF := parse_int(*str);
+        if TF == false then {
+          println("info string invalid perft");
+          continue;
+        }
+
         perft_divide(*xiangqi, depth);
 
       case "depth";
-        depth := parse_int(*str);
+        depth, TF := parse_int(*str);
+        if TF == false then {
+          println("info string invalid depth number");
+          continue;
+        }
+
         move := search(*xiangqi, depth);
         builder: String_Builder;
         builder.allocator = temp;

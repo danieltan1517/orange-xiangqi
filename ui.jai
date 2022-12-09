@@ -146,6 +146,9 @@ main :: () {
     r := get_rect(5.0, height - 5.0 - k, 8.5*k, k);
     if button(r, "New Game") then {
       xiangqi_startpos(*xiangqi);
+      reset(*moves);
+      generate_moves(*xiangqi, *moves);
+      filter_legal_moves(*xiangqi, *moves);
       prev_from = 0xFF;
       prev_to   = 0xFF;
     }
@@ -642,6 +645,7 @@ load_engine :: (name: string) -> Engine, bool {
   command := join(path, name, EXE);
   success := create_process(*engine.process, command, capture_and_return_output=true);
   engine.state = .ucciok;
+  engine.timer = FLOAT32_INFINITY;
   return engine, success;
 }
 
@@ -750,7 +754,7 @@ update_ucci :: (engine: *Engine) {
     engine.timer = FLOAT32_INFINITY;
   case .go;
     str := get_ucci_position();
-    gostr := "go depth 1\n";
+    gostr := "go depth 3\n";
     write_to_process(process, to_u8_array(str));
     sleep_milliseconds(10); // TODO: bad hack...
     write_to_process(process, to_u8_array(gostr));
