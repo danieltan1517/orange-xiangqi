@@ -1,16 +1,3 @@
-main :: () {
-
-  xiangqi: Xiangqi;
-  xiangqi_fen(*xiangqi, "rheakaehr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RHEAKAEHR w - - 0 1");
-  print_board(*xiangqi);
-  xiangqi_fen(*xiangqi, "r1ea1a3/4kh3/2h1e4/pHp1p1p1p/4c4/6P2/P1P2R2P/1CcC5/9/2EAKAE2 w - - 0 1");
-  print_board(*xiangqi);
-  xiangqi_fen(*xiangqi, "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w");
-  print_board(*xiangqi);
-  perft_test_suite();
-
-}
-
 perft_test_suite :: () {
   xiangqi: Xiangqi;
   xiangqi_startpos(*xiangqi);
@@ -142,7 +129,11 @@ MATE :: 20_000;
 nodes := 0;
 ply := 0;
 
-best_moves: [5] Move32;
+best_moves: [64] Move32;
+
+get_move32 :: () -> Move32 {
+  return best_moves[0];
+}
 
 #load "movegen.jai";
 #load "eval.jai";

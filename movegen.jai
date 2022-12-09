@@ -263,6 +263,7 @@ to_move32 :: (xiangqi: *Xiangqi, str: string) -> Move32 {
   col_from := str[1] - #char "0";
   row_to   := str[2] - #char "a";
   col_to   := str[3] - #char "0";
+  print("%\n", str);
 
   from := index_of(row_from, col_from);
   to   := index_of(row_to, col_to);

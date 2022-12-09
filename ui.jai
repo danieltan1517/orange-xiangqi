@@ -18,7 +18,7 @@ main :: () {
   ctrl_pressed := 0;
 
 
-  engine, tf := load_engine("ele_eye");
+  engine, tf := load_engine("ucci");
   assert(tf);
   defer close_engine(*engine);
 
@@ -740,8 +740,9 @@ update_ucci :: (engine: *Engine) {
     engine.timer = FLOAT32_INFINITY;
   case .go;
     str := get_ucci_position();
-    gostr := "go depth 5\n";
+    gostr := "go depth 1\n";
     write_to_process(process, to_u8_array(str));
+    sleep_milliseconds(10); // TODO: bad hack...
     write_to_process(process, to_u8_array(gostr));
   case .bestmove;
     // waiting to get the best move.
