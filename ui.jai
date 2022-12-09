@@ -187,6 +187,16 @@ main :: () {
       reset(state);
     }
 
+    r.y -= k + 5.0;
+    if base_checkbox(r, "Red", red_ai) then {
+      red_ai = !red_ai;
+    }
+
+    r.y -= k + 5.0;
+    if base_checkbox(r, "Black", black_ai) then {
+      black_ai = !black_ai;
+    }
+
     if status_string {
       r = get_rect(5.0, 5.0, 8.5*k, k);
       label(r, status_string, label_theme);
@@ -785,8 +795,8 @@ to_u8_array :: (str: string) -> [] u8 {
   return array;
 }
 
-red_ai: bool = false;
-black_ai: bool = true;
+red_ai: bool = true;
+black_ai: bool = false;
 
 is_engine_turn :: () -> bool {
   if xiangqi.turn == 0 && red_ai == true then
