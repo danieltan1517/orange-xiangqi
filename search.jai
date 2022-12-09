@@ -1,3 +1,21 @@
+// main search evaluation function.
+search :: (xiangqi: *Xiangqi, depth: int) -> Move32 {
+
+  nodes = 0;
+  time_taken := get_time();
+  score := negamax(xiangqi, depth, -MATE, MATE);
+  time_taken = get_time() - time_taken;
+  move := get_move32();
+  builder: String_Builder;
+  builder.allocator = temp;
+
+  t_ms: int = xx (time_taken*1000.0); // convert secs to ms
+  nps: int = xx (cast(float)nodes / time_taken);
+  println("info depth % nodes % time % score cp % nps %", depth, nodes, t_ms, score, nps);
+
+  return move;
+}
+
 perft_test_suite :: () {
   xiangqi: Xiangqi;
   xiangqi_startpos(*xiangqi);
@@ -28,9 +46,9 @@ perft_test_suite :: () {
     time = get_time() - time;
  
     if count == expected then {
-      print("success for [%] perft % in % seconds: %\n", title, depth, time, count);
+      println("success for [%] perft % in % seconds: %", title, depth, time, count);
     } else {
-      print("failed  for [%] perft % in % seconds. got %, expected %.\n", title, depth, time, count, expected);
+      println("failed  for [%] perft % in % seconds. got %, expected %", title, depth, time, count, expected);
     }
   }
 
@@ -42,22 +60,20 @@ perft_divide :: (xiangqi: *Xiangqi, depth: int) -> int {
 
   time := get_time();
   count := 0;
+  buf:[4] u8;
   for mov: moves {
     if !is_legal(xiangqi, mov) then
       continue;
     make_move(xiangqi, mov);
     num_moves := perft(xiangqi, depth-1);
-    from := mov.from;
-    to := mov.to;
-    row1, col1 := row_col_of(from);
-    row2, col2 := row_col_of(to);
-    print("move (%,%) => (%,%): %\n", row1, col1, row2, col2, num_moves);
+    str := to_string(mov, buf);
+    println("move %: %", str, num_moves);
     count += num_moves;
     unmake_move(xiangqi, mov);
   }
   time = get_time() - time;
 
-  print("Total Moves: %, Time Taken: %\n", count, time);
+  println("Total Moves: %, Time Taken: %", count, time);
   return count;
 }
 

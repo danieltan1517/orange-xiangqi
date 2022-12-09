@@ -143,12 +143,10 @@ xiangqi_fen :: (xiangqi: *Xiangqi, fen: string) -> bool {
           return false;
         }
         let -= #char "1";
-        print("%\n", let);
         row += let;
         piece = 0xFF;
       }
       if piece != 0xFF {
-        print("(%,%)\n", row, col);
         add_piece(xiangqi, piece, side, row, col);
       }
       row += 1;
@@ -258,13 +256,21 @@ append :: (builder: *String_Builder, move: Move32) {
   append(builder, (col_to + #char "0"));
 }
 
+to_string :: (move: Move32, buf: [] u8) -> string {
+  row_from, col_from := row_col_of(move.from);
+  row_to, col_to := row_col_of(move.to);
+  buf[0] = (row_from + #char "a");
+  buf[1] = (col_from + #char "0");
+  buf[2] = (row_to + #char "a");
+  buf[3] = (col_to + #char "0");
+  return to_string(buf.data, 4);
+}
+
 to_move32 :: (xiangqi: *Xiangqi, str: string) -> Move32 {
   row_from := str[0] - #char "a";
   col_from := str[1] - #char "0";
   row_to   := str[2] - #char "a";
   col_to   := str[3] - #char "0";
-  print("%\n", str);
-
   from := index_of(row_from, col_from);
   to   := index_of(row_to, col_to);
   move: Move32;

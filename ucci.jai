@@ -2,6 +2,7 @@ main :: () {
   xiangqi_startpos(*xiangqi);
 
   while true {
+    reset_temporary_storage();
     str := getline();
     token := parse_token(*str);
     if token == {
@@ -71,8 +72,7 @@ main :: () {
 
       case "depth";
         depth := parse_int(*str);
-        score := negamax(*xiangqi, depth, -MATE, MATE);
-        move  := get_move32();
+        move := search(*xiangqi, depth);
         builder: String_Builder;
         builder.allocator = temp;
         append(*builder, "bestmove ");
