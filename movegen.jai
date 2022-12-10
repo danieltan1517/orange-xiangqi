@@ -251,6 +251,10 @@ is_quiet :: (mov: Move32) -> bool #expand {
   return mov.capture == 0;
 }
 
+is_capture :: (mov: Move32) -> bool #expand {
+  return mov.capture != 0;
+}
+
 append :: (builder: *String_Builder, move: Move32) {
   row_from, col_from := row_col_of(move.from);
   row_to, col_to := row_col_of(move.to);
@@ -498,6 +502,7 @@ reset :: (array: *Array($N, $T)) {
 }
 
 append :: (a: *Array($N, $T), item: T) #expand {
+  // print("% %\n", <<a, item);
   assert(a.count < a.capacity);
   a.array[a.count] = item;
   a.count += 1;
@@ -524,16 +529,17 @@ for_expansion :: (a: *Array($N, $T), body: Code, flags: For_Flags) #expand {
 is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   turn := xiangqi.turn;
   opp  := turn ^ 1;
-  adv := ifx turn == 0 cast(u8)1 else cast(u8)0xFF; 
+  adv := ifx turn == 0 1 else -1; 
   gen := xiangqi.pieces[turn].general[0];
   soldier_code := encode_piece(S, turn ^ 1);
   if move.from == gen {
     gen = move.to;
   }
+
   row, col := row_col_of(gen);
  
   // soldier checks the king. 
-  if xiangqi.board_9x10[row][col+adv] == soldier_code && index_of(row,col+adv) != move.to then {
+  if xiangqi.board_9x10[row][(cast(s8)col)+adv] == soldier_code && index_of(row,cast(u8)(col+adv)) != move.to then {
     return false;
   }
   if xiangqi.board_9x10[row+1][col] == soldier_code && index_of(row+1,col) != move.to then {

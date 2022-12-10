@@ -2,7 +2,9 @@
 search :: (xiangqi: *Xiangqi, depth: int) -> Move32 {
 
   nodes = 0;
+  ply = 0;
   maxply = 0;
+  best_moves[0] = Move32.{0,0,0,0};
   time_taken := get_time();
   score := negamax(xiangqi, depth, -MATE, MATE);
   time_taken = get_time() - time_taken;
@@ -12,7 +14,7 @@ search :: (xiangqi: *Xiangqi, depth: int) -> Move32 {
 
   t_ms: int = xx (time_taken*1000.0); // convert secs to ms
   nps: int = xx (cast(float)nodes / time_taken);
-  println("info depth % nodes % time % score cp % nps %", depth, nodes, t_ms, score, nps);
+  println("info depth % seldepth % nodes % time % score cp % nps %", depth, maxply, nodes, t_ms, score, nps);
 
   return move;
 
@@ -120,12 +122,15 @@ negamax :: (xiangqi: *Xiangqi, depth: int, alpha: int, beta: int) -> eval: int {
   }
 
   moves: Moves;
+  queue: Queue;
   generate_moves(xiangqi, *moves);
 
   num_moves := 0;
-  for mov: moves {
+
+  for :pv mov, score: xiangqi {
     if !is_legal(xiangqi, mov) then
       continue;
+
     num_moves += 1;
     make_move(xiangqi, mov);
     ply += 1;
@@ -151,6 +156,31 @@ negamax :: (xiangqi: *Xiangqi, depth: int, alpha: int, beta: int) -> eval: int {
     return -MATE + ply;
 
   return alpha;
+
+  // principle variation.
+  pv :: (xiangqi: *Xiangqi, body: Code, f: For_Flags) #expand {
+    stage := Move_Stage.PV;
+    while outer_loop := true {
+      while queue.count <= 0 {
+        if stage == {
+        case .PV;
+          stage = .CAPTURE;
+        case .CAPTURE;
+          enqueue_capture_moves(*queue, moves);
+          stage = .QUIET;
+        case .QUIET;
+          enqueue_quiet_moves(*queue, moves);
+          stage = .END;
+        case .END;
+          break outer_loop;
+        }
+      }
+
+      `it, `it_index := pop(*queue);
+      #insert body;
+    }
+  }
+
 }
 
 quiescene :: (xiangqi: *Xiangqi, alpha: int, beta: int) -> eval: int {
@@ -162,12 +192,10 @@ quiescene :: (xiangqi: *Xiangqi, alpha: int, beta: int) -> eval: int {
   alpha = max(alpha, eval);
 
   moves: Moves;
+  queue: Queue;
   generate_moves(xiangqi, *moves);
 
-  for mov: moves {
-    // quiescene search. ignore quiet moves.
-    if is_quiet(mov) then
-      continue;
+  for :pv mov, score: xiangqi {
     if !is_legal(xiangqi, mov) then
       continue;
 
@@ -184,12 +212,146 @@ quiescene :: (xiangqi: *Xiangqi, alpha: int, beta: int) -> eval: int {
     if score >= beta then
       return beta;
 
-    if score > alpha
+    if score > alpha then
       alpha = score;
   }
 
   return alpha;
 
+  // principle variation.
+  pv :: (xiangqi: *Xiangqi, body: Code, f: For_Flags) #expand {
+    stage := Move_Stage.PV;
+    while outer_loop := true {
+      while queue.count <= 0 {
+        if stage == {
+        case .PV;
+          stage = .CAPTURE;
+        case .CAPTURE;
+          enqueue_capture_moves(*queue, moves);
+          stage = .END;
+        case .END;
+          break outer_loop;
+        }
+      }
+
+      `it, `it_index := pop(*queue);
+      #insert body;
+    }
+  }
+
+}
+
+#scope_file
+
+Move_Stage :: enum s8 {
+  PV;
+  CAPTURE;
+  QUIET;
+  END;
+}
+
+enqueue_capture_moves :: (queue: *Queue, moves: Moves) {
+
+  for mov: moves {
+    if is_capture(mov) then {
+      victim   := mov.capture >> 2;
+      attacker := mov.piece   >> 2;
+      priority := mvv_lva(victim, attacker);
+      append(queue, priority, mov);
+    }
+  }
+
+  mvv_lva :: (victim: s32, attacker: s32) -> s32 #expand {
+    victim_score := PIECE_VALUE[victim];
+    attacker_score := PIECE_VALUE[attacker] / 10;
+    return victim_score - attacker_score; 
+
+    // general, advisor, elephant, horse, rook, cannon, soldier
+    PIECE_VALUE :: s16.[800, 120, 120, 270, 600, 285, 30]; 
+  }
+
+}
+
+enqueue_quiet_moves :: (queue: *Queue, moves: Moves) {
+
+  // TODO: score quiet moves.
+  for mov: moves {
+    if is_quiet(mov) then {
+      priority: s32 = 0;
+      append(queue, priority, mov);
+    }
+  }
+
+}
+
+heapify :: (queue: *Queue, index: int) {
+
+  while true {
+    largest := index;
+    left := 2 * index + 1;
+    right := 2 * index + 2;
+ 
+    N := queue.count;
+ 
+    if left < N && queue.array[left].priority > queue.array[largest].priority then
+      largest = left;
+ 
+    if right < N && queue.array[right].priority > queue.array[largest].priority then
+      largest = right;
+
+    if largest == index then
+      break;
+ 
+    temp := queue.array[index];
+    queue.array[index] = queue.array[largest];
+    queue.array[largest] = temp;
+    index = largest;
+  }
+
+}
+
+pop :: (queue: *Queue) -> move: Move32, priority: s32 {
+
+  count := queue.count;
+  move := queue.array[0].move;
+  priority := queue.array[0].priority;
+  queue.array[0] = queue.array[count];
+  queue.count -= 1;
+  heapify(queue, 0);
+  return move, priority;
+
+}
+
+construct_heap :: (queue: *Queue) {
+
+  count := queue.array.count/2 - 1;
+  for < index: count..0 {
+    heapify(queue, index);
+  }
+
+}
+
+Queue :: struct {
+
+  count: int;
+  array: [127] Queue_Pair;
+
+}
+
+append :: (queue: *Queue, priority: s32, move: Move32) {
+
+  index := queue.count;
+  queue.array[index].priority = priority;
+  queue.array[index].move = move;
+  queue.count += 1;
+
+}
+
+Queue_Pair :: struct {
+  priority: s32;
+  move: Move32;
+  #place priority;
+  #as data: u64;
 }
 
 MATE :: 20_000;

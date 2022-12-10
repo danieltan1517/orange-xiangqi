@@ -799,7 +799,7 @@ to_u8_array :: (str: string) -> [] u8 {
   return array;
 }
 
-red_ai: bool = true;
+red_ai: bool = false;
 black_ai: bool = false;
 
 is_engine_turn :: () -> bool {
