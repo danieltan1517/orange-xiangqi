@@ -4,19 +4,17 @@ search :: (xiangqi: *Xiangqi, depth: int) -> Move32 {
   nodes = 0;
   ply = 0;
   maxply = 0;
-  best_moves[0] = Move32.{0,0,0,0};
+  best_move = Move32.{0,0,0,0};
   time_taken := get_time();
   score := negamax(xiangqi, depth, -MATE, MATE);
   time_taken = get_time() - time_taken;
-  move := get_move32();
   builder: String_Builder;
   builder.allocator = temp;
 
   t_ms: int = xx (time_taken*1000.0); // convert secs to ms
   nps: int = xx (cast(float)nodes / time_taken);
   println("info depth % seldepth % nodes % time % score cp % nps %", depth, maxply, nodes, t_ms, score, nps);
-
-  return move;
+  return best_move;
 
 }
 
@@ -147,7 +145,8 @@ negamax :: (xiangqi: *Xiangqi, depth: int, alpha: int, beta: int) -> eval: int {
     }
     
     if score > alpha then {
-      best_moves[ply] = mov;
+      if ply == 0 then
+        best_move = mov;
       alpha = score;
     }
   }
@@ -312,11 +311,10 @@ heapify :: (queue: *Queue, index: int) {
 
 pop :: (queue: *Queue) -> move: Move32, priority: s32 {
 
-  count := queue.count;
   move := queue.array[0].move;
   priority := queue.array[0].priority;
-  queue.array[0] = queue.array[count];
   queue.count -= 1;
+  queue.array[0] = queue.array[queue.count];
   heapify(queue, 0);
   return move, priority;
 
@@ -360,11 +358,7 @@ nodes := 0;
 ply := 0;
 maxply := 0;
 
-best_moves: [64] Move32;
-
-get_move32 :: () -> Move32 {
-  return best_moves[0];
-}
+best_move: Move32 = Move32.{0,0,0,0};
 
 #load "movegen.jai";
 #load "eval.jai";

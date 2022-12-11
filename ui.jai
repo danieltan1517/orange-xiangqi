@@ -754,7 +754,7 @@ update_ucci :: (engine: *Engine) {
     engine.timer = FLOAT32_INFINITY;
   case .go;
     str := get_ucci_position();
-    gostr := "go depth 1\n";
+    gostr := "go depth 3\n";
     write_to_process(process, to_u8_array(str));
     sleep_milliseconds(10); // TODO: bad hack...
     write_to_process(process, to_u8_array(gostr));
