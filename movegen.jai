@@ -1248,6 +1248,26 @@ col_bits :: (col: [10] u8) -> u64 {
   return value;
 }
 
+max :: (a: int, b: s32) -> int #expand {
+  c: int;
+  #asm {
+    cmp a, b;
+    mov c, a;
+    cmovle c, b;
+  }
+  return c;
+}
+
+min :: (a: int, b: s32) -> int #expand {
+  c: int;
+  #asm {
+    cmp a, b;
+    mov c, a;
+    cmovge c, b;
+  }
+  return c;
+}
+
 max :: (a: int, b: int) -> int #expand {
   c: int;
   #asm {
@@ -1267,6 +1287,7 @@ min :: (a: int, b: int) -> int #expand {
   }
   return c;
 }
+
 
 abs :: (a: int) -> int #expand {
   eax: int;

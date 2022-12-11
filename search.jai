@@ -1,19 +1,45 @@
 // main search evaluation function.
-search :: (xiangqi: *Xiangqi, depth: int) -> Move32 {
+search :: (xiangqi: *Xiangqi, search_depth: int) -> Move32 {
 
+  MATE32 := MATE;
   nodes = 0;
   ply = 0;
   maxply = 0;
   best_move = Move32.{0,0,0,0};
-  time_taken := get_time();
-  score := negamax(xiangqi, depth, -MATE, MATE);
-  time_taken = get_time() - time_taken;
-  builder: String_Builder;
-  builder.allocator = temp;
 
-  t_ms: int = xx (time_taken*1000.0); // convert secs to ms
-  nps: int = xx (cast(float)nodes / time_taken);
-  println("info depth % seldepth % nodes % time % score cp % nps %", depth, maxply, nodes, t_ms, score, nps);
+  alpha := -MATE;
+  beta  :=  MATE;
+  delta :=  50;
+
+  // aspiration window with iterative deepening.
+  depth := 1;
+  while depth <= search_depth {
+
+    time_taken := get_time();
+    score := negamax(xiangqi, depth, alpha, beta);
+    time_taken = get_time() - time_taken;
+    if score <= alpha then {
+      alpha = max(alpha-delta, -MATE32);
+      delta += delta + delta / 5;
+      continue;
+    }
+
+    if score >= beta then {
+      beta = min(beta+delta, MATE32);
+      delta += delta + delta / 5;
+      continue;
+    }
+
+    t_ms: int = xx (time_taken*1000.0); // convert secs to ms
+    nps: int = xx (cast(float)nodes / time_taken);
+    println("info depth % seldepth % nodes % time % score cp % nps %", depth, maxply, nodes, t_ms, score, nps);
+
+    alpha = max(score - delta, -MATE32);
+    beta  = min(score + delta,  MATE32);
+    depth += 1;
+ 
+  }
+
   return best_move;
 
 }
@@ -125,7 +151,7 @@ negamax :: (xiangqi: *Xiangqi, depth: int, alpha: int, beta: int) -> eval: int {
 
   num_moves := 0;
 
-  for :pv mov, score: xiangqi {
+  for :pv mov, move_score: xiangqi {
     if !is_legal(xiangqi, mov) then
       continue;
 
@@ -139,7 +165,6 @@ negamax :: (xiangqi: *Xiangqi, depth: int, alpha: int, beta: int) -> eval: int {
     unmake_move(xiangqi, mov);
     ply -= 1;
 
-    // alpha beta pruning.
     if score >= beta then {
       return score;
     }
@@ -194,7 +219,7 @@ quiescene :: (xiangqi: *Xiangqi, alpha: int, beta: int) -> eval: int {
   queue: Queue;
   generate_moves(xiangqi, *moves);
 
-  for :pv mov, score: xiangqi {
+  for :pv mov, move_score: xiangqi {
     if !is_legal(xiangqi, mov) then
       continue;
 
