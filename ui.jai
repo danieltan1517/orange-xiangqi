@@ -79,6 +79,8 @@ main :: () {
   init_textures :: () #expand {
     success := simp.texture_load_from_file(*sprites, "data/xiangqi.png");
     assert(success);
+    success  = simp.texture_load_from_file(*setting_sprite, "data/settings.png");
+    assert(success);
   }
 
   xiangqi_board_click :: (x: float, y: float, mouse_event: bool, key_pressed: int) {
@@ -142,67 +144,82 @@ main :: () {
     label_theme := *default_overall_theme.label_theme;
     time := get_time();
     ui_per_frame_update(win, width, height, time);
-    k := height * 0.05;
-    r := get_rect(5.0, height - 5.0 - k, 8.5*k, k);
-    if button(r, "New Game") then {
-      xiangqi_startpos(*xiangqi);
-      reset(*moves);
-      generate_moves(*xiangqi, *moves);
-      filter_legal_moves(*xiangqi, *moves);
-      prev_from = 0xFF;
-      prev_to   = 0xFF;
+    k := clamp(height * 0.05, 15.0, 45.0);
+    r := get_rect(5.0, height - 5.0 - k, k, k);
+
+    if button(r, "", texture=*setting_sprite) then {
+      display_settings = !display_settings;
     }
 
-    r.y -= k + 5.0;
-    if button(r, "Undo (Ctrl+Z)") then {
-      gui_undo_move();
-    }
-    r.y -= k + 5.0;
-    if button(r, "Redo (Ctrl+Y)") then {
-      gui_redo_move();
-    }
-    r.y -= k + 5.0;
-    if base_checkbox(r, "Romanized", !chinese_pieces) then {
-      chinese_pieces = !chinese_pieces;
-    }
-    r.y -= k + 5.0;
-    if base_checkbox(r, "Orientation", !orient) then {
-      orient = !orient;
-    }
-    r.y -= k + 5.0;
-    if base_checkbox(r, "Show Moves", show_moves) then {
-      show_moves = !show_moves;
-    }
-    r.y -= k + 5.0;
-    if base_checkbox(r, "Audio", sound) then {
-      sound = !sound;
-    }
-    r.y -= k + 5.0;
-    if base_checkbox(r, "Highlight Move", highlight_move) then {
-      highlight_move = !highlight_move;
-    }
+    if display_settings {
+      r.x += 20.0;
+      r.y -= 5.0;
+      r.w = 8.5 * k;
+      color := Vector4.{.1, .1, .1, .75};
+      simp.set_shader_for_color(true);
+      simp.immediate_quad(17.0, r.y, r.x + r.w + 5.0, r.y - 14*k, color);
 
-    r.y -= k + 5.0;
-    action, str, state := text_input(r, "", text_theme);
-    if action & .ENTERED {
-      xiangqi_fen(*xiangqi, str);
-      fen_string = copy_string(str);
-      reset(state);
-    }
-
-    r.y -= k + 5.0;
-    if base_checkbox(r, "Red", red_ai) then {
-      red_ai = !red_ai;
-    }
-
-    r.y -= k + 5.0;
-    if base_checkbox(r, "Black", black_ai) then {
-      black_ai = !black_ai;
-    }
-
-    if status_string {
-      r = get_rect(5.0, 5.0, 8.5*k, k);
-      label(r, status_string, label_theme);
+      r.y -= k + 5.0;
+      if button(r, "New Game") then {
+        xiangqi_startpos(*xiangqi);
+        reset(*moves);
+        generate_moves(*xiangqi, *moves);
+        filter_legal_moves(*xiangqi, *moves);
+        prev_from = 0xFF;
+        prev_to   = 0xFF;
+      }
+     
+      r.y -= k + 5.0;
+      if button(r, "Undo (Ctrl+Z)") then {
+        gui_undo_move();
+      }
+      r.y -= k + 5.0;
+      if button(r, "Redo (Ctrl+Y)") then {
+        gui_redo_move();
+      }
+      r.y -= k + 5.0;
+      if base_checkbox(r, "Romanized", !chinese_pieces) then {
+        chinese_pieces = !chinese_pieces;
+      }
+      r.y -= k + 5.0;
+      if base_checkbox(r, "Orientation", !orient) then {
+        orient = !orient;
+      }
+      r.y -= k + 5.0;
+      if base_checkbox(r, "Show Moves", show_moves) then {
+        show_moves = !show_moves;
+      }
+      r.y -= k + 5.0;
+      if base_checkbox(r, "Audio", sound) then {
+        sound = !sound;
+      }
+      r.y -= k + 5.0;
+      if base_checkbox(r, "Highlight Move", highlight_move) then {
+        highlight_move = !highlight_move;
+      }
+     
+      r.y -= k + 5.0;
+      action, str, state := text_input(r, "", text_theme);
+      if action & .ENTERED {
+        xiangqi_fen(*xiangqi, str);
+        fen_string = copy_string(str);
+        reset(state);
+      }
+     
+      r.y -= k + 5.0;
+      if base_checkbox(r, "Red", red_ai) then {
+        red_ai = !red_ai;
+      }
+     
+      r.y -= k + 5.0;
+      if base_checkbox(r, "Black", black_ai) then {
+        black_ai = !black_ai;
+      }
+     
+      if status_string {
+        r = get_rect(5.0, 5.0, 8.5*k, k);
+        label(r, status_string, label_theme);
+      }
     }
   }
 
@@ -436,6 +453,7 @@ main :: () {
 width:  s32 = 680;
 height: s32 = 480;
 sprites: simp.Texture;
+setting_sprite: simp.Texture;
 center_x: float = 0.0;
 center_y: float = 0.0;
 chinese_pieces := false;
@@ -798,6 +816,8 @@ to_u8_array :: (str: string) -> [] u8 {
   array.count = str.count;
   return array;
 }
+
+display_settings := false;
 
 red_ai: bool = false;
 black_ai: bool = false;
