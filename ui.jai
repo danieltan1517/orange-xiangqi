@@ -157,10 +157,11 @@ main :: () {
       r.w = 8.5 * k;
       color := Vector4.{.1, .1, .1, .75};
       simp.set_shader_for_color(true);
-      simp.immediate_quad(17.0, r.y, r.x + r.w + 5.0, r.y - 14*k, color);
+      simp.immediate_quad(17.0, r.y, r.x + r.w + 7.0, r.y - 14*k, color);
 
-      r.y -= k + 5.0;
+      r.y -= k + 10.0;
       if button(r, "New Game") then {
+        status_string = "";
         xiangqi_startpos(*xiangqi);
         reset(*moves);
         generate_moves(*xiangqi, *moves);
@@ -215,11 +216,11 @@ main :: () {
       if base_checkbox(r, "Black", black_ai) then {
         black_ai = !black_ai;
       }
+    }
      
-      if status_string {
-        r = get_rect(5.0, 5.0, 8.5*k, k);
-        label(r, status_string, label_theme);
-      }
+    if status_string {
+      r = get_rect(5.0, 5.0, 8.5*k, k);
+      label(r, status_string, label_theme);
     }
   }
 
@@ -622,6 +623,7 @@ gui_make_move :: (move: Move32) {
       reset(*moves);
       generate_moves(*xiangqi, *moves);
       filter_legal_moves(*xiangqi, *moves);
+      status_string = "";
       if moves.count == 0 then {
         status_string = "Checkmate.";  
       }
