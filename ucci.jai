@@ -1,6 +1,6 @@
 main :: () {
   xiangqi_startpos(*xiangqi);
-
+  print_board(*xiangqi);
   while true {
     reset_temporary_storage();
     str := getline();

@@ -234,39 +234,63 @@ main :: () {
     board_y := center_y - sq * 5.0;
     color := Vector4.{1., 1., 1., 1.};
     simp.immediate_quad(board_x, board_y, board_x + 9.0 * sq, board_y + 10.0 * sq, color);
-    simp.set_shader_for_images(*sprites);
-
     board_x += hsq;
     board_y += hsq;
 
-    // draw the palace
-    render_palace(board_x, board_y, sq, color);
-
-    // draw the board itself.
-    row := 0.0;
-    while row < 8.0 {
-      column := 0.0;
-      gridx := board_x + row*sq; 
-      while column < 9.0 {
-
-        // 1/7, 1/5
-        uv0 := make_vector2(0.0,     0.0);
-        uv1 := make_vector2(1.0/7.0, 0.0);
-        uv2 := make_vector2(1.0/7.0, 1.0/5.0);
-        uv3 := make_vector2(0,       1.0/5.0);
-
-        gridy := board_y + column*sq;
-        immediate_quad(gridx, gridy, gridx + sq, gridy + sq, color, uv0, uv1, uv2, uv3);
-        column += 1.0;
-
-        // ignore the river and do not draw the river
-        if column == 4.0 then
-          column += 1.0;
+    color = Vector4.{0,0,0,1};
+    // draw the board grid. 
+    simp.set_shader_for_color(true);
+    gridx := board_x;
+    gridy := board_y;
+    for 0..9 {
+      line_width := 1;
+      if it == 0 || it == 9 {
+        line_width = 2;
       }
-
-      row += 1.0;
+      simp.immediate_quad(gridx, gridy, gridx + 8*sq, gridy + line_width, color);
+      gridy += sq;
     }
 
+    gridx = board_x;
+    gridy = board_y;
+    for 0..8 {
+      if it == 0 || it == 8 then {
+        simp.immediate_quad(gridx, gridy, gridx + 2, gridy + 9*sq, color);
+      } else {
+        simp.immediate_quad(gridx, gridy, gridx + 1, gridy + 4*sq, color);
+        simp.immediate_quad(gridx, gridy + 5*sq, gridx + 1, gridy + 9*sq, color);
+      }
+      gridx += sq;
+    }
+
+    gridx = board_x;
+    // draw the palace diagonals.
+    v0 := Vector2.{gridx + 3*sq, gridy};
+    v1 := Vector2.{gridx + 5*sq, gridy + 2*sq};
+    v2 := Vector2.{gridx + 5*sq - 1, gridy + 2*sq};
+    v3 := Vector2.{gridx + 3*sq, gridy + 1};
+    simp.immediate_quad(v0, v1, v2, v3, color);
+
+    v0 = Vector2.{gridx + 3*sq, gridy + 2*sq};
+    v1 = Vector2.{gridx + 5*sq, gridy};
+    v2 = Vector2.{gridx + 5*sq + 1, gridy};
+    v3 = Vector2.{gridx + 3*sq, gridy + 2*sq + 1};
+    simp.immediate_quad(v0, v1, v2, v3, color);
+
+    v0 = Vector2.{gridx + 3*sq, gridy + 7*sq};
+    v1 = Vector2.{gridx + 5*sq, gridy + 9*sq};
+    v2 = Vector2.{gridx + 5*sq - 1, gridy + 9*sq};
+    v3 = Vector2.{gridx + 3*sq, gridy + 7*sq + 1};
+    simp.immediate_quad(v0, v1, v2, v3, color);
+
+    v0 = Vector2.{gridx + 3*sq, gridy + 9*sq};
+    v1 = Vector2.{gridx + 5*sq, gridy + 7*sq};
+    v2 = Vector2.{gridx + 5*sq + 1, gridy + 7*sq};
+    v3 = Vector2.{gridx + 3*sq, gridy + 9*sq + 1};
+    simp.immediate_quad(v0, v1, v2, v3, color);
+
+    simp.set_shader_for_images(*sprites);
+    color = Vector4.{1., 1., 1., 1.};
     board_x -= hsq;
     board_y -= hsq;
     if show_moves == true then {
@@ -339,44 +363,6 @@ main :: () {
       sprite_index := ren_idx[index];
       render_piece_drag(mouse_x, mouse_y, sq/2.0, sq, orient_piece(from_index), sprite_index, turn, color);
     }
-  }
-
-  render_palace :: (board_x: float, board_y: float, sq: float, color: Vector4) #expand {
-
-    palace_x := board_x + 3.0 * sq;
-    palace_y := board_y + 0.0 * sq;
-    // 1/7, 1/5
-    uv0 := make_vector2(1.0/7.0, 0.0/5.0);
-    uv1 := make_vector2(2.0/7.0, 0.0/5.0);
-    uv2 := make_vector2(2.0/7.0, 1.0/5.0);
-    uv3 := make_vector2(1.0/7.0, 1.0/5.0);
-    immediate_quad(palace_x, palace_y, palace_x + sq, palace_y + sq, color, uv0, uv1, uv2, uv3);
-    immediate_quad(palace_x + sq, palace_y + sq, palace_x + sq + sq, palace_y + sq + sq, color, uv0, uv1, uv2, uv3);
-
-    palace_y += 7.0 * sq;
-    immediate_quad(palace_x, palace_y, palace_x + sq, palace_y + sq, color, uv0, uv1, uv2, uv3);
-    immediate_quad(palace_x + sq, palace_y + sq, palace_x + sq + sq, palace_y + sq + sq, color, uv0, uv1, uv2, uv3);
-
-    palace_x = board_x + 5.0 * sq;
-    palace_y = board_y + 0.0 * sq;
-    immediate_quad(palace_x, palace_y, palace_x - sq, palace_y + sq, color, uv0, uv1, uv2, uv3);
-    immediate_quad(palace_x - sq - sq, palace_y + sq + sq, palace_x - sq, palace_y + sq, color, uv0, uv1, uv2, uv3);
-
-    palace_y += 7.0 * sq;
-    immediate_quad(palace_x, palace_y, palace_x - sq, palace_y + sq, color, uv0, uv1, uv2, uv3);
-    immediate_quad(palace_x - sq - sq, palace_y + sq + sq, palace_x - sq, palace_y + sq, color, uv0, uv1, uv2, uv3);
-
-    uv0 = make_vector2(5.0/7.0, 0.0/5.0);
-    uv1 = make_vector2(6.0/7.0, 0.0/5.0);
-    uv2 = make_vector2(6.0/7.0, 1.0/5.0);
-    uv3 = make_vector2(5.0/7.0, 1.0/5.0);
-
-    river_x := board_x + 0.0 * sq;
-    river_y := board_y + 4.0 * sq;
-
-    immediate_quad(river_x, river_y, river_x + sq, river_y + sq, color, uv0, uv1, uv2, uv3);
-    river_x += 8.0 * sq;
-    immediate_quad(river_x, river_y, river_x - sq, river_y + sq, color, uv0, uv1, uv2, uv3);
   }
 
   render_piece :: (board_x: float, board_y: float, sq: float, from: u8, sprite_x: float, turn: s64, color: Vector4) {

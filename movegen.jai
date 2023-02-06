@@ -52,7 +52,6 @@ add_piece :: (xiangqi: *Xiangqi, piece: u8, side: u8, row: u8, col: u8) {
   xiangqi.board_9x10[row][col] = piece_code;
   xiangqi.bit_row[col] |= cast(u16)(1 << row);
   xiangqi.bit_col[row] |= cast(u16)(1 << col);
-
   index := index_of(row, col);
   append(*xiangqi.pieces[side].piece[piece], index);
 }
@@ -179,8 +178,9 @@ encode_piece :: (piece: u8, side: u8) -> u8 #expand {
 
 print_board :: (xiangqi: Xiangqi) {
   
-  /*for < row: xiangqi.board_10x9 {
-    for piece: row {
+  for < j: 9..0 {
+    for i: 0..8 {
+      piece := xiangqi.board_9x10[i][j];
       if (piece & 1) == 0 {
         print("- ");
         continue;
@@ -220,11 +220,10 @@ print_board :: (xiangqi: Xiangqi) {
         case S;
           print("S ");
         }
-
       }
     }
     print("\n");
-  }*/
+  }
   if xiangqi.turn == 0 then {
     print("Turn: RED\n\n");
   } else {
@@ -234,8 +233,8 @@ print_board :: (xiangqi: Xiangqi) {
 
 Xiangqi :: struct {
   board_9x10: [9][10] u8;
-  bit_row: [10] u16;
-  bit_col: [9]  u16;
+  bit_row: [10] u16 #align 16;
+  bit_col: [9]  u16 #align 16;
 
   pieces: [2] Pieces;
   #place pieces;
@@ -545,7 +544,7 @@ is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   opp  := turn ^ 1;
   adv := ifx turn == 0 1 else -1; 
   gen := xiangqi.pieces[turn].general[0];
-  soldier_code := encode_piece(S, turn ^ 1);
+  soldier_code := encode_piece(S, opp);
   if move.from == gen {
     gen = move.to;
   }
@@ -601,18 +600,18 @@ is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   }
 
   // rooks, cannons, flying general rule...
-  bit_rows := xiangqi.bit_row[col]; //row_bits(xiangqi.board_10x9[col]);
+  bit_rows := cast, no_check(u64) xiangqi.bit_row[col]; //row_bits(xiangqi.board_10x9[col]);
   if col == col_of(move.from) {
-    bit_rows &= ~(cast(u16) (1 << row_of(move.from)));
+    bit_rows &= ~(cast, no_check (u16) (1 << row_of(move.from)));
   }
 
   if col == col_of(move.to) {
-    bit_rows |= cast(u16) (1 << row_of(move.to));
+    bit_rows |= cast, no_check(u16) (1 << row_of(move.to));
   }
 
-  gen_code := encode_piece(G, turn ^ 1);
-  rook_code := encode_piece(R, turn ^ 1);
-  cannon_code := encode_piece(C, turn ^ 1);
+  gen_code := encode_piece(G, opp);
+  rook_code := encode_piece(R, opp);
+  cannon_code := encode_piece(C, opp);
 
   forward: u64 = cast(u64)0xFFFF << row;
   backward := ~forward & 0x1FF;
@@ -652,16 +651,16 @@ is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
     return false;
   }
 
-  bit_cols := xiangqi.bit_col[row];
+  bit_cols := cast, no_check(u64)xiangqi.bit_col[row];
   if row == row_of(move.from) {
-    bit_cols &= ~ (cast(u16) (1 << col_of(move.from)));
+    bit_cols &= cast, no_check(u64) ~(1 << col_of(move.from));
   }
 
   if row == row_of(move.to) {
-    bit_cols |= cast(u16) (1 << col_of(move.to));
+    bit_cols |= cast, no_check(u64) (1 << col_of(move.to));
   }
 
-  forward = cast(u64)0xFFFF << col;
+  forward = cast, no_check(u64)0xFFFF << col;
   backward = ~forward & 0x3FF;
   forward <<= 1;
   forward &= 0x3FF;
@@ -677,13 +676,13 @@ is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
     btr backward, index2;
   }
 
-  if index1 != -1 && move.to != index_of(row,cast(u8)index1) {
+  if index1 != -1 && move.to != index_of(row,cast, no_check(u8)index1) {
     code := xiangqi.board_9x10[row][index1];
     if (code == rook_code || code == gen_code) {
       return false;
     }
   }
-  if index2 != -1 && move.to != index_of(row,cast(u8)index2) {
+  if index2 != -1 && move.to != index_of(row,cast, no_check (u8)index2) {
     code := xiangqi.board_9x10[row][index2];
     if (code == rook_code || code == gen_code) {
       return false;
