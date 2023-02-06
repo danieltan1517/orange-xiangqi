@@ -1,4 +1,5 @@
 xiangqi_startpos :: (xiangqi: *Xiangqi) {
+
   memset(xiangqi, 0, size_of(Xiangqi));
   // red
   add_piece(xiangqi, G, RED, 4, 0);
@@ -49,7 +50,9 @@ xiangqi_startpos :: (xiangqi: *Xiangqi) {
 add_piece :: (xiangqi: *Xiangqi, piece: u8, side: u8, row: u8, col: u8) {
   piece_code := encode_piece(piece, side);
   xiangqi.board_9x10[row][col] = piece_code;
-  xiangqi.board_10x9[col][row] = piece_code;
+  xiangqi.bit_row[col] |= cast(u16)(1 << row);
+  xiangqi.bit_col[row] |= cast(u16)(1 << col);
+
   index := index_of(row, col);
   append(*xiangqi.pieces[side].piece[piece], index);
 }
@@ -175,7 +178,8 @@ encode_piece :: (piece: u8, side: u8) -> u8 #expand {
 }
 
 print_board :: (xiangqi: Xiangqi) {
-  for < row: xiangqi.board_10x9 {
+  
+  /*for < row: xiangqi.board_10x9 {
     for piece: row {
       if (piece & 1) == 0 {
         print("- ");
@@ -220,7 +224,7 @@ print_board :: (xiangqi: Xiangqi) {
       }
     }
     print("\n");
-  }
+  }*/
   if xiangqi.turn == 0 then {
     print("Turn: RED\n\n");
   } else {
@@ -230,7 +234,9 @@ print_board :: (xiangqi: Xiangqi) {
 
 Xiangqi :: struct {
   board_9x10: [9][10] u8;
-  board_10x9: [10][9] u8;
+  bit_row: [10] u16;
+  bit_col: [9]  u16;
+
   pieces: [2] Pieces;
   #place pieces;
   red: Pieces;
@@ -321,16 +327,21 @@ make_move :: (xiangqi: *Xiangqi, move: Move32) {
   // from:
   row, col := row_col_of(from);
   xiangqi.board_9x10[row][col] = NONE;
-  xiangqi.board_10x9[col][row] = NONE;
+  xiangqi.bit_row[col] &= ~(cast(u16)(1 << row));
+  xiangqi.bit_col[row] &= ~(cast(u16)(1 << col));
 
   // to:
   to := move.to;
   row, col = row_col_of(to);
   piece_code := encode_piece(piece, xiangqi.turn);
   xiangqi.board_9x10[row][col] = piece_code;
-  xiangqi.board_10x9[col][row] = piece_code;
+  xiangqi.bit_row[col] |= (cast(u16)(1 << row));
+  xiangqi.bit_col[row] |= (cast(u16)(1 << col));
+
   array := *xiangqi.pieces[xiangqi.turn].piece[piece];
   update_piece_array(array, from, to);
+
+
   xiangqi.turn ^= 1;
 
   // we already flipped the turn.
@@ -345,10 +356,16 @@ make_move :: (xiangqi: *Xiangqi, move: Move32) {
 unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
   to    := move.to;
   capture := move.capture;
+  // to:
+  row, col := row_col_of(to);
+  xiangqi.board_9x10[row][col] = capture;
   if capture != 0 then {
     cap := capture >> 2;
     array := *xiangqi.pieces[xiangqi.turn].piece[cap];
     append(array, to);
+  } else {
+    xiangqi.bit_row[col] &= ~(cast(u16)(1 << row));
+    xiangqi.bit_col[row] &= ~(cast(u16)(1 << col));
   }
 
   xiangqi.turn ^= 1;
@@ -356,18 +373,15 @@ unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
   from  := move.from;
 
   // from:
-  row, col := row_col_of(from);
+  row, col = row_col_of(from);
   xiangqi.board_9x10[row][col] = piece;
-  xiangqi.board_10x9[col][row] = piece;
+  xiangqi.bit_row[col] |= (cast(u16)(1 << row));
+  xiangqi.bit_col[row] |= (cast(u16)(1 << col));
 
   piece >>= 2;
   array := *xiangqi.pieces[xiangqi.turn].piece[piece];
   update_piece_array(array, to, from);
 
-  // to:
-  row, col = row_col_of(to);
-  xiangqi.board_9x10[row][col] = capture;
-  xiangqi.board_10x9[col][row] = capture;
 }
 
 // generate pseudo legal moves for xiangqi.
@@ -402,11 +416,11 @@ generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   }
 
   for cannon: piece_array.cannons {
-    cannon_moves(cannon, xiangqi.board_9x10, xiangqi.board_10x9, moves);
+    cannon_moves(cannon, xiangqi, moves);
   }
 
   for rook: piece_array.rooks {
-    rook_moves(rook, xiangqi.board_9x10, xiangqi.board_10x9, moves);
+    rook_moves(rook, xiangqi, moves);
   }
 
   for soldier: piece_array.soldiers {
@@ -439,9 +453,9 @@ generate_moves_for_piece :: (xiangqi: *Xiangqi, moves: *Moves, row: u8, col: u8)
   case H;
     knight_moves(from, xiangqi.board_9x10, moves);
   case R;
-    rook_moves(from, xiangqi.board_9x10, xiangqi.board_10x9, moves);
+    rook_moves(from, xiangqi, moves);
   case C;
-    cannon_moves(from, xiangqi.board_9x10, xiangqi.board_10x9, moves);
+    cannon_moves(from, xiangqi, moves);
   case S;
     advance: s8 = 1;
     col_mask: u64 = 0b_01111_11000;
@@ -587,13 +601,13 @@ is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   }
 
   // rooks, cannons, flying general rule...
-  bit_rows := row_bits(xiangqi.board_10x9[col]);
+  bit_rows := xiangqi.bit_row[col]; //row_bits(xiangqi.board_10x9[col]);
   if col == col_of(move.from) {
-    bit_rows &= cast(u64) ~(1 << row_of(move.from));
+    bit_rows &= ~(cast(u16) (1 << row_of(move.from)));
   }
 
   if col == col_of(move.to) {
-    bit_rows |= cast(u64) (1 << row_of(move.to));
+    bit_rows |= cast(u16) (1 << row_of(move.to));
   }
 
   gen_code := encode_piece(G, turn ^ 1);
@@ -638,13 +652,13 @@ is_legal :: (xiangqi: *Xiangqi, move: Move32) -> bool {
     return false;
   }
 
-  bit_cols := col_bits(xiangqi.board_9x10[row]);
+  bit_cols := xiangqi.bit_col[row];
   if row == row_of(move.from) {
-    bit_cols &= cast(u64) ~(1 << col_of(move.from));
+    bit_cols &= ~ (cast(u16) (1 << col_of(move.from)));
   }
 
   if row == row_of(move.to) {
-    bit_cols |= cast(u64) (1 << col_of(move.to));
+    bit_cols |= cast(u16) (1 << col_of(move.to));
   }
 
   forward = cast(u64)0xFFFF << col;
@@ -959,19 +973,19 @@ knight_moves :: (from: u8, board: [9][10] u8, moves: *Moves) {
   }
 }
 
-rook_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: *Moves) {
-  rook_captures(from, board9x10, board10x9, moves);
-  quiet_sliding_moves(from, board9x10, board10x9, moves);
+rook_moves :: (from: u8, xiangqi: *Xiangqi, moves: *Moves) {
+  rook_captures(from, xiangqi, moves);
+  quiet_sliding_moves(from, xiangqi, moves);
 }
 
-rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: *Moves) {
+rook_captures :: (from: u8, xiangqi: *Xiangqi, moves: *Moves) {
   row, col := row_col_of(from);
-  piece := board10x9[col][row];
+  piece := xiangqi.board_9x10[row][col];
   forward: u64 = cast(u64)0xFFFF << row;
   backward := ~forward & 0x1FF;
   forward <<= 1;
   forward &= 0x1FF;
-  bits := row_bits(board10x9[col]);
+  bits := xiangqi.bit_row[col];
   forward &= bits;
   backward &= bits;
   row_back: s8 = -1;
@@ -984,7 +998,7 @@ rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves:
 
   if row_back != -1 {
     to := index_of(cast(u8)row_back, col);
-    capture := board9x10[row_back][col];
+    capture := xiangqi.board_9x10[row_back][col];
     if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
@@ -993,7 +1007,7 @@ rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves:
 
   if row_forward != -1 {
     to := index_of(cast(u8)row_forward, col);
-    capture := board9x10[row_forward][col];
+    capture := xiangqi.board_9x10[row_forward][col];
     if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
@@ -1004,7 +1018,7 @@ rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves:
   backward = ~forward & 0x3FF;
   forward <<= 1;
   forward &= 0x3FF;
-  bits = col_bits(board9x10[row]);
+  bits = xiangqi.bit_col[row];
   forward &= bits;
   backward &= bits;
   col_back: s8 = -1;
@@ -1016,7 +1030,7 @@ rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves:
 
   if col_back != -1 {
     to := index_of(row, cast(u8)col_back);
-    capture := board9x10[row][col_back];
+    capture := xiangqi.board_9x10[row][col_back];
     if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
@@ -1025,7 +1039,7 @@ rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves:
 
   if col_forward != -1 {
     to := index_of(row, cast(u8)col_forward);
-    capture := board9x10[row][col_forward];
+    capture := xiangqi.board_9x10[row][col_forward];
     if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
@@ -1033,14 +1047,14 @@ rook_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves:
   }
 }
 
-cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: *Moves) {
+cannon_captures :: (from: u8, xiangqi: *Xiangqi, moves: *Moves) {
   row, col := row_col_of(from);
-  piece := board10x9[col][row];
+  piece := xiangqi.board_9x10[row][col];
   forward: u64 = cast(u64)0xFFFF << row;
   backward := ~forward & 0x1FF;
   forward <<= 1;
   forward &= 0x1FF;
-  bits := row_bits(board10x9[col]);
+  bits := xiangqi.bit_row[col];
   forward &= bits;
   backward &= bits;
   row_back: s8 = -1;
@@ -1058,7 +1072,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
 
   if row_back != -1 {
     to := index_of(cast(u8)row_back, col);
-    capture := board9x10[row_back][col];
+    capture := xiangqi.board_9x10[row_back][col];
     if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
@@ -1067,7 +1081,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
 
   if row_forward != -1 {
     to := index_of(cast(u8)row_forward, col);
-    capture := board9x10[row_forward][col];
+    capture := xiangqi.board_9x10[row_forward][col];
     if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
@@ -1078,7 +1092,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
   backward = ~forward & 0x3FF;
   forward <<= 1;
   forward &= 0x3FF;
-  bits = col_bits(board9x10[row]);
+  bits = xiangqi.bit_col[row];
   forward &= bits;
   backward &= bits;
   col_back: s8 = -1;
@@ -1094,7 +1108,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
 
   if col_back != -1 {
     to := index_of(row, cast(u8)col_back);
-    capture := board9x10[row][col_back];
+    capture := xiangqi.board_9x10[row][col_back];
     if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
@@ -1103,7 +1117,7 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
 
   if col_forward != -1 {
     to := index_of(row, cast(u8)col_forward);
-    capture := board9x10[row][col_forward];
+    capture := xiangqi.board_9x10[row][col_forward];
     if (capture & 0x3) != (piece & 0x3) then {
       move := Move32.{from, to, capture, piece};
       append(moves, move);
@@ -1111,10 +1125,10 @@ cannon_captures :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, move
   }
 }
 
-quiet_sliding_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: *Moves) {
+quiet_sliding_moves :: (from: u8, xiangqi: *Xiangqi, moves: *Moves) {
   // this function is used for both rook and cannon quiet moves.
   row, col := row_col_of(from);
-  piece := board10x9[col][row];
+  piece := xiangqi.board_9x10[row][col];
   forward := 0xFFFF << row;
   backward := ~forward & 0x1FF;
   forward <<= 1;
@@ -1126,7 +1140,7 @@ quiet_sliding_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, 
     }
     backward >>= 1;
     to := index_of(index, col);
-    capture := board10x9[col][index];
+    capture := xiangqi.board_9x10[index][col];
     if capture != 0 then
       break;
     move := Move32.{from, to, capture, piece};
@@ -1139,7 +1153,7 @@ quiet_sliding_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, 
       bsf index, forward;
       blsr forward, forward;
     }
-    capture := board10x9[col][index];
+    capture := xiangqi.board_9x10[index][col];
     to := index_of(index, col);
     if capture != 0 then
       break;
@@ -1157,7 +1171,7 @@ quiet_sliding_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, 
       bsr index, backward;
     }
     backward >>= 1;
-    capture := board9x10[row][index];
+    capture := xiangqi.board_9x10[row][index];
     to := index_of(row, index);
     if capture != 0 then
       break;
@@ -1171,7 +1185,7 @@ quiet_sliding_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, 
       bsf index, forward;
       blsr forward, forward;
     }
-    capture := board9x10[row][index];
+    capture := xiangqi.board_9x10[row][index];
     to := index_of(row, index);
     if capture != 0 then
       break;
@@ -1181,9 +1195,9 @@ quiet_sliding_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, 
 
 }
 
-cannon_moves :: (from: u8, board9x10: [9][10] u8, board10x9: [10][9] u8, moves: *Moves) {
-  cannon_captures(from, board9x10, board10x9, moves);
-  quiet_sliding_moves(from, board9x10, board10x9, moves);
+cannon_moves :: (from: u8, xiangqi: *Xiangqi, moves: *Moves) {
+  cannon_captures(from, xiangqi, moves);
+  quiet_sliding_moves(from, xiangqi, moves);
 }
 
 // flip the index.
@@ -1212,40 +1226,6 @@ col_of :: (index: u8) -> u8 #expand {
 
 row_col_of :: (index: u8) -> u8, u8 #expand {
   return row_of(index), col_of(index);
-}
-
-row_bits :: (row: [9] u8) -> u64 {
-  data := row.data;
-  value: u64;
-  #asm BMI2 {
-    mov.q  value, [data];
-    mov.q  reg1: gpr, [data + 1];
-    mov.q  mask0: gpr, 0x0101_0101_0101_0101;
-    mov.q  mask1: gpr, 0x0100_0000_0000_00FF;
-    pext.q value, value, mask0;
-    pext.q reg1, reg1, mask1;
-    and.q  reg1, 0x100;
-    or.q   value, reg1;
-  } 
-
-  return value;
-}
-
-col_bits :: (col: [10] u8) -> u64 {
-  data := col.data;
-  value: u64;
-  #asm BMI2 {
-    mov.q  value, [data];
-    mov.q  reg1: gpr, [data + 2];
-    mov.q  mask0: gpr, 0x0101_0101_0101_0101;
-    mov.q  mask1: gpr, 0x0101_0000_0000_00FF;
-    pext.q value, value, mask0;
-    pext.q reg1, reg1, mask1;
-    and.q  reg1, 0x300;
-    or.q   value, reg1;
-  } 
-
-  return value;
 }
 
 max :: (a: int, b: s32) -> int #expand {

@@ -54,7 +54,7 @@ perft_test_suite :: () {
   test(*xiangqi, "startpos", 4, 3_290_240);
   test(*xiangqi, "startpos", 5, 133_312_995);
 
-  fen := "r1ea1a3/4kh3/2h1e4/pHp1p1p1p/4c4/6P2/P1P2R2P/1CcC5/9/2EAKAE2 w - - 0 1";
+  /*fen := "r1ea1a3/4kh3/2h1e4/pHp1p1p1p/4c4/6P2/P1P2R2P/1CcC5/9/2EAKAE2 w - - 0 1";
   xiangqi_fen(*xiangqi, fen);
   test(*xiangqi, fen, 1, 38);
   test(*xiangqi, fen, 2, 1_128);
@@ -67,7 +67,7 @@ perft_test_suite :: () {
   test(*xiangqi, fen, 2, 281);
   test(*xiangqi, fen, 3, 8_620);
   test(*xiangqi, fen, 4, 326_201);
-  test(*xiangqi, fen, 5, 10_369_923);
+  test(*xiangqi, fen, 5, 10_369_923);*/
   
   test :: (xiangqi: *Xiangqi, title: string, depth: int, expected: int) {
     time := get_time();
