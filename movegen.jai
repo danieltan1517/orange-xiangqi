@@ -1268,36 +1268,5 @@ min :: (a: int, b: s32) -> int #expand {
   return c;
 }
 
-max :: (a: int, b: int) -> int #expand {
-  c: int;
-  #asm {
-    cmp a, b;
-    mov c, a;
-    cmovle c, b;
-  }
-  return c;
-}
-
-min :: (a: int, b: int) -> int #expand {
-  c: int;
-  #asm {
-    cmp a, b;
-    mov c, a;
-    cmovge c, b;
-  }
-  return c;
-}
-
-
-abs :: (a: int) -> int #expand {
-  eax: int;
-  #asm {
-    mov eax, a;
-    neg eax;
-    cmovs eax, a;
-  }
-  return eax;
-}
-
 #import "Basic";
 #import "String";
