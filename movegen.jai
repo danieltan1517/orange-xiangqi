@@ -179,6 +179,7 @@ encode_piece :: (piece: u8, side: u8) -> u8 #expand {
 print_board :: (xiangqi: Xiangqi) {
   
   for < j: 9..0 {
+    print("%  ", j);
     for i: 0..8 {
       piece := xiangqi.board_9x10[i][j];
       if (piece & 1) == 0 {
@@ -224,6 +225,7 @@ print_board :: (xiangqi: Xiangqi) {
     }
     print("\n");
   }
+  print("   a b c d e f g h i\n");
   if xiangqi.turn == 0 then {
     print("Turn: RED\n\n");
   } else {
