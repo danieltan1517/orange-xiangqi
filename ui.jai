@@ -157,7 +157,7 @@ main :: () {
       r.w = 8.5 * k;
       color := Vector4.{.1, .1, .1, .75};
       simp.set_shader_for_color(true);
-      simp.immediate_quad(17.0, r.y, r.x + r.w + 7.0, r.y - 14*k, color);
+      simp.immediate_quad(17.0, r.y, r.x + r.w + 7.0, r.y - 16*k, color);
 
       r.y -= k + 10.0;
       if button(r, "New Game") then {
@@ -180,10 +180,11 @@ main :: () {
       if button(r, "Redo (Ctrl+Y)") then {
         gui_redo_move();
       }
+
       r.y -= k + 5.0;
-      if base_checkbox(r, "Romanized", !chinese_pieces) then {
-        chinese_pieces = !chinese_pieces;
-      }
+      dropdown(r, string.["European Set", "Chinese Set", "Chinese Calligraphy Set"], cast(*s32)*piece_style);
+      r.y -= k + 5.0;
+      dropdown(r, string.["White Board", "Mocha Board", "Bamboo Board", "Rust Board", "Jade Board"], cast(*s32)*board_style);
       r.y -= k + 5.0;
       if base_checkbox(r, "Orientation", !orient) then {
         orient = !orient;
@@ -224,20 +225,51 @@ main :: () {
       r = get_rect(5.0, 5.0, 8.5*k, k);
       label(r, status_string, label_theme);
     }
+
+    draw_popups();  // This draws Subwindows as well.
   }
 
   render_xiangqiboard :: (mouse_x: float, mouse_y: float, mouse_event: bool) #expand {
     simp.clear_render_target(.15, .15, .15, 1.0);
     simp.set_shader_for_color();
+    simp.set_shader_for_color(true);
     board_margin := min(center_x, center_y) * .925;
     sq := board_margin / 5.0;
     hsq := sq / 2.0; //hsq = half square
     board_x := center_x - sq * 4.5;
     board_y := center_y - sq * 5.0;
-    color := Vector4.{1., 1., 1., 1.};
+    color: Vector4 = ---;
+    if board_style == {
+    case .White;
+      color = Vector4.{1., 1., 1., 1.};
+    case .Mocha;
+      color = Vector4.{.7529, .6392, .5725, 1.};
+    case .Bamboo;
+      color = Vector4.{.8235, .6902, .2980, 1.}; 
+    case .Rust;
+      color = Vector4.{.8255, .3784, .0, 1.};
+    case .Jade;
+      color = Vector4.{.4667, .6118, .4392, 1.};
+    }
+
     simp.immediate_quad(board_x, board_y, board_x + 9.0 * sq, board_y + 10.0 * sq, color);
     board_x += hsq;
     board_y += hsq;
+
+    {
+      // Chu He Han Jie.
+      simp.set_shader_for_images(*sprites);
+      color := Vector4.{0., 0., 0., 1.};
+      sprite_x := 0;
+      sprite_y := 0;
+      x_river := board_x;
+      y_river := board_y + sq * 4.0;
+      uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/7.0);
+      uv1 := make_vector2((sprite_x+2.0)*1.0/7.0, sprite_y*1.0/7.0);
+      uv2 := make_vector2((sprite_x+2.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
+      uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
+      immediate_quad(x_river, y_river, x_river + sq + sq, y_river + sq, color, uv0, uv1, uv2, uv3);
+    }
 
     color = Vector4.{0,0,0,1};
     // draw the board grid. 
@@ -379,13 +411,19 @@ main :: () {
 
     gridx := board_x + index_x*sq; 
     gridy := board_y + index_y*sq;
-    if chinese_pieces then
+    if piece_style == {
+    case .European;
+      // do nothing.
+    case .Classic;
+      sprite_y += 4.0;
+    case .Stylized;
       sprite_y += 2.0;
+    }
 
-    uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/5.0);
-    uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/5.0);
-    uv2 := make_vector2((sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
-    uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
+    uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/7.0);
+    uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/7.0);
+    uv2 := make_vector2((sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
+    uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
 
     immediate_quad(gridx, gridy, gridx + sq, gridy + sq, color, uv0, uv1, uv2, uv3);
   }
@@ -398,7 +436,6 @@ main :: () {
       sprite_x -= 1.0;
     sprite_y := 0.0;
 
-
     row, col = row_col_of(orient_piece(from));
 
     index_x := cast(float) row;
@@ -406,10 +443,10 @@ main :: () {
     gridx := board_x + index_x*sq; 
     gridy := board_y + index_y*sq;
 
-    uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/5.0);
-    uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/5.0);
-    uv2 := make_vector2((sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
-    uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
+    uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/7.0);
+    uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/7.0);
+    uv2 := make_vector2((sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
+    uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
 
     // enlarge or make it smaller to make the move highlighting more aesthetically pleasing... 
     if piece != 0 then {
@@ -425,13 +462,19 @@ main :: () {
     index_x := cast(float) row;
     index_y := cast(float) col;
     sprite_y := 2.0 - cast(float)turn;
-    if chinese_pieces then
+    if piece_style == {
+    case .European;
+      // do nothing.
+    case .Classic;
+      sprite_y += 4.0;
+    case .Stylized;
       sprite_y += 2.0;
+    }
 
-    uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/5.0);
-    uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/5.0);
-    uv2 := make_vector2((sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
-    uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/5.0);
+    uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/7.0);
+    uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/7.0);
+    uv2 := make_vector2((sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
+    uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
 
     immediate_quad(mousex - hsq, mousey - hsq, mousex + hsq, mousey + hsq, color, uv0, uv1, uv2, uv3);
 
@@ -445,7 +488,8 @@ sprites: simp.Texture;
 setting_sprite: simp.Texture;
 center_x: float = 0.0;
 center_y: float = 0.0;
-chinese_pieces := false;
+piece_style: enum s32 { European; Classic; Stylized; } = .European;
+board_style: enum s32 { White; Mocha; Bamboo; Rust; Jade; } = .White;
 orient := false;
 dt: float = 0.0;
 looptime_begin: float = 0;
