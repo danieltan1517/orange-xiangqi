@@ -48,7 +48,11 @@ main :: () {
         if e.key_code == .MOUSE_BUTTON_LEFT {
           key_pressed = e.key_pressed;
           mouse_event = true;
-          xiangqi_board_click(cast(float) mouse_x, cast(float) mouse_y, mouse_event, key_pressed);
+          xiangqi_board_click(cast(float) mouse_x, cast(float) mouse_y, mouse_event, key_pressed, true);
+        } else if e.key_code == .MOUSE_BUTTON_RIGHT {
+          key_pressed = e.key_pressed;
+          mouse_event = true;
+          xiangqi_board_click(cast(float) mouse_x, cast(float) mouse_y, mouse_event, key_pressed, false);
         } else if e.key_code == .CTRL {
           ctrl_pressed = e.key_pressed;
         } else if e.key_pressed == 1 && e.key_code == #char "Z" && ctrl_pressed {
@@ -83,7 +87,7 @@ main :: () {
     assert(success);
   }
 
-  xiangqi_board_click :: (x: float, y: float, mouse_event: bool, key_pressed: int) {
+  xiangqi_board_click :: (x: float, y: float, mouse_event: bool, key_pressed: int, left_or_right: bool) {
     board_margin := min(center_x, center_y) * .925;
     sq := board_margin / 5.0;
     hsq := sq / 2.0; //hsq = half square
@@ -100,41 +104,69 @@ main :: () {
         row = 8 - row;
         col = 9 - col;
       }
-      if xiangqi_mouse == {
-      case XiangqiMouse.Idle;
-        if key_pressed == 1 then {
-          piece := xiangqi.board_9x10[row][col];
-          if piece != 0 then {
-            xiangqi_mouse = XiangqiMouse.Drag;
-            from_index = index_of(row, col);
+      if left_or_right == true {
+        xiangqi_highlight = .Idle;
+        clear_arrows();
+        if xiangqi_mouse == {
+        case XiangqiMouse.Idle;
+          if key_pressed == 1 then {
+            piece := xiangqi.board_9x10[row][col];
+            if piece != 0 then {
+              xiangqi_mouse = XiangqiMouse.Drag;
+              from_index = index_of(row, col);
+            }
           }
-        }
-
-      case XiangqiMouse.Drag;
-        to_index := index_of(row, col);
-        if from_index != to_index then {
+       
+        case XiangqiMouse.Drag;
+          to_index := index_of(row, col);
+          if from_index != to_index then {
+            piece := xiangqi.board_9x10[row_of(from_index)][col_of(from_index)];
+            capture := xiangqi.board_9x10[row][col];
+            move := Move32.{from_index, to_index, capture, piece};
+            gui_make_move(move, false);
+            xiangqi_mouse = XiangqiMouse.Idle;
+            from_index = 0xFF;
+          } else {
+            xiangqi_mouse = XiangqiMouse.Select;
+          }
+       
+        case XiangqiMouse.Select;
+          to_index := index_of(row, col);
           piece := xiangqi.board_9x10[row_of(from_index)][col_of(from_index)];
           capture := xiangqi.board_9x10[row][col];
           move := Move32.{from_index, to_index, capture, piece};
-          gui_make_move(move, false);
+          gui_make_move(move, true);
           xiangqi_mouse = XiangqiMouse.Idle;
           from_index = 0xFF;
-        } else {
-          xiangqi_mouse = XiangqiMouse.Select;
+        }
+      } else {
+        position := index_of(row, col);
+        if xiangqi_highlight == {
+        case .Idle;
+          if key_pressed == 1 {
+            xiangqi_highlight_select = position;
+            xiangqi_highlight = .Select;
+          }
+        case .Select;
+          if key_pressed == 0 {
+            if xiangqi_highlight_select != position {
+              // add an arrow...
+              arrow: Arrow;
+              arrow.from = cast(u8) xiangqi_highlight_select;
+              arrow.to   = cast(u8) position;
+              add_arrow(arrow);
+            }
+
+            xiangqi_highlight = .Idle;
+          }
         }
 
-      case XiangqiMouse.Select;
-        to_index := index_of(row, col);
-        piece := xiangqi.board_9x10[row_of(from_index)][col_of(from_index)];
-        capture := xiangqi.board_9x10[row][col];
-        move := Move32.{from_index, to_index, capture, piece};
-        gui_make_move(move, true);
-        xiangqi_mouse = XiangqiMouse.Idle;
-        from_index = 0xFF;
       }
     } else {
       // outside of the board.
       xiangqi_mouse = XiangqiMouse.Idle; 
+      xiangqi_highlight = .Idle;
+      xiangqi_highlight_select = -1;
       from_index = 0xFF;
     }
   }
@@ -437,7 +469,57 @@ main :: () {
       render_piece_drag(p0.x + hsq, p0.y + hsq, hsq, sq, orient_piece(from_index), sprite_index, xiangqi.turn ^ 1, color);
     }
 
+    for index: 0..num_arrows-1 {
+      arrow: Arrow = arrows[index];
+      render_arrow(arrow, board_x, board_y, sq);
+    }
 
+    render_arrow :: (arrow: Arrow, corner_x: float, corner_y: float, square: float) {
+      hsquare := square * .5;
+      from_pt := arrow_point(arrow.from, corner_x, corner_y, square, hsquare);
+      to\ _pt := arrow_point(arrow.to\, corner_x, corner_y, square, hsquare);
+      dx := to_pt.x - from_pt.x;
+      dy := to_pt.y - from_pt.y;
+      hypotenuse := sqrt(dx*dx + dy*dy);
+ 
+      // ... I suck at trigonometry...haven't done it in a while... so this...
+      ct   := (dx / hypotenuse);
+      st   := (dy / hypotenuse);
+      size := square * .12;
+      w    := make_vector2(ct, st) * size;
+      h    := make_vector2(st, -ct) * size;
+ 
+      qsquare := square * .70;
+      from_pt.x += ct * square * .425;
+      from_pt.y += st * square * .425;
+      to_pt.x -= ct * qsquare;
+      to_pt.y -= st * qsquare;
+ 
+      p0 := from_pt - w - h;
+      p1 := to_pt + w - h;
+      p2 := to_pt + w + h;
+      p3 := from_pt - w + h;
+ 
+      simp.set_shader_for_color(true);
+      simp.immediate_quad(p0, p1, p2, p3, arrow_color);
+ 
+      from_pt = to_pt;
+      to_pt.x += ct * qsquare * .6;
+      to_pt.y += st * qsquare * .6;
+      w  = make_vector2(ct, st) * size;
+      h  = make_vector2(st, -ct) * size;
+      p0 = from_pt + w - h * 2.25;
+      p1 = to_pt + w;
+      p2 = from_pt + w + h * 2.25;
+      simp.immediate_quad(p0, p1, p1, p2, arrow_color);
+ 
+ 
+      arrow_point :: (index: int, corner_x: float, corner_y: float, square: float, half_square: float) -> Vector2 {
+        index = orient_piece(cast(u8)index);
+        row, col := row_col_of(cast(u8)index);
+        return make_vector2(corner_x + square * row + half_square, corner_y + square * col + half_square);
+      }
+    }
   }
 
   render_piece :: (board_x: float, board_y: float, sq: float, from: u8, sprite_x: float, turn: s64, color: Vector4) {
@@ -907,6 +989,32 @@ to_u8_array :: (str: string) -> [] u8 {
   array.data = str.data;
   array.count = str.count;
   return array;
+}
+
+
+arrows: [128] Arrow;
+arrow_index: int = 0;
+num_arrows: int = 0;
+arrow_color :: Vector4.{.15, .15, .15, .75};
+xiangqi_highlight := XiangqiMouse.Idle;
+xiangqi_highlight_select := -1;
+
+Arrow :: struct {
+  from: u8;
+  to: u8;
+}
+
+add_arrow :: (arrow: Arrow) {
+  arrows[arrow_index] = arrow;
+  arrow_index += 1;
+  arrow_index %= arrows.count;
+  num_arrows += 1;
+  num_arrows = min(num_arrows, cast(int)arrows.count);
+}
+
+clear_arrows :: () #expand {
+  arrow_index = 0;
+  num_arrows = 0;
 }
 
 display_settings := false;
