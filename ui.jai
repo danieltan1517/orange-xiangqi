@@ -64,7 +64,7 @@ main :: () {
     }
 
     if moves.count then
-      update_ucci(*engine);
+      update_ucci(*engine, "ucci");
 
     render_xiangqiboard(cast(float)mouse_x, cast(float)mouse_y, mouse_event);
     render_ui();
@@ -841,7 +841,7 @@ load_engine :: (name: string) -> Engine, bool {
   return engine, success;
 }
 
-update_ucci :: (engine: *Engine) {
+update_ucci :: (engine: *Engine, protocol: string) {
   process := *engine.process;
   state := engine.state;
   defer engine.state = state;
@@ -861,11 +861,15 @@ update_ucci :: (engine: *Engine) {
     messages: string;
     messages.data = out_buff.data;
     messages.count = output_bytes;
+
+    ok := tprint("%1ok", protocol);
     for msg, index: split(messages, NEWLINE) {
       message := msg;
       if message
         print("%\n", message);
-      if equal(message, "ucciok") then {
+
+      // either ucciok or uciok
+      if equal(message, ok) then {
         state = .isready;
         engine.timer = FLOAT32_INFINITY;
       } 
@@ -892,7 +896,7 @@ update_ucci :: (engine: *Engine) {
   case .idle;
     if is_engine_turn() then {
       state = .go;
-      engine.timer = FLOAT32_INFINITY;
+      engine.timer = 0.0;
     }
   case .go;
     state = .bestmove;
@@ -929,7 +933,7 @@ update_ucci :: (engine: *Engine) {
   if state == {
   case .ucciok;
     if engine.timer > 3.0 then {
-      write_to_process(process, to_u8_array("ucci\n"));
+      write_to_process(process, to_u8_array(tprint("%1%2", protocol, NEWLINE)));
       engine.timer = 0.0;
     } 
   case .isready;
@@ -939,7 +943,7 @@ update_ucci :: (engine: *Engine) {
     } 
   case .uccinewgame;
     if engine.timer > 5.0 then {
-      write_to_process(process, to_u8_array("uccinewgame\n"));
+      write_to_process(process, to_u8_array(tprint("%1newgame%2", protocol, NEWLINE)));
       engine.timer = 0.0;
     }
   case .idle;
