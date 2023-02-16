@@ -116,7 +116,7 @@ main :: () {
           piece := xiangqi.board_9x10[row_of(from_index)][col_of(from_index)];
           capture := xiangqi.board_9x10[row][col];
           move := Move32.{from_index, to_index, capture, piece};
-          gui_make_move(move);
+          gui_make_move(move, false);
           xiangqi_mouse = XiangqiMouse.Idle;
           from_index = 0xFF;
         } else {
@@ -128,7 +128,7 @@ main :: () {
         piece := xiangqi.board_9x10[row_of(from_index)][col_of(from_index)];
         capture := xiangqi.board_9x10[row][col];
         move := Move32.{from_index, to_index, capture, piece};
-        gui_make_move(move);
+        gui_make_move(move, true);
         xiangqi_mouse = XiangqiMouse.Idle;
         from_index = 0xFF;
       }
@@ -201,6 +201,18 @@ main :: () {
       if base_checkbox(r, "Highlight Move", highlight_move) then {
         highlight_move = !highlight_move;
       }
+
+      r.y -= k + 5.0;
+      if base_checkbox(r, "Animations", mov_anim_state != MovAnim.Off) then {
+        if mov_anim_state == MovAnim.Off
+          mov_anim_state = MovAnim.Idle;
+        else
+          mov_anim_state = MovAnim.Off;
+      }
+
+      slider_theme := *default_overall_theme.slider_theme;
+      r.y -= k + 5.0;
+      slider(r, *mov_anim_complete, 0.00, 1.0, 0.01, slider_theme, suffix=" Animation");
      
       r.y -= k + 5.0;
       action, str, state := text_input(r, "", text_theme);
@@ -395,14 +407,45 @@ main :: () {
       turn := (index & 2) >> 1;
       index >>= 2;
       sprite_index := ren_idx[index];
-      render_piece_drag(mouse_x, mouse_y, sq/2.0, sq, orient_piece(from_index), sprite_index, turn, color);
+      render_piece_drag(mouse_x, mouse_y, hsq, sq, orient_piece(from_index), sprite_index, turn, color);
     }
+
+    if mov_anim_state == MovAnim.Play && moves_made_count then {
+      ren_idx :: float.[0.0,1.0,3.0,2.0,4.0,5.0,6.0];
+      mov := moves_made[moves_made_count-1];
+      from, to := orient_piece(mov.from), orient_piece(mov.to);
+      piece := mov.piece >> 2;
+
+      from_x, from_y := row_col_of(from);
+      to_x, to_y := row_col_of(to);
+      from_vector: Vector2; 
+      from_vector.x = board_x + sq * from_x;
+      from_vector.y = board_y + sq * from_y;
+
+      to_vector: Vector2;
+      to_vector.x = board_x + sq * to_x;
+      to_vector.y = board_y + sq * to_y;
+
+      ratio := mov_anim_time / mov_anim_complete;
+      mov_anim_time += dt;
+      if mov_anim_time >= mov_anim_complete {
+        mov_anim_time = 0;
+        mov_anim_state = MovAnim.Idle;
+      }
+      p0 := lerp(from_vector, to_vector, ratio);
+      sprite_index := ren_idx[piece];
+      render_piece_drag(p0.x + hsq, p0.y + hsq, hsq, sq, orient_piece(from_index), sprite_index, xiangqi.turn ^ 1, color);
+    }
+
+
   }
 
   render_piece :: (board_x: float, board_y: float, sq: float, from: u8, sprite_x: float, turn: s64, color: Vector4) {
     if xiangqi_mouse == XiangqiMouse.Drag && from == orient_piece(from_index) then {
       return;
     }
+    if mov_anim_state == .Play && from == prev_to then
+      return;
 
     row, col := row_col_of(from);
     index_x := cast(float) row;
@@ -627,11 +670,11 @@ gui_redo_move :: () {
   mov := moves_made[moves_made_count];
   if mov == 0 then return;
   next := moves_made[moves_made_count+1];
-  gui_make_move(mov);
+  gui_make_move(mov, true);
   moves_made[moves_made_count] = next;
 }
 
-gui_make_move :: (move: Move32) {
+gui_make_move :: (move: Move32, animate: bool) {
   for m: moves {
     if m == move then {
       prev_from = move.from;
@@ -639,9 +682,14 @@ gui_make_move :: (move: Move32) {
       make_move(*xiangqi, move);
 
       // add another move.
-      assert (moves_made_count < moves_made.count);
+      assert (moves_made_count < moves_made.count, "Exceed the maximum allowed moves!");
       moves_made[moves_made_count] = move;
       moves_made_count += 1;
+
+      if animate == true && mov_anim_state == MovAnim.Idle then {
+        mov_anim_time = 0.0;
+        mov_anim_state = MovAnim.Play;
+      }
 
       sound_data: *Mixer_Sound_Data;
       if move.capture == 0 {
@@ -684,6 +732,16 @@ EngineState :: enum {
   go;
   bestmove;
   bug;
+}
+
+mov_anim_time: float = 0;
+mov_anim_complete: float = .12;
+mov_anim_state: MovAnim = MovAnim.Idle;
+
+MovAnim :: enum {
+  Off;
+  Idle;
+  Play;
 }
 
 load_engine :: (name: string) -> Engine, bool {
@@ -776,7 +834,7 @@ update_ucci :: (engine: *Engine) {
           message = eat_spaces(message);
           mov_token := parse_token(*message);
           mov := to_move32(*xiangqi, mov_token);
-          gui_make_move(mov);
+          gui_make_move(mov, true);
           state = .idle;
         }
       }
