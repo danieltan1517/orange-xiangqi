@@ -526,7 +526,7 @@ main :: () {
     if xiangqi_mouse == XiangqiMouse.Drag && from == orient_piece(from_index) then {
       return;
     }
-    if mov_anim_state == .Play && from == prev_to then
+    if mov_anim_state == .Play && (from == prev_from || from == prev_to) then
       return;
 
     row, col := row_col_of(from);
@@ -557,7 +557,7 @@ main :: () {
     row, col := row_col_of(from);
     sprite_x := 3.0;
     piece := xiangqi.board_9x10[row][col];
-    if piece != 0 then
+    if mov_anim_state != .Play && piece != 0 then
       sprite_x -= 1.0;
     sprite_y := 0.0;
 
@@ -574,7 +574,7 @@ main :: () {
     uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
 
     // enlarge or make it smaller to make the move highlighting more aesthetically pleasing... 
-    if piece != 0 then {
+    if mov_anim_state != .Play && piece != 0 then {
       immediate_quad(gridx - .05*sq, gridy - .05*sq, gridx + 1.05*sq, gridy + 1.05*sq, color, uv0, uv1, uv2, uv3);
     } else {
       immediate_quad(gridx + 0.25 * sq, gridy + 0.25 * sq, gridx + 0.75 * sq, gridy + 0.75 * sq, color, uv0, uv1, uv2, uv3);
