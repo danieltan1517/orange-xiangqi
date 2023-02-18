@@ -526,7 +526,7 @@ main :: () {
     if xiangqi_mouse == XiangqiMouse.Drag && from == orient_piece(from_index) then {
       return;
     }
-    if mov_anim_state == .Play && (from == prev_from || from == prev_to) then
+    if mov_anim_state == .Play && (from == orient_piece(prev_from) || from == orient_piece(prev_to)) then
       return;
 
     row, col := row_col_of(from);
