@@ -74,7 +74,7 @@ main :: () {
     for sound_player.streams  it.marked = true;
     post_entity_update(sound_player, dt);
 
-    sleep_milliseconds(10);
+    sleep_milliseconds(20);
     simp.swap_buffers(win);
     reset_temporary_storage();
     looptime_end = cast(float)get_time();
@@ -189,9 +189,11 @@ main :: () {
       r.w = 8.5 * k;
       color := Vector4.{.1, .1, .1, .75};
       simp.set_shader_for_color(true);
-      simp.immediate_quad(17.0, r.y, r.x + r.w + 7.0, r.y - 16*k, color);
 
-      r.y -= k + 10.0;
+      num_buttons :: 14.0;
+      simp.immediate_quad(17.0, r.y, r.x + r.w + 7.0, r.y - num_buttons*k - 5.0*num_buttons, color);
+
+      r.y -= k + 5.0;
       if button(r, "New Game") then {
         status_string = "";
         xiangqi_startpos(*xiangqi);
