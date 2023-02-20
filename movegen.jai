@@ -106,7 +106,7 @@ xiangqi_fen :: (xiangqi: *Xiangqi, fen: string) -> bool {
         side = RED;
         piece = H;
       case #char "N";
-        side = BLACK;
+        side = RED;
         piece = H;
       case #char "P";
         side = RED;
