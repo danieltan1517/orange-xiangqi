@@ -29,9 +29,9 @@ test_general_move :: () {
     test_one_piece_move("position fen rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/4K4/RNBA1ABNR w - - 0 1",
                         "e1", string.["e1d1", "e1e0", "e1e2", "e1f1"]);
     test_one_piece_move("position fen rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C1K3C1/9/RNBA1ABNR w - - 0 1",
-                        "d2", string.["d2d1", "d2e2"]);                        
+                        "d2", string.["d2d1", "d2e2"]);
     test_one_piece_move("position fen rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C3K1C1/9/RNBA1ABNR w - - 0 1",
-                        "f2", string.["f2e2", "f2f1"]);                   
+                        "f2", string.["f2e2", "f2f1"]);
 }
 
 test_advisor_move :: () {
@@ -74,6 +74,14 @@ test_knight_move :: () {
                         "c2", string.["c2a1","c2b0","c2e1"]);
 }
 
+test_soldiers_move :: () {
+    print("Testing soldiers move generation...\n");
+    test_one_piece_move("position fen rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/2N1C2C1/9/R1BAKABNR w - - 0 1",
+                        "a3", string.["a3a4"]);
+    test_one_piece_move("position fen rnbakabnr/9/1c5c1/p1p1p1p1p/P8/9/2P1P1P1P/2N1C2C1/9/R1BAKABNR w - - 0 1",
+                        "a5", string.["a5a6", "a5b5"]);
+}
+
 main :: () {
     print("Unit Test for Xiangqi UCCI Engine\n");
     print("---------------------------------\n");
@@ -85,6 +93,7 @@ main :: () {
     test_rook_move();
     test_elephant_move();
     test_knight_move();
+    test_soldiers_move();
 
     print("Done.\n");
 }
