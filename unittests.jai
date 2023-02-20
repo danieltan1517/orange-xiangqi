@@ -70,6 +70,8 @@ test_knight_move :: () {
     print("Testing knight move generation...\n");
     test_one_piece_move("position fen rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1",
                         "b0", string.["b0a2","b0c2"]);
+    test_one_piece_move("position fen rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/2N1C2C1/9/R1BAKABNR w - - 0 1",
+                        "c2", string.["c2a1","c2b0","c2e1"]);
 }
 
 main :: () {
@@ -131,7 +133,6 @@ test_one_piece_move :: (fen: string, piece: string, expected_moves: []string) {
     }
     if (moves.count == 0) {
         print("  no moves\n");
-        return;
     }
     print("\n");
 
