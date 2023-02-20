@@ -45,16 +45,21 @@ search :: (xiangqi: *Xiangqi, search_depth: int) -> Move32 {
 }
 
 perft_test_suite :: () {
+  // Perft Test Results from: https://www.chessprogramming.org/Chinese_Chess_Perft_Results
+  // TODO: Would be good to be able to find more perft results, so we can permutationally test
+  // the movegen better. - Daniel (Feb 19. 2023)
 
   xiangqi: Xiangqi;
   xiangqi_startpos(*xiangqi);
+  println("FEN [startpos]");
   test(*xiangqi, "startpos", 1, 44);
   test(*xiangqi, "startpos", 2, 1_920);
   test(*xiangqi, "startpos", 3, 79_666);
   test(*xiangqi, "startpos", 4, 3_290_240);
   test(*xiangqi, "startpos", 5, 133_312_995);
 
-  /*fen := "r1ea1a3/4kh3/2h1e4/pHp1p1p1p/4c4/6P2/P1P2R2P/1CcC5/9/2EAKAE2 w - - 0 1";
+  fen := "r1ea1a3/4kh3/2h1e4/pHp1p1p1p/4c4/6P2/P1P2R2P/1CcC5/9/2EAKAE2 w - - 0 1";
+  println("FEN [%]", fen);
   xiangqi_fen(*xiangqi, fen);
   test(*xiangqi, fen, 1, 38);
   test(*xiangqi, fen, 2, 1_128);
@@ -63,21 +68,102 @@ perft_test_suite :: () {
 
   fen = "1ceak4/9/h2a5/2p1p3p/5cp2/2h2H3/6PCP/3AE4/2C6/3A1K1H1 w - - 0 1";
   xiangqi_fen(*xiangqi, fen);
+  println("FEN [%]", fen);
   test(*xiangqi, fen, 1, 7);
   test(*xiangqi, fen, 2, 281);
   test(*xiangqi, fen, 3, 8_620);
   test(*xiangqi, fen, 4, 326_201);
-  test(*xiangqi, fen, 5, 10_369_923);*/
-  
+  test(*xiangqi, fen, 5, 10_369_923);
+  test(*xiangqi, fen, 6, 308_156_340);
+
+  fen = "5a3/3k5/3aR4/9/5r3/5h3/9/3A1A3/5K3/2EC2E2 w - - 0 1";
+  xiangqi_fen(*xiangqi, fen);
+  println("FEN [%]", fen);
+  test(*xiangqi, fen, 1, 25);
+  test(*xiangqi, fen, 2, 424);
+  test(*xiangqi, fen, 3, 9_850);
+  test(*xiangqi, fen, 4, 202_884);
+  test(*xiangqi, fen, 5, 4_739_553);
+  test(*xiangqi, fen, 6, 100_055_401);
+
+  fen = "CRH1k1e2/3ca4/4ea3/9/2hr5/9/9/4E4/4A4/4KA3 w - - 0 1";
+  xiangqi_fen(*xiangqi, fen);
+  println("FEN [%]", fen);
+  test(*xiangqi, fen, 1, 28);
+  test(*xiangqi, fen, 2, 516);
+  test(*xiangqi, fen, 3, 14_808);
+  test(*xiangqi, fen, 4, 395_483);
+  test(*xiangqi, fen, 5, 11_842_230);
+
+  fen = "R1H1k1e2/9/3aea3/9/2hr5/2E6/9/4E4/4A4/4KA3 w - - 0 1";
+  xiangqi_fen(*xiangqi, fen);
+  println("FEN [%]", fen);
+  test(*xiangqi, fen, 1, 21);
+  test(*xiangqi, fen, 2, 364);
+  test(*xiangqi, fen, 3, 7_626);
+  test(*xiangqi, fen, 4, 162_837);
+  test(*xiangqi, fen, 5, 3_500_505);
+  test(*xiangqi, fen, 6, 81_195_154);
+
+  fen = "C1hHk4/9/9/9/9/9/h1pp5/E3C4/9/3A1K3 w - - 0 1";
+  xiangqi_fen(*xiangqi, fen);
+  println("FEN [%]", fen);
+  test(*xiangqi, fen, 1, 28);
+  test(*xiangqi, fen, 2, 222);
+  test(*xiangqi, fen, 3, 6_241);
+  test(*xiangqi, fen, 4, 64_971);
+  test(*xiangqi, fen, 5, 1_914_306);
+  test(*xiangqi, fen, 6, 23_496_493);
+
+  fen = "4ka3/4a4/9/9/4H4/p8/9/4C3c/7h1/2EK5 w - - 0 1";
+  xiangqi_fen(*xiangqi, fen);
+  println("FEN [%]", fen);
+  test(*xiangqi, fen, 1, 23);
+  test(*xiangqi, fen, 2, 345);
+  test(*xiangqi, fen, 3, 8124);
+  test(*xiangqi, fen, 4, 149_272);
+  test(*xiangqi, fen, 5, 3_513_104);
+  test(*xiangqi, fen, 6, 71_287_903);
+
+  fen = "2e1ka3/9/e3H4/4h4/9/9/9/4C4/2p6/2EK5 w - - 0 1";
+  xiangqi_fen(*xiangqi, fen);
+  println("FEN [%]", fen);
+  test(*xiangqi, fen, 1, 21);
+  test(*xiangqi, fen, 2, 195);
+  test(*xiangqi, fen, 3, 3_883);
+  test(*xiangqi, fen, 4, 48_060);
+  test(*xiangqi, fen, 5, 933_096);
+  test(*xiangqi, fen, 6, 12_250_386);
+
+  fen = "1C2ka3/9/C1Hae1h2/p3p3p/6p2/9/P3P3P/3AE4/3p2c2/c1EAK4 w - - 0 1";
+  xiangqi_fen(*xiangqi, fen);
+  println("FEN [%]", fen);
+  test(*xiangqi, fen, 1, 30);
+  test(*xiangqi, fen, 2, 830);
+  test(*xiangqi, fen, 3, 22_787);
+  test(*xiangqi, fen, 4, 649_866);
+  test(*xiangqi, fen, 5, 17_920_736);
+
+  fen = "ChH1k1e2/c3a4/4ea3/9/2hr5/9/9/4C4/4A4/4KA3 w - - 0 1";
+  xiangqi_fen(*xiangqi, fen);
+  println("FEN [%]", fen);
+  test(*xiangqi, fen, 1, 19);
+  test(*xiangqi, fen, 2, 583);
+  test(*xiangqi, fen, 3, 11_714);
+  test(*xiangqi, fen, 4, 376_467);
+  test(*xiangqi, fen, 5, 8_148_177);
+
+  print("Perft Test End.\n"); 
+
   test :: (xiangqi: *Xiangqi, title: string, depth: int, expected: int) {
     time := get_time();
     count := perft(xiangqi, depth);
     time = get_time() - time;
  
     if count == expected then {
-      println("success for [%] perft % in % seconds: %", title, depth, time, count);
+      println("success for perft % in % seconds: %", depth, time, count);
     } else {
-      println("failed  for [%] perft % in % seconds. got %, expected %", title, depth, time, count, expected);
+      println("FAILED  for perft % in % seconds. got %, expected %", depth, time, count, expected);
     }
   }
 
