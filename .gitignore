@@ -1,5 +1,6 @@
 .build/
 data/
+BayesianElo/
 *.pdb
 *.exe
 *.txt
@@ -17,3 +18,4 @@ heap
 pikafish*
 pikafish.nnue
 eleeye
+*.pgn
