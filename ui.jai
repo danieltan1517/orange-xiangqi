@@ -1,5 +1,4 @@
 main :: () {
-
   path = copy_string(path_strip_filename(get_path_of_running_executable()));
   set_working_directory(path);
   set_default_theme(default_theme_procs[Default_Themes.Grayscale]());
@@ -16,7 +15,6 @@ main :: () {
   init_textures();
   ui_init();
   ctrl_pressed := 0;
-
 
   engine, tf := load_engine("ucci");
   assert(tf);
@@ -1047,6 +1045,53 @@ close_engine :: (engine: *Engine) {
   write_to_process(process, write_buffer);
   deinit(process);
   kill_process(process);
+}
+
+ui_set_font :: (font: *simp.Dynamic_Font) {
+  // set dropdown theme font
+  dropdown_theme := *default_overall_theme.dropdown_theme;
+  dropdown_theme.theme_for_current_value.font = font;
+  dropdown_theme.theme_for_each_choice.font = font;
+  dropdown_theme.theme_for_current_choice.font = font;
+
+  // set button theme font
+  button_theme := *default_overall_theme.button_theme;
+  button_theme.font = font;
+
+  // set label theme font
+  label_theme := *default_overall_theme.label_theme;
+  label_theme.font = font;
+
+  // set checkbox theme font
+  checkbox_theme := *default_overall_theme.checkbox_theme;
+  checkbox_theme.font = font;
+
+  // color picker theme in "GetRect" not supported. however,
+  // for our use case, is pointless.
+
+  // subwindow theme font
+  subwindow_theme := *default_overall_theme.subwindow_theme;
+  subwindow_theme.title_bar.font = font;
+  subwindow_theme.close_button.font = font;
+
+  // scrollable region
+  // I do not think scrollable region needs a font. 
+  // since it is just for scrolling
+
+  // slidable region
+  // I do not think slidable region needs a font. 
+  // since it is just for sliding
+
+  // slider theme font
+  slider_theme := *default_overall_theme.slider_theme;
+  slider_theme.foreground.font = font;
+  slider_theme.background.font = font;
+  slider_theme.text_input_theme.font = font;
+  slider_theme.spinbox_theme.font = font;
+
+  // text input theme
+  text_input_theme := *default_overall_theme.text_input_theme;
+  text_input_theme.font = font;
 }
 
 #import "Window_Creation";
