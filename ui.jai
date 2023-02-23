@@ -299,7 +299,7 @@ main :: () {
   }
 
   render_xiangqiboard :: (mouse_x: float, mouse_y: float, mouse_event: bool) #expand {
-    simp.clear_render_target(1.15, 1.15, 1.15, 1.0);
+    simp.clear_render_target(.15, .15, .15, 1.0);
     simp.set_shader_for_color(true);
 
     center_x: float = 0;
