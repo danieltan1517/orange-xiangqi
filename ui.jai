@@ -2,23 +2,25 @@ main :: () {
   path = copy_string(path_strip_filename(get_path_of_running_executable()));
   set_working_directory(path);
   set_default_theme(default_theme_procs[Default_Themes.Grayscale]());
-  win := create_window(width, height, "Xiangqi");
+  win := create_window(cast(int) width, cast(int) height, "Xiangqi");
   simp.set_render_target(win);
   xiangqi_startpos(*xiangqi);
   reset(*moves);
   generate_moves(*xiangqi, *moves);
   filter_legal_moves(*xiangqi, *moves);
 
-  center_x = cast(float) width / 2.0;
-  center_y = cast(float) height / 2.0;
   init_sound(win);
   init_textures();
   ui_init();
   ctrl_pressed := 0;
 
-  engine, tf := load_engine("ucci");
-  assert(tf);
-  defer close_engine(*engine);
+  load_engines_at_startup();
+
+  defer {
+    for *engine: engines_array {
+      close_engine(engine);
+    }
+  }
 
   while render_loop := true {
     dt = looptime_end - looptime_begin;
@@ -26,10 +28,16 @@ main :: () {
     update_window_events();
     for get_window_resizes() {
       if it.window == win {
-        width  = it.width;
-        height = it.height;
-        center_x = cast(float) width / 2.0;
-        center_y = cast(float) height / 2.0;
+        width  = cast(float) it.width;
+        height = cast(float) it.height;
+
+        // a bit of a supersition, use a golden section to determine
+        // where to place the widgets.
+        if cast(float)width > cast(float) height * SQRT2 {
+          off_center = true;
+        } else {
+          off_center = false;
+        }
         simp.update_window(win);
       }
     }
@@ -61,10 +69,16 @@ main :: () {
       }
     }
 
-    if moves.count then
-      update_ucci(*engine, "ucci");
+    // loop through engines and do engine logic.
+    if moves.count then {
+      for *engine: engines_array {
+        protocol := ifx engine.protocol == .uci then "uci" else "ucci";
+        update_ucci(engine, protocol);
+      }
+    }
 
     render_xiangqiboard(cast(float)mouse_x, cast(float)mouse_y, mouse_event);
+    render_right_panel();
     render_ui();
 
     // sound effects.
@@ -86,12 +100,23 @@ main :: () {
   }
 
   xiangqi_board_click :: (x: float, y: float, mouse_event: bool, key_pressed: int, left_or_right: bool) {
-    board_margin := min(center_x, center_y) * .925;
+    center_x: float = 0;
+    center_y: float = 0;
+    board_margin: float = 0;
+    if off_center == true {
+      center_x = height / 2.0;
+      center_y = center_x;
+      board_margin = center_x * .925;
+    } else {
+      center_x = width  / 2.0;
+      center_y = height / 2.0;
+      board_margin = min(center_x, center_y) * .925;
+    }
+
     sq := board_margin / 5.0;
     hsq := sq / 2.0; //hsq = half square
     board_x := center_x - sq * 4.5;
     board_y := center_y - sq * 5.0;
-
     end_x := board_x + sq * 9.0;
     end_y := board_y + sq * 10.0;
 
@@ -173,7 +198,7 @@ main :: () {
     text_theme  := *default_overall_theme.text_input_theme;
     label_theme := *default_overall_theme.label_theme;
     time := get_time();
-    ui_per_frame_update(win, width, height, time);
+    ui_per_frame_update(win, cast(s32) width, cast(s32) height, time);
     k := clamp(height * 0.05, 15.0, 45.0);
     r := get_rect(5.0, height - 5.0 - k, k, k);
 
@@ -274,12 +299,24 @@ main :: () {
   }
 
   render_xiangqiboard :: (mouse_x: float, mouse_y: float, mouse_event: bool) #expand {
-    simp.clear_render_target(.15, .15, .15, 1.0);
-    simp.set_shader_for_color();
+    simp.clear_render_target(1.15, 1.15, 1.15, 1.0);
     simp.set_shader_for_color(true);
-    board_margin := min(center_x, center_y) * .925;
+
+    center_x: float = 0;
+    center_y: float = 0;
+    board_margin: float = 0;
+    if off_center == true {
+      center_x = height / 2.0;
+      center_y = center_x;
+      board_margin = center_x * .925;
+    } else {
+      center_x = width  / 2.0;
+      center_y = height / 2.0;
+      board_margin = min(center_x, center_y) * .925;
+    }
+
     sq := board_margin / 5.0;
-    hsq := sq / 2.0; //hsq = half square
+    hsq := sq / 2.0;
     board_x := center_x - sq * 4.5;
     board_y := center_y - sq * 5.0;
     color: Vector4 = ---;
@@ -439,7 +476,7 @@ main :: () {
       turn := (index & 2) >> 1;
       index >>= 2;
       sprite_index := ren_idx[index];
-      render_piece_drag(mouse_x, mouse_y, hsq, sq, orient_piece(from_index), sprite_index, turn, color);
+      render_piece_drag(mouse_x, mouse_y, hsq, sq, sprite_index, turn, color);
     }
 
     if mov_anim_state == MovAnim.Play && moves_made_count then {
@@ -466,7 +503,7 @@ main :: () {
       }
       p0 := lerp(from_vector, to_vector, ratio);
       sprite_index := ren_idx[piece];
-      render_piece_drag(p0.x + hsq, p0.y + hsq, hsq, sq, orient_piece(from_index), sprite_index, xiangqi.turn ^ 1, color);
+      render_piece_drag(p0.x + hsq, p0.y + hsq, hsq, sq, sprite_index, xiangqi.turn ^ 1, color);
     }
 
     for index: 0..num_arrows-1 {
@@ -520,6 +557,32 @@ main :: () {
         return make_vector2(corner_x + square * row + half_square, corner_y + square * col + half_square);
       }
     }
+  }
+
+  render_right_panel :: () {
+    if off_center == false {
+      return;
+    } 
+    simp.set_shader_for_color(true);
+    color := Vector4.{.1, .1, .1, .85};
+
+    board_margin := height * ((1 - .925) *.5);
+    k := clamp(height * 0.05, 35.0, 95.0);
+    simp.immediate_quad(height, board_margin, width - board_margin*2.5, height - board_margin, color);
+    r := get_rect(height + 3.0, height - board_margin - 3.0 - k, width - board_margin*2.5 - height - 6.0, k);
+
+    color = Vector4.{1, 1, 1, 1.};
+    simp.set_shader_for_images(*sprites);
+    hsq := k / 2.0;
+    if xiangqi.turn == xx (orient)
+      color.w = .15;
+    render_piece_drag(r.x + hsq, r.y + hsq, hsq, k, 0.0, xx !orient, color);
+
+    color.w = 1;
+    if xiangqi.turn == xx (!orient)
+      color.w = .15;
+    r.y -= k + 5.0;
+    render_piece_drag(r.x + hsq, r.y + hsq, hsq, k, 0.0, xx orient, color);
   }
 
   render_piece :: (board_x: float, board_y: float, sq: float, from: u8, sprite_x: float, turn: s64, color: Vector4) {
@@ -581,11 +644,8 @@ main :: () {
     }
   }
 
-  render_piece_drag :: (mousex: float, mousey: float, hsq: float, sq: float, from: u8, sprite_x: float, turn: s64, color: Vector4) {
+  render_piece_drag :: (mousex: float, mousey: float, hsq: float, sq: float, sprite_x: float, turn: s64, color: Vector4) {
 
-    row, col := row_col_of(from);
-    index_x := cast(float) row;
-    index_y := cast(float) col;
     sprite_y := 2.0 - cast(float)turn;
     if piece_style == {
     case .European;
@@ -607,12 +667,10 @@ main :: () {
 }
 
 #scope_file
-width:  s32 = 680;
-height: s32 = 480;
+width:  float = 480;
+height: float = 680;
 sprites: simp.Texture;
 setting_sprite: simp.Texture;
-center_x: float = 0.0;
-center_y: float = 0.0;
 piece_style: enum s32 { European; Classic; Stylized; } = .European;
 board_style: enum s32 { White; Mocha; Bamboo; Rust; Jade; } = .White;
 orient := false;
@@ -642,6 +700,9 @@ moves_made_count: int = 0;
 
 // status label.
 status_string: string;
+
+// engine(s).
+engines_array: [..] Engine;
 
 init_sound :: (win: Window_Type) {
   sound_player = New(Sound_Player);
@@ -802,8 +863,15 @@ XiangqiMouse :: enum {
 
 Engine :: struct {
   process: Process;
+  name: string;
   state: EngineState;
   timer: float;
+  protocol := Protocol.uci;
+}
+
+Protocol :: enum u8 { 
+  uci; 
+  ucci; 
 }
 
 EngineState :: enum {
@@ -826,7 +894,7 @@ MovAnim :: enum {
   Play;
 }
 
-load_engine :: (name: string) -> Engine, bool {
+load_engine :: (name: string, protocol: Protocol) -> Engine, bool {
   #if OS == .WINDOWS {
     EXE :: ".exe";
   } else {
@@ -838,6 +906,7 @@ load_engine :: (name: string) -> Engine, bool {
   success := create_process(*engine.process, command, capture_and_return_output=true);
   engine.state = .ucciok;
   engine.timer = FLOAT32_INFINITY;
+  engine.protocol = protocol;
   return engine, success;
 }
 
@@ -995,13 +1064,15 @@ to_u8_array :: (str: string) -> [] u8 {
   return array;
 }
 
-
 arrows: [128] Arrow;
 arrow_index: int = 0;
 num_arrows: int = 0;
 arrow_color :: Vector4.{.15, .15, .15, .75};
 xiangqi_highlight := XiangqiMouse.Idle;
 xiangqi_highlight_select := -1;
+
+off_center: bool = false;
+SQRT2 :: 1.41421356237; // the square root of 2. used for a "golden section"
 
 Arrow :: struct {
   from: u8;
@@ -1092,6 +1163,15 @@ ui_set_font :: (font: *simp.Dynamic_Font) {
   // text input theme
   text_input_theme := *default_overall_theme.text_input_theme;
   text_input_theme.font = font;
+}
+
+load_engines_at_startup :: () {
+  e, success := load_engine("ucci", .ucci);
+  if success == true {
+    e.name = "Another Xiangqi Engine";
+    print("Loading engine: %\n", e.name);
+    array_add(*engines_array, e);
+  }
 }
 
 #import "Window_Creation";
