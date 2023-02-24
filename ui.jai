@@ -636,7 +636,7 @@ main :: () {
     s := inside;
     s.y = s.y + s.h - k;
     s.h = k;
-    s.y += scroll_value;
+    s.y += move_list_scroll_value;
     // TODO: this code assumes that red goes first, which is not always the case.
     // what if we were in a custom position loaded from a fen, and black goes first?
     num_rect := s;
@@ -687,7 +687,7 @@ main :: () {
       }
     }
 
-    end_scrollable_region(region, s.x + s.w, s.y, *scroll_value);
+    end_scrollable_region(region, s.x + s.w, s.y, *move_list_scroll_value);
   }
 
   render_piece :: (board_x: float, board_y: float, sq: float, from: u8, sprite_x: float, turn: s64, color: Vector4) {
@@ -805,7 +805,7 @@ moves_made_count: int = 0;
 
 // status label.
 status_string: string;
-scroll_value: float = 0;
+move_list_scroll_value: float = 0;
 
 // engine(s).
 engines_array: [..] Engine;
@@ -956,6 +956,7 @@ gui_make_move :: (move: Move32, animate: bool) {
       if moves.count == 0 then {
         status_string = "Checkmate.";  
       }
+      move_list_scroll_value = 10000;
       break;
     }
   }
