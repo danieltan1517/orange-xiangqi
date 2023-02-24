@@ -647,7 +647,7 @@ main :: () {
 
     black_move_rect := num_rect;
     black_move_rect.x += k;
-    black_move_rect.x += (s.w-k) / 2.0;
+    black_move_rect.x += (s.w-2*k) / 2.0;
 
     index := 0;
     numbering := 0;
