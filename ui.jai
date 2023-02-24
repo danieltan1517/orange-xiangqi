@@ -2,6 +2,7 @@ main :: () {
   path = copy_string(path_strip_filename(get_path_of_running_executable()));
   set_working_directory(path);
   set_default_theme(default_theme_procs[Default_Themes.Grayscale]());
+  overall_theme_modify();
   win := create_window(cast(int) width, cast(int) height, "Xiangqi");
   simp.set_render_target(win);
   xiangqi_startpos(*xiangqi);
@@ -345,21 +346,6 @@ main :: () {
     board_x += hsq;
     board_y += hsq;
 
-    {
-      // Chu He Han Jie.
-      simp.set_shader_for_images(*sprites);
-      color := Vector4.{0., 0., 0., 1.};
-      sprite_x := 0;
-      sprite_y := 0;
-      x_river := board_x;
-      y_river := board_y + sq * 4.0;
-      uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/7.0);
-      uv1 := make_vector2((sprite_x+2.0)*1.0/7.0, sprite_y*1.0/7.0);
-      uv2 := make_vector2((sprite_x+2.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
-      uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
-      immediate_quad(x_river, y_river, x_river + sq + sq, y_river + sq, color, uv0, uv1, uv2, uv3);
-    }
-
     color = Vector4.{0,0,0,1};
     // draw the board grid. 
     simp.set_shader_for_color(true);
@@ -413,6 +399,19 @@ main :: () {
     simp.immediate_quad(v0, v1, v2, v3, color);
 
     simp.set_shader_for_images(*sprites);
+    {
+      // Chu He Han Jie.
+      sprite_x := 0;
+      sprite_y := 0;
+      x_river := board_x;
+      y_river := board_y + sq * 4.0;
+      uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/7.0);
+      uv1 := make_vector2((sprite_x+2.0)*1.0/7.0, sprite_y*1.0/7.0);
+      uv2 := make_vector2((sprite_x+2.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
+      uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
+      immediate_quad(x_river, y_river, x_river + sq + sq, y_river + sq, color, uv0, uv1, uv2, uv3);
+    }
+
     color = Vector4.{1., 1., 1., 1.};
     board_x -= hsq;
     board_y -= hsq;
@@ -513,7 +512,8 @@ main :: () {
       sprite_index := ren_idx[piece];
       render_piece_drag(p0.x + hsq, p0.y + hsq, hsq, sq, sprite_index, xiangqi.turn ^ 1, color);
     }
-
+ 
+    simp.set_shader_for_color(true);
     for index: 0..num_arrows-1 {
       arrow: Arrow = arrows[index];
       render_arrow(arrow, board_x, board_y, sq);
@@ -544,8 +544,6 @@ main :: () {
       p1 := to_pt + w - h;
       p2 := to_pt + w + h;
       p3 := from_pt - w + h;
- 
-      simp.set_shader_for_color(true);
       simp.immediate_quad(p0, p1, p2, p3, arrow_color);
  
       from_pt = to_pt;
@@ -578,19 +576,118 @@ main :: () {
     k := clamp(height * 0.05, 35.0, 95.0);
     simp.immediate_quad(height, board_margin, width - board_margin*2.5, height - board_margin, color);
     r := get_rect(height + 3.0, height - board_margin - 3.0 - k, width - board_margin*2.5 - height - 6.0, k);
+    label_r := r;
+    label_r.x += k;
+
+    hsq := k / 2.0;
+
+    red_display_string := get_player_info(red_ai);
+    black_display_string := get_player_info(black_ai);
+
+    get_player_info :: (index: int) -> string {
+      if index == -1 {
+        return tprint("10:00");
+      } else {
+        return tprint("%1  10:00", engines_array[index].name);
+      }
+    } 
+
+    bottom_string: string;
+    top_string:    string;
+
+    if orient == true {
+      // red on bottom, black on top.
+      bottom_string = red_display_string;
+      top_string    = black_display_string;
+    } else {
+      // black on bottom, red on top.
+      bottom_string = black_display_string; 
+      top_string    = red_display_string;
+    }
 
     color = Vector4.{1, 1, 1, 1.};
-    simp.set_shader_for_images(*sprites);
-    hsq := k / 2.0;
-    if xiangqi.turn == xx (orient)
-      color.w = .15;
-    render_piece_drag(r.x + hsq, r.y + hsq, hsq, k, 0.0, xx !orient, color);
+    label_theme := *default_overall_theme.label_theme;
+    label_theme.alignment = .Left;
+    label(label_r, bottom_string, label_theme);
+    label_r.y -= k + 5.0;
+    label(label_r, top_string, label_theme);
 
-    color.w = 1;
-    if xiangqi.turn == xx (!orient)
+    if xiangqi.turn == xx (orient) {
       color.w = .15;
+    }
+
+    simp.set_shader_for_images(*sprites);
+    render_piece_drag(r.x + hsq, r.y + hsq, hsq, k, 0.0, xx !orient, color);
+    color.w = 1;
+
+    if xiangqi.turn == xx (!orient) {
+      color.w = .15;
+    }
+
     r.y -= k + 5.0;
     render_piece_drag(r.x + hsq, r.y + hsq, hsq, k, 0.0, xx orient, color);
+    color.w = 1;
+    r.y -= k * .5;
+
+    r.y -= k * 10;
+    r.h = k * 10;
+    scrollable_region_theme := *default_overall_theme.scrollable_region_theme;
+    region, inside := begin_scrollable_region(r, scrollable_region_theme);
+    s := inside;
+    s.y = s.y + s.h - k;
+    s.h = k;
+    s.y += scroll_value;
+    // TODO: this code assumes that red goes first, which is not always the case.
+    // what if we were in a custom position loaded from a fen, and black goes first?
+    num_rect := s;
+    num_rect.w = k;
+
+    red_move_rect := num_rect;
+    red_move_rect.x += k;
+
+    black_move_rect := num_rect;
+    black_move_rect.x += k;
+    black_move_rect.x += (s.w-k) / 2.0;
+
+    index := 0;
+    numbering := 0;
+    while index < moves_made_count {
+      numbering += 1;
+      label(num_rect, tprint("%.", numbering), label_theme);
+
+      mov_red := moves_made[index];
+      label(red_move_rect, to_notation(mov_red), label_theme, false);
+      index += 1;
+      if index >= moves_made_count then
+        break;
+
+      mov_black := moves_made[index];
+      index += 1;
+
+      label(black_move_rect, to_notation(mov_black), label_theme, false);
+      num_rect.y -= floor(k*1.1 + 0.5);
+      red_move_rect.y -= floor(k*1.1 + 0.5);
+      black_move_rect.y -= floor(k*1.1 + 0.5);
+      s.y -= floor(k*1.1 + 0.5);
+
+      // TODO: (DANIEL, Feb 24, 2023) this is not xiangqi standard notation. It's just UCCI moves.
+      // maybe support for standard notation later?
+      to_notation :: (move: Move32) -> string {
+        buf := talloc_string(5);
+        row_from, col_from := row_col_of(move.from);
+        row_to, col_to := row_col_of(move.to);
+        buf[0] = PIECE_VALUE[move.piece >> 2];
+        buf[1] = (row_from + #char "a");
+        buf[2] = (col_from + #char "0");
+        buf[3] = (row_to + #char "a");
+        buf[4] = (col_to + #char "0");
+        return buf;
+        // general, advisor, elephant, horse, rook, cannon, soldier
+        PIECE_VALUE :: u8.[#char "K", #char "A", #char "E", #char "N", #char "R", #char "C", #char "P"]; 
+      }
+    }
+
+    end_scrollable_region(region, s.x + s.w, s.y, *scroll_value);
   }
 
   render_piece :: (board_x: float, board_y: float, sq: float, from: u8, sprite_x: float, turn: s64, color: Vector4) {
@@ -708,6 +805,7 @@ moves_made_count: int = 0;
 
 // status label.
 status_string: string;
+scroll_value: float = 0;
 
 // engine(s).
 engines_array: [..] Engine;
@@ -942,7 +1040,7 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
     ok := tprint("%1ok", protocol);
     for msg, index: split(messages, NEWLINE) {
       message := msg;
-      if message
+      if message then
         print("%\n", message);
 
       // either ucciok or uciok
@@ -961,7 +1059,7 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
     messages.count = output_bytes;
     for msg, index: split(messages, NEWLINE) {
       message := msg;
-      if message
+      if message then
         print("%\n", message);
       if equal(message, "readyok") then {
         state = .uccinewgame;
@@ -1126,6 +1224,22 @@ close_engine :: (engine: *Engine) {
   kill_process(process);
 }
 
+overall_theme_modify :: () {
+  button_theme := *default_overall_theme.button_theme;
+  button_theme.alignment = .Left;
+
+  checkbox_theme := *default_overall_theme.checkbox_theme;
+  checkbox_theme.alignment = .Left;
+
+  scrollable_region_theme := *default_overall_theme.scrollable_region_theme;
+  scrollable_region_theme.region_background.shape.rounding_flags = 0;
+
+  dropdown_theme := *default_overall_theme.dropdown_theme;
+  dropdown_theme.theme_for_current_value.alignment = .Left;
+  dropdown_theme.theme_for_each_choice.alignment = .Left;
+  dropdown_theme.theme_for_current_choice.alignment = .Left;
+}
+
 ui_set_font :: (font: *simp.Dynamic_Font) {
   // set dropdown theme font
   dropdown_theme := *default_overall_theme.dropdown_theme;
@@ -1176,7 +1290,7 @@ ui_set_font :: (font: *simp.Dynamic_Font) {
 load_engines_at_startup :: () {
   e, success := load_engine("ucci", .ucci);
   if success == true {
-    e.name = "Another Xiangqi Engine";
+    e.name = "CPU";
     print("Loading engine: %\n", e.name);
     array_add(*engines_array, e);
   }
