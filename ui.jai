@@ -71,9 +71,9 @@ main :: () {
 
     // loop through engines and do engine logic.
     if moves.count then {
-      for *engine: engines_array {
+      for *engine, index: engines_array {
         protocol := ifx engine.protocol == .uci then "uci" else "ucci";
-        update_ucci(engine, protocol);
+        update_ucci(engine, index, protocol);
       }
     }
 
@@ -280,13 +280,21 @@ main :: () {
       }
      
       r.y -= k + 5.0;
-      if base_checkbox(r, "Red", red_ai) then {
-        red_ai = !red_ai;
+      if base_checkbox(r, "Red", red_ai != -1) then {
+        if red_ai == -1 {
+          red_ai = 0;
+        } else {
+          red_ai = -1;
+        }
       }
      
       r.y -= k + 5.0;
-      if base_checkbox(r, "Black", black_ai) then {
-        black_ai = !black_ai;
+      if base_checkbox(r, "Black", black_ai != -1) then {
+        if black_ai == -1 {
+          black_ai = 0;
+        } else {
+          black_ai = -1;
+        }
       }
     }
      
@@ -910,7 +918,7 @@ load_engine :: (name: string, protocol: Protocol) -> Engine, bool {
   return engine, success;
 }
 
-update_ucci :: (engine: *Engine, protocol: string) {
+update_ucci :: (engine: *Engine, id: int, protocol: string) {
   process := *engine.process;
   state := engine.state;
   defer engine.state = state;
@@ -963,14 +971,14 @@ update_ucci :: (engine: *Engine, protocol: string) {
   case .uccinewgame;
     state = .idle;
   case .idle;
-    if is_engine_turn() then {
+    if is_engine_turn(id) then {
       state = .go;
       engine.timer = 0.0;
     }
   case .go;
     state = .bestmove;
   case .bestmove;
-    if !is_engine_turn() then {
+    if !is_engine_turn(id) then {
       state = .idle;
       engine.timer = FLOAT32_INFINITY;
     } else {
@@ -1094,13 +1102,13 @@ clear_arrows :: () #expand {
 
 display_settings := false;
 
-red_ai: bool = false;
-black_ai: bool = false;
+red_ai: int = -1;
+black_ai: int = -1;
 
-is_engine_turn :: () -> bool {
-  if xiangqi.turn == 0 && red_ai == true then
+is_engine_turn :: (index: int) -> bool {
+  if xiangqi.turn == 0 && red_ai == index then
     return true;
-  if xiangqi.turn == 1 && black_ai == true then
+  if xiangqi.turn == 1 && black_ai == index then
     return true;
   return false;
 }
