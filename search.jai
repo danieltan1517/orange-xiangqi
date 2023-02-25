@@ -74,7 +74,7 @@ perft_test_suite :: () {
   test(*xiangqi, fen, 3, 8_620);
   test(*xiangqi, fen, 4, 326_201);
   test(*xiangqi, fen, 5, 10_369_923);
-  test(*xiangqi, fen, 6, 308_156_340);
+  test(*xiangqi, fen, 6, 380_156_340);
 
   fen = "5a3/3k5/3aR4/9/5r3/5h3/9/3A1A3/5K3/2EC2E2 w - - 0 1";
   xiangqi_fen(*xiangqi, fen);
