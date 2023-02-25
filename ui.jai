@@ -286,6 +286,7 @@ main :: () {
           red_ai = 0;
         } else {
           red_ai = -1;
+          show_r_eval = false;
         }
       }
      
@@ -295,6 +296,7 @@ main :: () {
           black_ai = 0;
         } else {
           black_ai = -1;
+          show_b_eval = false;
         }
       }
     }
@@ -609,8 +611,29 @@ main :: () {
     label_theme := *default_overall_theme.label_theme;
     label_theme.alignment = .Left;
     label(label_r, bottom_string, label_theme);
+
+
     label_r.y -= k + 5.0;
     label(label_r, top_string, label_theme);
+    label_r.y -= k + 5.0;
+
+    label_r.x -= k;
+    label_r.w *= .5;
+
+    if base_checkbox(label_r, "Red PV", show_r_eval) {
+      if red_ai == -1 then
+        show_r_eval = false;
+      else
+        show_r_eval = !show_r_eval;
+    }
+    label_r.x += label_r.w + 5.0;
+    if base_checkbox(label_r, "Black PV", show_b_eval) {
+      if black_ai == -1 then
+        show_b_eval = false;
+      else
+        show_b_eval = !show_b_eval;
+    }
+    label_r.x -= label_r.w / 2.0;
 
     if xiangqi.turn == xx (orient) {
       color.w = .15;
@@ -627,12 +650,39 @@ main :: () {
     r.y -= k + 5.0;
     render_piece_drag(r.x + hsq, r.y + hsq, hsq, k, 0.0, xx orient, color);
     color.w = 1;
-    r.y -= k * .5;
+    region: *Scrollable_Region_State;
+    inside: Rect;
 
-    r.y -= k * 10;
-    r.h = k * 10;
-    scrollable_region_theme := *default_overall_theme.scrollable_region_theme;
-    region, inside := begin_scrollable_region(r, scrollable_region_theme);
+    r.y -= k + 5.0;
+
+    if red_ai != -1 && show_r_eval == true {
+      r.y -= k * 3;
+      r.h =  k * 3;
+      region, inside = begin_scrollable_region(r);
+      s := inside;
+      s.y = s.y + s.h - k;
+      s.h = k;
+      s.y += scroll_value_red;
+      end_scrollable_region(region, s.x + s.w, s.y, *scroll_value_red);
+      r.y -= k * .5;
+    }
+
+    if black_ai != -1 && show_b_eval == true {
+      r.y -= k * 3;
+      r.h =  k * 3;
+      region, inside = begin_scrollable_region(r);
+      s := inside;
+      s.y = s.y + s.h - k;
+      s.h = k;
+      s.y += scroll_value_black;
+      end_scrollable_region(region, s.x + s.w, s.y, *scroll_value_black);
+      r.y -= k * .5;
+    }
+
+    val := r.y;
+    r.y = board_margin + 3.0;
+    r.h = val - board_margin;
+    region, inside = begin_scrollable_region(r);
     s := inside;
     s.y = s.y + s.h - k;
     s.h = k;
@@ -1126,7 +1176,7 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
     engine.timer = FLOAT32_INFINITY;
   case .go;
     str := get_ucci_position();
-    gostr := "go depth 3\n";
+    gostr := "go movetime 3000\n";
     write_to_process(process, to_u8_array(str));
     sleep_milliseconds(10); // TODO: bad hack...
     write_to_process(process, to_u8_array(gostr));
@@ -1233,7 +1283,7 @@ overall_theme_modify :: () {
   checkbox_theme.alignment = .Left;
 
   scrollable_region_theme := *default_overall_theme.scrollable_region_theme;
-  scrollable_region_theme.region_background.shape.rounding_flags = 0;
+  scrollable_region_theme.region_background.shape.roundedness = .02;
 
   dropdown_theme := *default_overall_theme.dropdown_theme;
   dropdown_theme.theme_for_current_value.alignment = .Left;
@@ -1289,13 +1339,19 @@ ui_set_font :: (font: *simp.Dynamic_Font) {
 }
 
 load_engines_at_startup :: () {
-  e, success := load_engine("ucci", .ucci);
+  e, success := load_engine("pikafish", .uci);
   if success == true {
-    e.name = "CPU";
+    e.name = "Pikafish";
     print("Loading engine: %\n", e.name);
     array_add(*engines_array, e);
   }
 }
+
+show_r_eval: bool = false;
+show_b_eval: bool = false;
+
+scroll_value_red: float;
+scroll_value_black: float;
 
 #import "Window_Creation";
 #import "System";
