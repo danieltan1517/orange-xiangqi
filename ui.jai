@@ -8,6 +8,8 @@ main :: () {
   xiangqi_startpos(*xiangqi);
   reset(*moves);
   generate_moves(*xiangqi, *moves);
+  array_reserve(*red_pv_lines, 200);
+  array_reserve(*black_pv_lines, 200);
   filter_legal_moves(*xiangqi, *moves);
 
   init_sound(win);
@@ -16,6 +18,11 @@ main :: () {
   ctrl_pressed := 0;
 
   load_engines_at_startup();
+
+  subwindow_newgame.rect = get_rect(100,100,400,300);
+  subwindow_newgame.draw = draw_subwindow_newgame;
+  subwindow_newgame.title_text = "New Game";
+  subwindow_newgame.open = false;
 
   defer {
     for *engine: engines_array {
@@ -101,6 +108,10 @@ main :: () {
   }
 
   xiangqi_board_click :: (x: float, y: float, mouse_event: bool, key_pressed: int, left_or_right: bool) {
+    if subwindow_newgame.open {
+      return; // do not process board inputs when subwindows are open.
+    }
+
     center_x: float = 0;
     center_y: float = 0;
     board_margin: float = 0;
@@ -204,7 +215,9 @@ main :: () {
     r := get_rect(5.0, height - 5.0 - k, k, k);
 
     if button(r, "", texture=*setting_sprite) then {
-      display_settings = !display_settings;
+      if subwindow_newgame.open == false {
+        display_settings = !display_settings;
+      }
     }
 
     if display_settings {
@@ -219,6 +232,7 @@ main :: () {
 
       r.y -= k + 5.0;
       if button(r, "New Game") then {
+        subwindow_newgame.open = true;
         status_string = "";
         xiangqi_startpos(*xiangqi);
         moves_made_count = 0;
@@ -306,13 +320,17 @@ main :: () {
       label(r, status_string, label_theme);
     }
 
+    if subwindow_newgame.open {  // The Subwindow starts open, but pressing the Close button can close it.
+      add_subwindow(*subwindow_newgame);
+    }
+
     draw_popups();  // This draws Subwindows as well.
   }
 
   render_xiangqiboard :: (mouse_x: float, mouse_y: float, mouse_event: bool) #expand {
     simp.clear_render_target(.15, .15, .15, 1.0);
     simp.set_shader_for_color(true);
-
+    
     center_x: float = 0;
     center_y: float = 0;
     board_margin: float = 0;
@@ -343,11 +361,11 @@ main :: () {
     case .Jade;
       color = Vector4.{.4667, .6118, .4392, 1.};
     }
-
+    
     simp.immediate_quad(board_x, board_y, board_x + 9.0 * sq, board_y + 10.0 * sq, color);
     board_x += hsq;
     board_y += hsq;
-
+    
     color = Vector4.{0,0,0,1};
     // draw the board grid. 
     simp.set_shader_for_color(true);
@@ -361,7 +379,7 @@ main :: () {
       simp.immediate_quad(gridx, gridy, gridx + 8*sq, gridy + line_width, color);
       gridy += sq;
     }
-
+    
     gridx = board_x;
     gridy = board_y;
     for 0..8 {
@@ -373,7 +391,7 @@ main :: () {
       }
       gridx += sq;
     }
-
+    
     gridx = board_x;
     // draw the palace diagonals.
     v0 := Vector2.{gridx + 3*sq, gridy};
@@ -399,7 +417,7 @@ main :: () {
     v2 = Vector2.{gridx + 5*sq + 1, gridy + 7*sq};
     v3 = Vector2.{gridx + 3*sq, gridy + 9*sq + 1};
     simp.immediate_quad(v0, v1, v2, v3, color);
-
+    
     simp.set_shader_for_images(*sprites);
     {
       // Chu He Han Jie.
@@ -439,7 +457,7 @@ main :: () {
         render_possible_move(board_x, board_y, sq, prev_to, color);
       }
     }
-
+    
     // draw all the pieces.
     for piece_array, turn: xiangqi.pieces {
       gen := piece_array.general[0];
@@ -476,7 +494,7 @@ main :: () {
         render_piece(board_x, board_y, sq, sol, 6.0, turn, color);
       }
     }
-
+    
     // dragged piece.
     if xiangqi_mouse == XiangqiMouse.Drag then {
       ren_idx :: float.[0.0,1.0,3.0,2.0,4.0,5.0,6.0];
@@ -514,11 +532,23 @@ main :: () {
       sprite_index := ren_idx[piece];
       render_piece_drag(p0.x + hsq, p0.y + hsq, hsq, sq, sprite_index, xiangqi.turn ^ 1, color);
     }
- 
+    
     simp.set_shader_for_color(true);
     for index: 0..num_arrows-1 {
       arrow: Arrow = arrows[index];
       render_arrow(arrow, board_x, board_y, sq);
+    }
+
+    render_pv_lines(red_pv_lines, board_x, board_y, sq);
+    render_pv_lines(black_pv_lines, board_x, board_y, sq);
+
+    render_pv_lines :: (pv_info: [..] PV_Info, board_x: float, board_y: float, sq: float) {
+      for pv_line, identifier: pv_info {
+        if pv_line.show == false then continue;
+        for arrow:  pv_line.pv {
+          render_arrow(arrow, board_x, board_y, sq);
+        }
+      }
     }
 
     render_arrow :: (arrow: Arrow, corner_x: float, corner_y: float, square: float) {
@@ -609,7 +639,6 @@ main :: () {
 
     color = Vector4.{1, 1, 1, 1.};
     label_theme := *default_overall_theme.label_theme;
-    label_theme.alignment = .Left;
     label(label_r, bottom_string, label_theme);
 
 
@@ -656,28 +685,88 @@ main :: () {
     r.y -= k + 5.0;
 
     if red_ai != -1 && show_r_eval == true {
-      r.y -= k * 3;
-      r.h =  k * 3;
+      // TODO: Not sure about the basic way to go about this...
+      r.y -= k * 6;
+      r.h =  k * 6;
       region, inside = begin_scrollable_region(r);
       s := inside;
       s.y = s.y + s.h - k;
       s.h = k;
       s.y += scroll_value_red;
+      for *pv_line, identifier: red_pv_lines {
+
+        if base_checkbox(s, show_pv_line(pv_line), pv_line.show, identifier=identifier) {
+          pv_line.show = !pv_line.show;
+        }
+        s.y -= floor(k*1.1 + 0.5);
+
+      }
       end_scrollable_region(region, s.x + s.w, s.y, *scroll_value_red);
       r.y -= k * .5;
     }
 
     if black_ai != -1 && show_b_eval == true {
-      r.y -= k * 3;
-      r.h =  k * 3;
+      r.y -= k * 6;
+      r.h =  k * 6;
       region, inside = begin_scrollable_region(r);
       s := inside;
       s.y = s.y + s.h - k;
       s.h = k;
       s.y += scroll_value_black;
+      for *pv_line, identifier: black_pv_lines {
+        
+        if base_checkbox(s, show_pv_line(pv_line), pv_line.show, identifier=identifier) {
+          pv_line.show = !pv_line.show;
+        }
+        s.y -= floor(k*1.1 + 0.5);
+
+      }
       end_scrollable_region(region, s.x + s.w, s.y, *scroll_value_black);
       r.y -= k * .5;
     }
+
+    // TODO: (DANIEL Feb 25, 2023.) I am not too sure what's the best aesthetic decision
+    // about what to do here.
+    show_pv_line :: (using pv_line: *PV_Info) -> string {
+
+      builder: String_Builder;
+      builder.allocator = temp;
+      if eval >= 0 {
+        print_to_builder(*builder, "[%.%] ", eval / 100, eval % 100);
+      } else {
+        score := -eval;
+        print_to_builder(*builder, "[-%.%] ", score / 100, score % 100);
+      }
+      if depth != -1 {
+        print_to_builder(*builder, "depth % | ", depth);
+      }
+
+      // engines show huge amount of nodes, so don't feel like display all the nodes...
+      /*if nodes != -1 {
+        print_to_builder(*builder, "nodes % | ", nodes);
+      }*/
+
+      if time != -1 {
+        if time < 1000 {
+          print_to_builder(*builder, "% ms | ", time);
+        } else {
+          // convert to seconds.
+          print_to_builder(*builder, "%.% s | ", time / 1000, time % 1000);
+        }
+      }
+
+      for arrow: pv {
+        if arrow.from == 0 && arrow.to == 0 then break;
+        move: Move32;
+        move.from = arrow.from;
+        move.to = arrow.to;
+        append(*builder, move);
+        append(*builder, " ");
+      }
+
+      return builder_to_string(*builder, temp);
+    }
+
 
     val := r.y;
     r.y = board_margin + 3.0;
@@ -693,7 +782,7 @@ main :: () {
     num_rect.w = k;
 
     red_move_rect := num_rect;
-    red_move_rect.x += k;
+    red_move_rect.x += k * 1.25;
 
     black_move_rect := num_rect;
     black_move_rect.x += k;
@@ -703,7 +792,7 @@ main :: () {
     numbering := 0;
     while index < moves_made_count {
       numbering += 1;
-      label(num_rect, tprint("%.", numbering), label_theme);
+      label(num_rect, tprint("%.", numbering), label_theme, false);
 
       mov_red := moves_made[index];
       label(red_move_rect, to_notation(mov_red), label_theme, false);
@@ -822,7 +911,7 @@ main :: () {
 }
 
 #scope_file
-width:  float = 480;
+width:  float = 680;
 height: float = 680;
 sprites: simp.Texture;
 setting_sprite: simp.Texture;
@@ -1041,6 +1130,84 @@ EngineState :: enum {
   bug;
 }
 
+// PV = Principle Variation
+PV_Info :: struct {
+  show: bool = false;
+  eval:  int;
+  depth: int = -1;
+  nodes: int = -1;
+  time:  int = -1;
+  pv: [16] Arrow; 
+}
+
+// TODO: I do not know whether this function is robust.
+// It does not cover every possible interesting thing you
+// want to know.
+// This is just for getting the code off the ground
+// TODO: This does not handle mate distance pruning issues.
+// where a lot of info strings spit out a load of stuff...
+parse_pv_info :: (line: *string) -> PV_Info, bool {
+  pv_info: PV_Info;
+  i := 0;
+  while line.count > 0 {
+    token, success := parse_token(line);
+    if !success then
+      break;
+    if token == {
+    case "string";
+      // TODO: Not correct... just to handle some funny Pikafish input.
+      return pv_info, false;
+    case "time";
+      time, success := parse_int(line);
+      if success == true {
+        pv_info.time = time;
+      }
+
+    case "depth";
+      depth, success := parse_int(line);
+      if success == true {
+        pv_info.depth = depth;
+      }
+    case "nodes";
+      nodes, success := parse_int(line);
+      if success == true {
+        pv_info.nodes = nodes;
+      }
+    case "score";
+      // "score cp" is the whole token.
+      {
+        token, success := parse_token(line);
+        if success == false then
+          continue;
+      }
+      eval, success:= parse_int(line);
+      if success == true {
+        pv_info.eval = eval;
+      }
+    case "pv";
+      while i < 16 && line.count > 0 {
+        token, success := parse_token(line);
+        if success == false then
+          break;
+        // TODO: This move sequence does not give info on pieces...
+        // TODO: Parsing is NOT robust. it's just to get something to display on 
+        // the screen.
+        move := to_move32(*xiangqi, token);
+        arrow: Arrow;
+        arrow.from = move.from;
+        arrow.to = move.to;
+        pv_info.pv[i] = arrow;
+        i += 1;
+      }
+    }
+  }
+
+  return pv_info, true;
+}
+
+red_pv_lines: [..] PV_Info;
+black_pv_lines: [..] PV_Info;
+
 mov_anim_time: float = 0;
 mov_anim_complete: float = .12;
 mov_anim_state: MovAnim = MovAnim.Idle;
@@ -1125,6 +1292,11 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
       engine.timer = 0.0;
     }
   case .go;
+    if xiangqi.turn == 0 {
+      red_pv_lines.count = 0;
+    } else {
+      black_pv_lines.count = 0;
+    }
     state = .bestmove;
   case .bestmove;
     if !is_engine_turn(id) then {
@@ -1139,8 +1311,30 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
       messages.count = output_bytes;
       for msg, index: split(messages, NEWLINE) {
         message := msg;
-        if message
+        if message {
           print("%\n", message);
+        }
+        if starts_with(message, "info ") then {
+          parse_token(*message);
+          message = eat_spaces(message);
+          pv_info, success := parse_pv_info(*message);
+          if success == false then
+            continue;
+
+          // limit the number of PV lines to 100 
+          if xiangqi.turn == 0 {
+            if red_pv_lines.count <= 100 then {
+              array_add(*red_pv_lines, pv_info);
+              scroll_value_red = 10000;
+            }
+          } else {
+            if black_pv_lines.count <= 100 then {
+              array_add(*black_pv_lines, pv_info);
+              scroll_value_black = 10000;
+            }
+          }
+        }
+
         if starts_with(message, "bestmove ") then {
           parse_token(*message);
           message = eat_spaces(message);
@@ -1176,7 +1370,7 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
     engine.timer = FLOAT32_INFINITY;
   case .go;
     str := get_ucci_position();
-    gostr := "go movetime 3000\n";
+    gostr := "go depth 5\n";
     write_to_process(process, to_u8_array(str));
     sleep_milliseconds(10); // TODO: bad hack...
     write_to_process(process, to_u8_array(gostr));
@@ -1254,6 +1448,10 @@ display_settings := false;
 red_ai: int = -1;
 black_ai: int = -1;
 
+// subwindow new game.
+subwindow_newgame: Subwindow_Info;
+
+
 is_engine_turn :: (index: int) -> bool {
   if xiangqi.turn == 0 && red_ai == index then
     return true;
@@ -1284,6 +1482,9 @@ overall_theme_modify :: () {
 
   scrollable_region_theme := *default_overall_theme.scrollable_region_theme;
   scrollable_region_theme.region_background.shape.roundedness = .02;
+
+  label_theme := *default_overall_theme.label_theme;
+  label_theme.alignment = .Left;
 
   dropdown_theme := *default_overall_theme.dropdown_theme;
   dropdown_theme.theme_for_current_value.alignment = .Left;
@@ -1339,14 +1540,67 @@ ui_set_font :: (font: *simp.Dynamic_Font) {
 }
 
 load_engines_at_startup :: () {
-  e, success := load_engine("pikafish", .uci);
+  e, success := load_engine("ucci", .ucci);
   if success == true {
-    e.name = "Pikafish";
+    e.name = "CPU";
     print("Loading engine: %\n", e.name);
     array_add(*engines_array, e);
   }
 }
 
+newgame_w_choice: s32 = 0;
+newgame_b_choice: s32 = 0;
+subwindow_time: s32 = 0;
+
+draw_subwindow_newgame :: (r: Rect, data: *void) {
+  label_theme := *default_overall_theme.label_theme;
+  text_theme: *Text_Input_Theme = *default_overall_theme.text_input_theme;
+  display_settings = false;
+  k := clamp(height * 0.05, 15.0, 45.0);
+  arr := get_engine_names();
+  rect := get_rect(r.x + 3, r.y + r.h - k - 3, r.w - k*2.1 - 9, k);
+  label(rect, "Fen", label_theme);
+  rect.x += k * 2.1;
+  action_c, _, fen_state := text_input(rect, "", text_theme);
+  if action_c & .TEXT_MODIFIED {
+
+  }
+  rect.y -= k * 1.1;
+  rect.x -= k * 2.1;
+  label(rect, "Red", label_theme);
+  rect.x += k * 2.1;
+  dropdown(rect, arr, *newgame_w_choice);
+  rect.x -= k * 2.1;
+  rect.y -= k * 1.1;
+  label(rect, "Black", label_theme);
+  rect.x += k * 2.1;
+  dropdown(rect, arr, *newgame_b_choice);
+  rect.y -= k * 1.1;
+  if base_checkbox(rect, "Equal Time Control", equal_time_control) {
+    equal_time_control = !equal_time_control;
+  }
+
+  rect.x -= k * 2.1;
+  rect.y -= k * 1.1;
+  label(rect, "Time", label_theme);
+  rect.x += k * 2.1;
+  dropdown(rect, TimeCtrl, *subwindow_time);
+  rect.y -= k * 1.1;
+
+  get_engine_names :: () -> [..] string {
+    arr: [..] string;
+    arr.allocator = temp;
+    array_add(*arr, "(none)");
+    for engine: engines_array {
+      array_add(*arr, engine.name);
+    }
+    return arr;
+  }
+
+  TimeCtrl :: string.["None", "Clock", "Time Per Move", "Depth"];
+}
+
+equal_time_control := true;
 show_r_eval: bool = false;
 show_b_eval: bool = false;
 
