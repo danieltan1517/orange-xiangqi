@@ -1600,7 +1600,7 @@ ui_set_font :: (font: *simp.Dynamic_Font) {
 }
 
 load_engines_at_startup :: () {
-  e, success := load_engine("pikafish", .ucci);
+  e, success := load_engine("ucci", .ucci);
   if success == true {
     e.name = "ucci";
     print("Loading engine: %\n", e.name);
