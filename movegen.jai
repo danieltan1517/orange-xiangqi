@@ -385,9 +385,7 @@ unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
 
 }
 
-// generate pseudo legal moves for xiangqi.
-generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
-  turn := xiangqi.turn;
+generate_moves_for :: (turn: u8, xiangqi: *Xiangqi, moves: *Moves) {
   piece_array := *xiangqi.pieces[turn];
 
   // soldier/elephant related parameters.
@@ -427,6 +425,12 @@ generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   for soldier: piece_array.soldiers {
     soldier_moves(soldier, advance, col_mask, horizontal_mask, xiangqi.board_9x10, moves);
   }
+}
+
+// generate pseudo legal moves for xiangqi.
+generate_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
+  turn := xiangqi.turn;
+  generate_moves_for(turn, xiangqi, moves);
 }
 
 generate_moves_for_piece :: (xiangqi: *Xiangqi, moves: *Moves, row: u8, col: u8) {

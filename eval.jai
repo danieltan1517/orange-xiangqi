@@ -1,4 +1,4 @@
-
+USE_MOVE_EST :: true;
 // this evaluation function was inspired by: https://github.com/markdirish/xiangqi
 // as well as: https://github.com/maksimKorzh/wukong-xiangqi/blob/main/src/engine/wukong.js
 
@@ -16,16 +16,84 @@ evaluate :: (xiangqi: *Xiangqi) -> int {
   score := mat_sol + mat_adv + mat_ele + mat_kni + mat_can + mat_rook;
 
   // calculate PST.
-  red_score := calculate_pst(red, false);
-  black_score := calculate_pst(black, true);
+  score += calculate_pst(red, false);
+  score -= calculate_pst(black, true);
 
-  score += red_score;
-  score -= black_score;
+  if USE_MOVE_EST {
+    red_moves: Moves;
+    black_moves: Moves;
+    generate_moves_for(RED, xiangqi, *red_moves);
+    generate_moves_for(BLACK, xiangqi, *black_moves);
+    filter_legal_moves(xiangqi, *red_moves);
+    filter_legal_moves(xiangqi, *black_moves);
+
+    // under protected pieces
+    score += calculate_under_attack(red, *red_moves);
+    score -= calculate_under_attack(black, *black_moves);
+
+    // under attacked pieces
+    score -= (calculate_under_attack(red, *black_moves) / 2);
+    score += (calculate_under_attack(black, *red_moves) / 2);
+
+    // movable space
+    score += calculate_movable_space(red, *red_moves);
+    score -= calculate_movable_space(black, *black_moves);
+  }
+
   if xiangqi.turn == 0 then {
     return score;
   } else {
     return -score;
   }
+
+  calculate_movable_space :: (pieces: *Pieces, moves: *Moves) -> int {
+    score := 0;
+    PIECE_VALUE :: u8.[15, 15, 15, 5, 5, 5, 1]; 
+    for move: moves {
+      piece := (move.piece >> 2);
+      score += PIECE_VALUE[piece]; 
+    }    
+    return score;
+  }
+
+  calculate_under_attack :: (pieces: *Pieces, moves: *Moves) -> int {
+    score := 0;
+    
+    check_under_attack :: (piece: u8, moves: *Moves, s: int) -> int {
+      for move: moves {
+        if move.to == piece {
+          return s / 10;
+        }
+      }
+      return 0;
+    }
+
+    for sol: pieces.soldiers {
+      score += check_under_attack(sol, moves, soldier_mat);
+    }
+
+    for adv: pieces.advisors {
+      score += check_under_attack(adv, moves, advisor_mat);
+    }
+
+    for ele: pieces.elephants {
+      score += check_under_attack(ele, moves, elephant_mat);
+    }
+
+    for knight: pieces.knights {
+      score += check_under_attack(knight, moves, knight_mat);
+    }
+
+    for cannon: pieces.cannons {
+      score += check_under_attack(cannon, moves, cannon_mat);
+    }
+
+    for rook: pieces.rooks {
+      score += check_under_attack(rook, moves, rook_mat);
+    }
+    return score;
+  }
+
 
   // calculate the piece square attack tables.
   calculate_pst :: (pieces: *Pieces, $flip: bool) -> int {

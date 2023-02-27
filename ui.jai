@@ -5,13 +5,15 @@ main :: () {
   overall_theme_modify();
   win := create_window(cast(int) width, cast(int) height, "Xiangqi");
   simp.set_render_target(win);
+  font := simp.get_font_at_size("data", "SourceHanSansHWSC-Regular.otf", 16);
+  ui_set_font(font);
+
   xiangqi_startpos(*xiangqi);
   reset(*moves);
   generate_moves(*xiangqi, *moves);
   array_reserve(*red_pv_lines, 200);
   array_reserve(*black_pv_lines, 200);
   filter_legal_moves(*xiangqi, *moves);
-
   init_sound(win);
   init_textures();
   ui_init();
@@ -233,46 +235,46 @@ main :: () {
       color := Vector4.{.05, .05, .05, .9};
       simp.set_shader_for_color(true);
 
-      num_buttons :: 14.0;
+      num_buttons :: 15.0;
       simp.immediate_quad(17.0, r.y, r.x + r.w + 7.0, r.y - num_buttons*k - 5.0*num_buttons, color);
 
       r.y -= k + 5.0;
-      if button(r, "New Game") then {
+      if button(r, get_ui_str().new_game) then {
         subwindow_newgame.open = true;
       }
      
       r.y -= k + 5.0;
-      if button(r, "Undo (Ctrl+Z)") then {
+      if button(r, get_ui_str().undo) then {
         gui_undo_move();
       }
       r.y -= k + 5.0;
-      if button(r, "Redo (Ctrl+Y)") then {
+      if button(r, get_ui_str().redo) then {
         gui_redo_move();
       }
 
       r.y -= k + 5.0;
-      dropdown(r, string.["European Set", "Chinese Set", "Chinese Calligraphy Set"], cast(*s32)*piece_style);
+      dropdown(r, get_ui_str().piece_style, cast(*s32)*piece_style);
       r.y -= k + 5.0;
-      dropdown(r, string.["White Board", "Mocha Board", "Bamboo Board", "Rust Board", "Jade Board"], cast(*s32)*board_style);
+      dropdown(r, get_ui_str().board_style, cast(*s32)*board_style);
       r.y -= k + 5.0;
-      if base_checkbox(r, "Orientation", !orient) then {
+      if base_checkbox(r, get_ui_str().orientation, !orient) then {
         orient = !orient;
       }
       r.y -= k + 5.0;
-      if base_checkbox(r, "Show Moves", show_moves) then {
+      if base_checkbox(r, get_ui_str().show_moves, show_moves) then {
         show_moves = !show_moves;
       }
       r.y -= k + 5.0;
-      if base_checkbox(r, "Audio", sound) then {
+      if base_checkbox(r, get_ui_str().audio, sound) then {
         sound = !sound;
       }
       r.y -= k + 5.0;
-      if base_checkbox(r, "Highlight Move", highlight_move) then {
+      if base_checkbox(r, get_ui_str().highlight_move, highlight_move) then {
         highlight_move = !highlight_move;
       }
 
       r.y -= k + 5.0;
-      if base_checkbox(r, "Animations", mov_anim_state != MovAnim.Off) then {
+      if base_checkbox(r, get_ui_str().animations, mov_anim_state != MovAnim.Off) then {
         if mov_anim_state == MovAnim.Off
           mov_anim_state = MovAnim.Idle;
         else
@@ -282,6 +284,9 @@ main :: () {
       slider_theme := *default_overall_theme.slider_theme;
       r.y -= k + 5.0;
       slider(r, *mov_anim_complete, 0.00, 1.0, 0.01, slider_theme, suffix=" Animation");
+      r.y -= k + 5.0;
+      
+      dropdown(r, string.["English", "简体中文"], cast(*s32)*language);
       r.y -= k + 5.0;
     }
      
@@ -911,6 +916,7 @@ sprites: simp.Texture;
 setting_sprite: simp.Texture;
 piece_style: enum s32 { European; Classic; Stylized; } = .European;
 board_style: enum s32 { White; Mocha; Bamboo; Rust; Jade; } = .White;
+language: enum s32 { English; Chinese; } = .English;
 orient := false;
 dt: float = 0.0;
 looptime_begin: float = 0;
@@ -1799,6 +1805,41 @@ clock_move_incr :: () {
   }
 
 }
+UI_String :: struct {
+  new_game: string = "New Game";
+  undo: string = "Undo (Ctrl+Z)";
+  redo: string = "Redo (Ctrl+Y)";
+  piece_style: [] string = string.["European Set", "Chinese Set", "Chinese Calligraphy Set"];
+  board_style: [] string = string.["White Board", "Mocha Board", "Bamboo Board", "Rust Board", "Jade Board"];
+  show_moves: string = "Show Moves";
+  orientation: string = "Orientation";
+  audio: string = "Audio";
+  highlight_move: string = "Highlight Move";
+  animations: string = "Animations";
+}
+
+English_UI := UI_String.{};
+Chinese_UI := UI_String.{
+  "新游戏",
+  "悔棋 (Ctrl+Z)",
+  "重做 (Ctrl+Y)",
+  string.["欧洲棋子", "中国棋子", "中国书法棋子"],
+  string.["白棋盘", "咖啡棋盘", "竹子棋盘", "铁棋盘", "翡翠棋盘"],
+  "显示走法",
+  "棋盘方向",
+  "音效",
+  "高亮走法",
+  "动画",
+};
+
+get_ui_str :: () -> *UI_String {
+  if language == .English then
+    return *English_UI;
+  if language == .Chinese then
+    return *Chinese_UI;
+  return *English_UI;
+}
+
 
 #import "Window_Creation";
 #import "System";
