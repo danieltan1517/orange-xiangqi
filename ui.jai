@@ -19,7 +19,7 @@ main :: () {
 
   load_engines_at_startup();
 
-  subwindow_newgame.rect = get_rect(100,100,400,300);
+  subwindow_newgame.rect = get_rect(50,50,580,580);
   subwindow_newgame.draw = draw_subwindow_newgame;
   subwindow_newgame.title_text = "New Game";
   subwindow_newgame.open = false;
@@ -32,6 +32,7 @@ main :: () {
 
   while render_loop := true {
     dt = looptime_end - looptime_begin;
+    clock_update();
     looptime_begin = looptime_end;
     update_window_events();
     for get_window_resizes() {
@@ -109,6 +110,11 @@ main :: () {
 
   xiangqi_board_click :: (x: float, y: float, mouse_event: bool, key_pressed: int, left_or_right: bool) {
     if subwindow_newgame.open {
+      // outside of the board.
+      xiangqi_mouse = XiangqiMouse.Idle; 
+      xiangqi_highlight = .Idle;
+      xiangqi_highlight_select = -1;
+      from_index = 0xFF;
       return; // do not process board inputs when subwindows are open.
     }
 
@@ -224,7 +230,7 @@ main :: () {
       r.x += 20.0;
       r.y -= 5.0;
       r.w = 8.5 * k;
-      color := Vector4.{.1, .1, .1, .75};
+      color := Vector4.{.05, .05, .05, .9};
       simp.set_shader_for_color(true);
 
       num_buttons :: 14.0;
@@ -233,15 +239,6 @@ main :: () {
       r.y -= k + 5.0;
       if button(r, "New Game") then {
         subwindow_newgame.open = true;
-        status_string = "";
-        xiangqi_startpos(*xiangqi);
-        moves_made_count = 0;
-        reset(*moves);
-        memset(*moves_made, 0, size_of(type_of(moves_made)));
-        generate_moves(*xiangqi, *moves);
-        filter_legal_moves(*xiangqi, *moves);
-        prev_from = 0xFF;
-        prev_to   = 0xFF;
       }
      
       r.y -= k + 5.0;
@@ -285,34 +282,7 @@ main :: () {
       slider_theme := *default_overall_theme.slider_theme;
       r.y -= k + 5.0;
       slider(r, *mov_anim_complete, 0.00, 1.0, 0.01, slider_theme, suffix=" Animation");
-     
       r.y -= k + 5.0;
-      action, str, state := text_input(r, "", text_theme);
-      if action & .ENTERED {
-        xiangqi_fen(*xiangqi, str);
-        fen_string = copy_string(str);
-        reset(state);
-      }
-     
-      r.y -= k + 5.0;
-      if base_checkbox(r, "Red", red_ai != -1) then {
-        if red_ai == -1 {
-          red_ai = 0;
-        } else {
-          red_ai = -1;
-          show_r_eval = false;
-        }
-      }
-     
-      r.y -= k + 5.0;
-      if base_checkbox(r, "Black", black_ai != -1) then {
-        if black_ai == -1 {
-          black_ai = 0;
-        } else {
-          black_ai = -1;
-          show_b_eval = false;
-        }
-      }
     }
      
     if status_string {
@@ -613,15 +583,33 @@ main :: () {
 
     hsq := k / 2.0;
 
-    red_display_string := get_player_info(red_ai);
-    black_display_string := get_player_info(black_ai);
+    red_display_string := get_player_info(red_ai, *r_time_manager, r_time_ms);
+    black_display_string := get_player_info(black_ai, *b_time_manager, b_time_ms);
 
-    get_player_info :: (index: int) -> string {
+    get_player_info :: (index: int, time_manager: *TimeManager, time_ms: float) -> string {
+      name := "";
       if index == -1 {
-        return tprint("10:00");
+        name = "";
       } else {
-        return tprint("%1  10:00", engines_array[index].name);
+        name = engines_array[index].name;
       }
+
+      if time_manager.time_control == {
+      case .None;
+        return name;
+      case .Clock;
+        time_ms /= 1000.0;
+        mins := cast(int) (time_ms / 60.0);
+        secs := cast(int) fmod_cycling(time_ms, 60.0);
+        return tprint("%1 -- %2:%3", name, mins, formatInt(secs, minimum_digits=2));
+      case .Time_per_move;
+        secs_per_move := time_manager.seconds_per_move;
+        return tprint("%1 -- %2 secs per move", name, formatFloat(secs_per_move, trailing_width=2));
+      case .Depth;
+        return tprint("%1 -- %2 Depth", name, time_manager.depth);
+      }
+
+      return "";
     } 
 
     bottom_string: string;
@@ -771,6 +759,9 @@ main :: () {
     val := r.y;
     r.y = board_margin + 3.0;
     r.h = val - board_margin;
+    if r.h < k {
+      return;  // do not render if too small...
+    }
     region, inside = begin_scrollable_region(r);
     s := inside;
     s.y = s.y + s.h - k;
@@ -783,19 +774,22 @@ main :: () {
 
     red_move_rect := num_rect;
     red_move_rect.x += k * 1.25;
+    red_move_rect.w = s.w / 2.0;
 
     black_move_rect := num_rect;
     black_move_rect.x += k;
     black_move_rect.x += (s.w-2*k) / 2.0;
+    black_move_rect.w = s.w / 2.0;
 
+    // NOTE: (Daniel) Feb 25, 2023: label(r, "label", do_scissors=true) causes a compiler crash.
     index := 0;
     numbering := 0;
     while index < moves_made_count {
       numbering += 1;
-      label(num_rect, tprint("%.", numbering), label_theme, false);
+      label(num_rect, tprint("%.", numbering), label_theme);
 
       mov_red := moves_made[index];
-      label(red_move_rect, to_notation(mov_red), label_theme, false);
+      label(red_move_rect, to_notation(mov_red), label_theme);
       index += 1;
       if index >= moves_made_count then
         break;
@@ -803,7 +797,7 @@ main :: () {
       mov_black := moves_made[index];
       index += 1;
 
-      label(black_move_rect, to_notation(mov_black), label_theme, false);
+      label(black_move_rect, to_notation(mov_black), label_theme);
       num_rect.y -= floor(k*1.1 + 0.5);
       red_move_rect.y -= floor(k*1.1 + 0.5);
       black_move_rect.y -= floor(k*1.1 + 0.5);
@@ -1096,6 +1090,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         status_string = "Checkmate.";  
       }
       move_list_scroll_value = 10000;
+      clock_move_incr();
       break;
     }
   }
@@ -1370,16 +1365,82 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
     engine.timer = FLOAT32_INFINITY;
   case .go;
     str := get_ucci_position();
-    gostr := "go depth 5\n";
+    timeManager := ifx xiangqi.turn == 0 r_time_manager else b_time_manager;
     write_to_process(process, to_u8_array(str));
     sleep_milliseconds(10); // TODO: bad hack...
+
+    gostr := ucci_go_command(engine, timeManager);
+    print("%\n", gostr);
     write_to_process(process, to_u8_array(gostr));
+
   case .bestmove;
     // waiting to get the best move.
     // don't do anything.
   case .bug;
 
   }
+
+  ucci_go_command :: (engine: *Engine, using timeManager: TimeManager) -> string {
+    if #complete time_control == {
+    case .None;
+      return tprint("go depth 5%1", NEWLINE);
+
+    case .Clock;
+      // time in milliseconds
+      if engine.protocol == .uci {
+        return tprint("go wtime %1 btime %2 winc %3 binc %4%5", 
+                      cast(int) r_time_ms, 
+                      cast(int) b_time_ms, 
+                      cast(int) r_time_manager.increment_ms, 
+                      cast(int) b_time_manager.increment_ms,
+                      NEWLINE);
+      } else {
+        time: int;
+        opptime: int;
+        increment: int;
+        oppincrement: int;
+        ifx xiangqi.turn == 0 {
+
+          time = cast(int) r_time_ms;
+          increment = cast(int) r_time_manager.increment_ms;
+
+          opptime = cast(int) b_time_ms;
+          oppincrement = cast(int) b_time_manager.increment_ms;
+
+        } else {
+
+          time = cast(int) b_time_ms;
+          increment = cast(int) b_time_manager.increment_ms;
+
+          opptime = cast(int) r_time_ms;
+          oppincrement = cast(int) r_time_manager.increment_ms;
+
+        }
+        return tprint("go time %1 increment %2 opptime %3 oppincrement %4%5",
+               time,
+               increment,
+               opptime,
+               oppincrement,
+               NEWLINE);
+      }
+
+    case .Time_per_move;
+      ms := cast(int)(timeManager.seconds_per_move * 1000.0);
+      if engine.protocol == .uci {
+        // time in milliseconds
+        return tprint("go movetime %1%2", ms, NEWLINE);
+      } else {
+        // TODO: (DANIEL Feb 26, 2023) best I can do given I don't know what is the correct command for
+        // "Think for x time per move..."
+        return tprint("go time %1%2", ms, NEWLINE);
+      }
+
+    case .Depth;
+      return tprint("go depth %1%2", timeManager.depth, NEWLINE);
+    }
+  }
+
+
 }
 
 fen_string := "";
@@ -1450,7 +1511,6 @@ black_ai: int = -1;
 
 // subwindow new game.
 subwindow_newgame: Subwindow_Info;
-
 
 is_engine_turn :: (index: int) -> bool {
   if xiangqi.turn == 0 && red_ai == index then
@@ -1540,9 +1600,15 @@ ui_set_font :: (font: *simp.Dynamic_Font) {
 }
 
 load_engines_at_startup :: () {
-  e, success := load_engine("ucci", .ucci);
+  e, success := load_engine("pikafish", .uci);
   if success == true {
-    e.name = "CPU";
+    e.name = "Pikafish";
+    print("Loading engine: %\n", e.name);
+    array_add(*engines_array, e);
+  }
+  e, success = load_engine("eleeye", .ucci);
+  if success == true {
+    e.name = "Elephant Eye";
     print("Loading engine: %\n", e.name);
     array_add(*engines_array, e);
   }
@@ -1550,42 +1616,81 @@ load_engines_at_startup :: () {
 
 newgame_w_choice: s32 = 0;
 newgame_b_choice: s32 = 0;
-subwindow_time: s32 = 0;
+subwindow_fenstring := "startpos";
 
 draw_subwindow_newgame :: (r: Rect, data: *void) {
+  // themes
+  slider_theme := *default_overall_theme.slider_theme;
   label_theme := *default_overall_theme.label_theme;
   text_theme: *Text_Input_Theme = *default_overall_theme.text_input_theme;
+
+
   display_settings = false;
   k := clamp(height * 0.05, 15.0, 45.0);
   arr := get_engine_names();
-  rect := get_rect(r.x + 3, r.y + r.h - k - 3, r.w - k*2.1 - 9, k);
+  rect := get_rect(r.x + 3, r.y + r.h - k - 3, r.w - k*2.5 - 9, k);
   label(rect, "Fen", label_theme);
-  rect.x += k * 2.1;
-  action_c, _, fen_state := text_input(rect, "", text_theme);
+  rect.x += k * 2.5;
+  action_c, _, fen_state := text_input(rect, subwindow_fenstring, text_theme);
   if action_c & .TEXT_MODIFIED {
-
+    subwindow_fenstring = get_result(fen_state);
   }
   rect.y -= k * 1.1;
-  rect.x -= k * 2.1;
+  rect.x -= k * 2.5;
   label(rect, "Red", label_theme);
-  rect.x += k * 2.1;
+  rect.x += k * 2.5;
   dropdown(rect, arr, *newgame_w_choice);
-  rect.x -= k * 2.1;
+  rect.x -= k * 2.5;
   rect.y -= k * 1.1;
   label(rect, "Black", label_theme);
-  rect.x += k * 2.1;
+  rect.x += k * 2.5;
   dropdown(rect, arr, *newgame_b_choice);
   rect.y -= k * 1.1;
   if base_checkbox(rect, "Equal Time Control", equal_time_control) {
     equal_time_control = !equal_time_control;
   }
 
-  rect.x -= k * 2.1;
+  rect.x -= k * 2.5;
   rect.y -= k * 1.1;
-  label(rect, "Time", label_theme);
-  rect.x += k * 2.1;
-  dropdown(rect, TimeCtrl, *subwindow_time);
-  rect.y -= k * 1.1;
+
+  time_management_ui(*rect, ifx equal_time_control then "Time" else "Red", *r_time_manager, k, 0);
+  if equal_time_control == false {
+    time_management_ui(*rect, "Black", *b_time_manager, k, 3);
+  } else {
+    b_time_manager = r_time_manager;
+  }
+
+  rect.x += k * 2.5;
+  if button(rect, "Play") {
+    subwindow_newgame.open = false;
+    str := get_result(fen_state);
+    if !str || equal(str, "startpos") then {
+      xiangqi_startpos(*xiangqi);
+      fen_string = "";
+    } else {
+      if xiangqi_fen(*xiangqi, str) {
+        fen_string = copy_string(str);
+      } else {
+        xiangqi_startpos(*xiangqi);
+        fen_string = "";
+      }
+    }
+    set_input(fen_state, "startpos"); 
+    subwindow_fenstring = "startpos";
+    status_string = "";
+    xiangqi_startpos(*xiangqi);
+    moves_made_count = 0;
+    reset(*moves);
+    memset(*moves_made, 0, size_of(type_of(moves_made)));
+    generate_moves(*xiangqi, *moves);
+    filter_legal_moves(*xiangqi, *moves);
+    prev_from = 0xFF;
+    prev_to   = 0xFF;
+    red_ai = newgame_w_choice - 1;
+    black_ai = newgame_b_choice - 1;
+    r_time_ms = r_time_manager.clock_ms;
+    b_time_ms = b_time_manager.clock_ms;
+  }
 
   get_engine_names :: () -> [..] string {
     arr: [..] string;
@@ -1598,6 +1703,48 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
   }
 
   TimeCtrl :: string.["None", "Clock", "Time Per Move", "Depth"];
+
+  time_management_ui :: (rect: *Rect, name: string, time_manager: *TimeManager, k: float, id: int) {
+    slider_theme := *default_overall_theme.slider_theme;
+    label_theme := *default_overall_theme.label_theme;
+    text_theme: *Text_Input_Theme = *default_overall_theme.text_input_theme;
+    label(rect, name, label_theme);
+    rect.x += k * 2.5;
+    dropdown(rect, TimeCtrl, cast(*s32)*time_manager.time_control, identifier=id);
+    rect.y -= k * 1.1;
+    if time_manager.time_control == {
+    case .Clock;
+      function := slider_theme.format_text_float;
+      slider_theme.format_text_float = format_float_time_clk;
+      slider(rect, *time_manager.clock_ms, 1000, 1000 * 59 * 60, 1000, slider_theme, identifier=id+1);
+      rect.y -= k * 1.1;
+      slider_theme.format_text_float = format_float_incr_clk;
+      slider(rect, *time_manager.increment_ms, 0, 1000*30, 10, slider_theme, identifier=id+2);
+      rect.y -= k * 1.1;
+      slider_theme.format_text_float = function;
+    case .Time_per_move;
+      slider_theme := *default_overall_theme.slider_theme;
+      slider(rect, *time_manager.seconds_per_move, 0.01, 10.0, 0.01, slider_theme, suffix=" seconds per move", identifier=id+1);
+      rect.y -= k * 1.1;
+    case .Depth;
+      slider(rect, *time_manager.depth, 1, 50, 1, slider_theme, prefix="Depth ", identifier=id+1);
+      rect.y -= k * 1.1;
+    }
+    rect.x -= k * 2.5;
+  }
+
+}
+
+format_float_time_clk :: (prefix: string, suffix: string, value: float64, theme: *Slider_Theme, state: *Slider_State, mode: Slider_Format_Text_Mode) -> string {
+   value /= 1000.0;
+   mins := cast(int) (value / 60.0);
+   secs := cast(int) fmod_cycling(cast(float)value, 60.0);
+   return tprint("%1:%2", mins, formatInt(secs, minimum_digits=2));
+}
+
+format_float_incr_clk :: (prefix: string, suffix: string, value: float64, theme: *Slider_Theme, state: *Slider_State, mode: Slider_Format_Text_Mode) -> string {
+   value /= 1000.0;
+   return tprint("%1 seconds increment", formatFloat(value, trailing_width=2));
 }
 
 equal_time_control := true;
@@ -1606,6 +1753,58 @@ show_b_eval: bool = false;
 
 scroll_value_red: float;
 scroll_value_black: float;
+
+
+TimeControl :: enum s8 {
+  None;
+  Clock;
+  Time_per_move;
+  Depth;
+}
+
+TimeManager :: struct {
+  time_control: TimeControl;
+  clock_ms: float = 1000 * 5 * 60;
+  increment_ms: float = 1000;
+  depth: int = 1;
+  seconds_per_move: float = 2.0;
+}
+
+r_time_manager: TimeManager;
+b_time_manager: TimeManager;
+
+r_time_ms: float;
+b_time_ms: float;
+
+clock_update :: () {
+
+  if xiangqi.turn == 0 {
+    if r_time_manager.time_control == .Clock {
+      r_time_ms -= dt * 1000;
+      r_time_ms = max(0.0, r_time_ms);
+    }
+  } else {
+    if b_time_manager.time_control == .Clock {
+      b_time_ms -= dt * 1000;
+      b_time_ms = max(0.0, b_time_ms);
+    }
+  }
+
+}
+
+clock_move_incr :: () {
+
+  if xiangqi.turn == 0 {
+    if r_time_manager.time_control == .Clock {
+      r_time_ms += r_time_manager.increment_ms;
+    }
+  } else {
+    if b_time_manager.time_control == .Clock {
+      b_time_ms += b_time_manager.increment_ms;
+    }
+  }
+
+}
 
 #import "Window_Creation";
 #import "System";
