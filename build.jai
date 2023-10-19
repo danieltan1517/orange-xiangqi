@@ -1,0 +1,207 @@
+#run {
+  defer {
+    set_build_options_dc(.{do_output=false});
+  }
+
+  w := compiler_create_workspace("workspace");
+  target_options := get_build_options(w);
+  args := target_options.compile_time_command_line;
+  if args.count == 1 {
+    print("Type 'install_bayeselo' to install BayesianElo\n");
+    print("Type 'elo' to calculate the elo\n");
+    print("Type 'games' to download a set of grandmaster games\n");
+    print("Type 'ai' to build the ai\n");
+    print("Type 'ui' to build the ui\n");
+    print("Type 'nnue' to download the NNUE model.\n");
+    print("Type 'release' to build an optimized build\n");
+    return;
+  }
+
+  build_dataset := false;
+  build_ai    := false;
+  build_ui    := false;
+  release     := false;
+  for arg: args {
+    if arg == {
+    case "nnue";
+      download_nnue_model();
+    case "install_bayeselo"; 
+      install_bayesian_elo();
+    case "elo";
+      bayeselo_run_pgn("ratings.txt", "game.pgn");
+    case "games";
+      download_xiangqi_games();
+    case "all";
+      build_ai = true;
+      build_ui = true;
+    case "ai";
+      build_ai = true;
+    case "ui";
+      build_ui = true;
+    case "dataset";
+      build_dataset = true;
+    case "release";
+      release = true;
+    }
+  }
+
+  if build_ai == true {
+    build("orange", add_ai_files, release);
+  }
+
+  if build_ui == true {
+    build("xiangqi", add_ui_files, release);
+  }
+
+  if build_dataset == true {
+    build("dataset", add_dataset_files, release);
+  }
+
+}
+
+add_ui_files :: (w: Workspace) {
+  add_build_file("ui.jai", w);  
+  add_build_file("board.jai", w);  
+}
+
+add_ai_files :: (w: Workspace) {
+  add_build_file("eval.jai", w);  
+  add_build_file("nnue_avx2.jai", w);  
+  add_build_file("ucci.jai", w);  
+  add_build_file("board.jai", w);
+  add_build_file("search.jai", w);
+}
+
+add_dataset_files :: (w: Workspace) {
+  add_build_file("eval.jai", w);  
+  add_build_file("dataset.jai", w);  
+  add_build_file("board.jai", w);
+  add_build_file("search.jai", w);
+}
+
+build :: (exe_name: string, $add_files: #type (Workspace), release: bool) -> w: Workspace {
+  w := compiler_create_workspace();
+  target_options := get_build_options(w);
+  target_options.output_executable_name = exe_name;
+
+  if release == true {
+    set_optimization(*target_options, .VERY_OPTIMIZED); 
+    target_options.stack_trace = false;
+  } else {
+    target_options.backend = .X64;
+    target_options.stack_trace = true;
+  }
+
+  set_build_options(target_options, w);
+  add_files(w);
+  return w;
+}
+
+install_bayesian_elo :: () {
+  // (Daniel) Feb 20, 2023
+  // install/make Bayesian Elo by Remi Coulom.
+  // used to estimate the elo, i.e. the playing strength of the engine
+  // https://www.remi-coulom.fr/Bayesian-Elo/ for more information.
+  // assumes you have git/make installed.
+
+  run_command("git", "clone", "https://github.com/ddugovic/BayesianElo");
+  run_command("make", "--directory=BayesianElo/src");
+}
+
+bayeselo_run_pgn :: (output_file: string, pgn_files: ..string) {
+
+  read_bayeselo :: () #expand {
+    while true {
+      success = read_from_process(*process, output, error, timeout_ms=1);
+      str: string;
+      str.data = output.data;
+      str.count = output.count;
+      print("%", str);
+      if success == true 
+        break;
+    }
+  }
+
+  write_bayeselo :: (command: string) #expand {
+    bytes: [] u8;
+    bytes.data = command.data;
+    bytes.count = command.count;
+    success = write_to_process(*process, bytes);
+    print(command);
+    if success == false then {
+      compiler_report("bayeselo error.", mode=Report.INFO);
+      `return;
+    }
+    read_bayeselo();
+  }
+
+  process: Process;
+  success: bool;
+  output: [512] u8;
+  error:  [512] u8;
+  success = create_process(*process, "BayesianElo/src/bayeselo");
+  if success == false then {
+    compiler_report("bayeselo cannot be found.", mode=Report.INFO);
+    return;
+  }
+
+  read_bayeselo();
+
+  defer {
+    deinit(*process);
+    kill_process(*process);
+  }
+
+  for pgn_file: pgn_files {
+    print("Writing pgn file: %\n", pgn_file);
+    command := tprint("readpgn %1%2", pgn_file, NEWLINE);
+    write_bayeselo(command);
+  }
+
+  command := tprint("elo%1", NEWLINE);
+  write_bayeselo(command);
+
+  command = tprint("mm%1", NEWLINE);
+  write_bayeselo(command);
+
+  command = tprint("exactdist%1", NEWLINE);
+  write_bayeselo(command);
+
+  command = tprint("ratings>%1%2", output_file, NEWLINE);
+  write_bayeselo(command);
+
+  command = tprint("x%1", NEWLINE);
+  write_bayeselo(command);
+  write_bayeselo(command);
+
+  // output the elo results to the screen.
+  print("\n");
+  run_command("cat", output_file);
+}
+
+// how to download something from the command line using "wget".
+download_xiangqi_games :: () {
+  fileId :: "14h_pI8Tel_Z6NV2SL9Z7_Y2hNdvC7-26";
+  link := tprint("https://drive.google.com/uc?export=download&id=%1", fileId);
+  run_command("wget", link, "-O", "xiangqi_games.zip");
+  run_command("unzip", "xiangqi_games.zip");
+  run_command("rm", "xiangqi_games.zip");
+}
+
+download_nnue_model :: () {
+  fileId :: "19yG0m8N5P0ca5kp1zHz-DS8z02yKx5kc";
+  link := tprint("https://drive.google.com/uc?export=download&id=%1", fileId);
+  run_command("wget", link, "-O", "orange10_18_23.zip");
+  run_command("unzip", "orange10_18_23.zip");
+  run_command("rm", "orange10_18_23.zip");
+}
+
+#if OS == .WINDOWS {
+  NEWLINE :: "\r\n";
+} else {
+  NEWLINE :: "\n";
+}
+
+#import "Basic";
+#import "Compiler";
+#import "Process";
