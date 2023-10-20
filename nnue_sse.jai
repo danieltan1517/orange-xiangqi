@@ -135,29 +135,51 @@ get_features :: (ksq: int, ally: Pieces, opp: Pieces, SQ: [90] u8) -> Features {
 }
 
 compute_output_layer :: (turn: int, accum: [2][HIDDEN] s16) -> int {
-
-  relu :: (value: int) -> int {
-    if value < 0 then
-      return 0;
-    else if value > 127 then
-      return 127;
-    return value;
-  }
-
-  eval: int = nnue.output_bias;
+  biases := nnue.output_bias;
   oppo := turn ^ 1;
-  for i: 0..HIDDEN-1 {
-    i1: int = relu(accum[turn][i]);
-    i2: int = relu(accum[oppo][i]);
-    w1: int = nnue.output_weights[0][i];
-    w2: int = nnue.output_weights[1][i];
-    eval += i1 * w1;
-    eval += i2 * w2;
+  acc0 := *accum[turn][0];
+  acc1 := *accum[oppo][0];
+  weights0 := *nnue.output_weights[0][0];
+  weights1 := *nnue.output_weights[1][0];
+  eax: s32 = 0x0001_0001;
+  #asm SSE {
+    pxor.x   zeroes:, zeroes;
+    movaps.x sum:, zeroes;
+    movd     ones_xmm: vec, eax;
+    pshufd   ones_xmm, ones_xmm, 0x0;
   }
 
-  eval /= 32;
+  for 0..7 {
+    #asm SSE {
+      movaps.x     xmm0:, [acc0];
+      movaps.x     xmm1:, [acc1];
+      packsswb.x   xmm0,  [acc0 + 0x10];
+      packsswb.x   xmm1,  [acc1 + 0x10];
+      pmaxsb.x     xmm0,  zeroes;
+      pmaxsb.x     xmm1,  zeroes;
+      pmaddubsw.x  xmm0,  [weights0];
+      pmaddubsw.x  xmm1,  [weights1];
+      pmaddwd.x    xmm0,  ones_xmm;
+      pmaddwd.x    xmm1,  ones_xmm;
+      paddd.x      sum,   xmm0;
+      paddd.x      sum,   xmm1;
+      add          acc0,  0x20;
+      add          acc1,  0x20;
+      add          weights0, 0x10;
+      add          weights1, 0x10;
+    }
+  }
 
-  return eval;
+  #asm SSE {
+    pshufd  xmm0:, sum, 0x1b;
+    paddd.x sum, xmm0;
+    movd eax, sum;
+    pextrd val: gpr, sum, 1;
+    add         eax, val;
+    add         eax, biases;
+  }
+
+  return eax / 32;
 }
 
 NNUE :: struct {
