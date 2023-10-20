@@ -4,9 +4,9 @@ nnue_evaluate :: (xiangqi: *Xiangqi) -> int {
   accum: [2][HIDDEN] s16 #align 64;
   red_features := get_features(get_king(xiangqi,0), xiangqi.pieces[0], xiangqi.pieces[1], SQUARES[0]);
   blk_features := get_features(get_king(xiangqi,1), xiangqi.pieces[1], xiangqi.pieces[0], SQUARES[1]);
-
-  compute_features(*accum[0][0], red_features, *nnue.feature_biases[0]);
-  compute_features(*accum[1][0], blk_features, *nnue.feature_biases[0]);
+  biases := *nnue.feature_biases[0];
+  compute_features(*accum[0][0], red_features, biases);
+  compute_features(*accum[1][0], blk_features, biases);
   return compute_output_layer(xiangqi.turn, accum);
 }
 
