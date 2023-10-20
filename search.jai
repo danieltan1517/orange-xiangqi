@@ -38,6 +38,7 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> Move32 {
   pv: PV;
   history.accum[0] = evaluate_absolute(xiangqi);
   history.phase_value = compute_phase(xiangqi);
+  nnue_incremental_init(xiangqi, history);
 
   while depth <= search_depth {
     score := unwrap(negamax_root(xiangqi, history, *pv, depth, alpha, beta));
@@ -699,14 +700,16 @@ pick_move :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, best_m
   return NULL_MOVE, stage;
 }
 
-make_move :: (xiangqi: *Xiangqi, hist: *History, move: Move32) {
+make_move :: (xiangqi: *Xiangqi, h: *History, move: Move32) {
   if is_capture(move) then {
-    hist.phase_value -= phase_incr(move);
+    h.phase_value -= phase_incr(move);
   }
-  incr_evaluation(xiangqi.turn, hist.accum, hist.ply, move);
+  incr_evaluation(xiangqi.turn, h.accum, h.ply, move);
   make_move(xiangqi, move);
-  hist.moves[hist.ply] = move;
-  hist.ply += 1;
+  h.moves[h.ply] = move;
+  h.ply += 1;
+  // called after h.ply. cannot be called before that.
+  nnue_incremental_update(xiangqi, h, move);
   nodes += 1;
 }
 
@@ -723,6 +726,7 @@ make_null_move :: (xiangqi: *Xiangqi, hist: *History) {
   make_null_move(xiangqi);
   hist.moves[hist.ply] = NULL_MOVE;
   hist.ply += 1;
+  nnue_incremental_nullmove(xiangqi, hist);
   hist.seldepth = max(hist.ply, hist.seldepth);
   nodes += 1;
 }
@@ -852,16 +856,6 @@ get_history :: (h: *History, num: int) -> [][90] s32 {
   return h.history[piece][sq];
 }
 
-NNUEData :: struct {
-  red_king_sq: s8;
-  blk_king_sq: s8;
-  computed:    s16;
-}
-
-Accumulator :: struct {
-  values: [2][HIDDEN] s16;
-}
-
 History :: struct {
   ply: int;
   seldepth: int;
@@ -869,9 +863,7 @@ History :: struct {
   max_search_depth: int;
   accum:       [128] Score;
   moves:       [128] Move32;
-  nnue_data:   [128] NNUEData;
   accumulator: [128] Accumulator #align 64; 
-
   killer:  [128][2] Move32;
   counter: [14][90] Move32;
   history: [14][90][14][90] s32;

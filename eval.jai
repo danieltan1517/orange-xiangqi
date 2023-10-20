@@ -28,7 +28,7 @@ evaluate :: (xiangqi: *Xiangqi, history: *History) -> int {
   ply := history.ply;
   evaluation := evaluation_phase_scale(history.accum[ply], history.phase_value);
   if abs(evaluation) < 630 && history.phase_value > 3 {
-    return nnue_evaluate(xiangqi);
+    return nnue_evaluate_incr(xiangqi, history);
   }
   if xiangqi.turn == 0 {
     return evaluation;
