@@ -2,9 +2,6 @@ HIDDEN :: 128;
 
 nnue_evaluate :: (xiangqi: *Xiangqi) -> int {
   accum: [2][HIDDEN] s16 #align 64;
-  memcpy(*accum[0], *nnue.feature_biases[0], size_of([HIDDEN] s16));
-  memcpy(*accum[1], *nnue.feature_biases[0], size_of([HIDDEN] s16));
-
   red_features := get_features(get_king(xiangqi,0), xiangqi.pieces[0], xiangqi.pieces[1], SQUARES[0]);
   blk_features := get_features(get_king(xiangqi,1), xiangqi.pieces[1], xiangqi.pieces[0], SQUARES[1]);
 
