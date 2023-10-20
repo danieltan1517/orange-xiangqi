@@ -10,11 +10,11 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> Move32 {
 
   allocate_history :: () -> *History #expand {
     #if OS == .WINDOWS {
-      h := New(History);
-      `defer free(h);
-      return h;
+      h := NewArray(1, History, alignment=64);
+      `defer array_free(h);
+      return *h[0];
     } else #if OS == .LINUX || OS == .MACOS {
-      `h: History;
+      `h: History #align 64;
       return *h;
     } else {
       #assert(false);
@@ -852,14 +852,27 @@ get_history :: (h: *History, num: int) -> [][90] s32 {
   return h.history[piece][sq];
 }
 
+NNUEData :: struct {
+  red_king_sq: s8;
+  blk_king_sq: s8;
+  computed:    s16;
+}
+
+Accumulator :: struct {
+  values: [2][HIDDEN] s16;
+}
+
 History :: struct {
   ply: int;
   seldepth: int;
   phase_value: int;
   max_search_depth: int;
-  accum :  [256] Score;
-  moves :  [256] Move32;
-  killer:  [256][2] Move32;
+  accum:       [128] Score;
+  moves:       [128] Move32;
+  nnue_data:   [128] NNUEData;
+  accumulator: [128] Accumulator #align 64; 
+
+  killer:  [128][2] Move32;
   counter: [14][90] Move32;
   history: [14][90][14][90] s32;
 }
