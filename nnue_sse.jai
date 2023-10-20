@@ -5,134 +5,150 @@ nnue_evaluate :: (xiangqi: *Xiangqi) -> int {
   memcpy(*accum[0], *nnue.feature_biases[0], size_of([HIDDEN] s16));
   memcpy(*accum[1], *nnue.feature_biases[0], size_of([HIDDEN] s16));
 
-  pieces_features(accum[0], get_king(xiangqi,0), xiangqi.pieces[0], xiangqi.pieces[1], SQUARES[0]);
-  pieces_features(accum[1], get_king(xiangqi,1), xiangqi.pieces[1], xiangqi.pieces[0], SQUARES[1]);
-  relu(accum);
-  return output_evaluation(xiangqi.turn, accum);
+  red_features := get_features(get_king(xiangqi,0), xiangqi.pieces[0], xiangqi.pieces[1], SQUARES[0]);
+  blk_features := get_features(get_king(xiangqi,1), xiangqi.pieces[1], xiangqi.pieces[0], SQUARES[1]);
+
+  compute_features(*accum[0][0], red_features, *nnue.feature_biases[0]);
+  compute_features(*accum[1][0], blk_features, *nnue.feature_biases[0]);
+  return compute_output_layer(xiangqi.turn, accum);
 }
 
-pieces_features :: (accum: [] s16, ksq: int, ally: Pieces, opp: Pieces, SQ: [90] u8) {
-  piece_addition :: (accum: [] s16, ksq: int, piece: Pieces, SQ: [90] u8, knight_type: int, rook_type: int, cannon_type: int, pawn_type: int) {
-    for adv : piece.adv {
-      adv = SQ[adv];
-      add_feature_weights(accum, ksq, 0, adv);
-    }
-  
-    for ele : piece.ele {
-      ele = SQ[ele];
-      add_feature_weights(accum, ksq, 0, ele);
-    }
-  
-    for kni : piece.kni {
-      kni = SQ[kni];
-      add_feature_weights(accum, ksq, knight_type, kni);
-    }
-  
-    for rook : piece.rook {
-      rook = SQ[rook];
-      add_feature_weights(accum, ksq, rook_type, rook);
-    }
-  
-    for can : piece.cannon {
-      can = SQ[can];
-      add_feature_weights(accum, ksq, cannon_type, can);
-    }
-  
-    for pawn : piece.pawn {
-      pawn = SQ[pawn];
-      add_feature_weights(accum, ksq, pawn_type, pawn);
-    }
+Features :: struct {
+  values: [32] *s16;
+  count: int;
+}
+
+append_feature :: inline (f: *Features, value: *s16) {
+  f.values[f.count] = value;
+  f.count += 1;
+}
+
+for_expansion :: (features: *Features, body: Code, f: For_Flags) #expand {
+  `it_index := 0;
+  while it_index < features.count {
+    `it := features.values[it_index];
+    #insert body;
+    it_index += 1;
+  }
+}
+
+compute_features :: (accum: *s16, features: Features, biases: *s16) {
+  #asm SSE {
+    movaps xmm0:  vec, [biases + 0x00];
+    movaps xmm1:  vec, [biases + 0x10];
+    movaps xmm2:  vec, [biases + 0x20];
+    movaps xmm3:  vec, [biases + 0x30];
+    movaps xmm4:  vec, [biases + 0x40];
+    movaps xmm5:  vec, [biases + 0x50];
+    movaps xmm6:  vec, [biases + 0x60];
+    movaps xmm7:  vec, [biases + 0x70];
+    movaps xmm8:  vec, [biases + 0x80];
+    movaps xmm9:  vec, [biases + 0x90];
+    movaps xmm10: vec, [biases + 0xa0];
+    movaps xmm11: vec, [biases + 0xb0];
+    movaps xmm12: vec, [biases + 0xc0];
+    movaps xmm13: vec, [biases + 0xd0];
+    movaps xmm14: vec, [biases + 0xe0];
+    movaps xmm15: vec, [biases + 0xf0];
   }
 
-  ksq = KSQ_INDEX[SQ[ksq]];
-  piece_addition(accum, ksq, ally, SQ, 1, 2, 3, 4);
-  piece_addition(accum, ksq, opp,  SQ, 5, 6, 7, 8);
-
-}
-
-add_feature_weights :: (accum: [] s16, ksq: int, piece: int, sq: int) {
-  #assert(HIDDEN == 128);
-  values := *nnue.feature_weights[ksq][piece][sq][0];
-  acc_values := *accum[0];
+  for feature : features {
+    #asm SSE {
+      paddw.x xmm0,  [feature + 0x00];
+      paddw.x xmm1,  [feature + 0x10];
+      paddw.x xmm2,  [feature + 0x20];
+      paddw.x xmm3,  [feature + 0x30];
+      paddw.x xmm4,  [feature + 0x40];
+      paddw.x xmm5,  [feature + 0x50];
+      paddw.x xmm6,  [feature + 0x60];
+      paddw.x xmm7,  [feature + 0x70];
+      paddw.x xmm8,  [feature + 0x80];
+      paddw.x xmm9,  [feature + 0x90];
+      paddw.x xmm10, [feature + 0xa0];
+      paddw.x xmm11, [feature + 0xb0];
+      paddw.x xmm12, [feature + 0xc0];
+      paddw.x xmm13, [feature + 0xd0];
+      paddw.x xmm14, [feature + 0xe0];
+      paddw.x xmm15, [feature + 0xf0];
+    }
+  }
 
   #asm SSE {
-    movaps xmm0:  vec, [acc_values + 0x00];
-    movaps xmm1:  vec, [acc_values + 0x10];
-    movaps xmm2:  vec, [acc_values + 0x20];
-    movaps xmm3:  vec, [acc_values + 0x30];
-    movaps xmm4:  vec, [acc_values + 0x40];
-    movaps xmm5:  vec, [acc_values + 0x50];
-    movaps xmm6:  vec, [acc_values + 0x60];
-    movaps xmm7:  vec, [acc_values + 0x70];
-    movaps xmm8:  vec, [acc_values + 0x80];
-    movaps xmm9:  vec, [acc_values + 0x90];
-    movaps xmm10: vec, [acc_values + 0xa0];
-    movaps xmm11: vec, [acc_values + 0xb0];
-    movaps xmm12: vec, [acc_values + 0xc0];
-    movaps xmm13: vec, [acc_values + 0xd0];
-    movaps xmm14: vec, [acc_values + 0xe0];
-    movaps xmm15: vec, [acc_values + 0xf0];
-
-    paddw.x xmm0,  [values + 0x00];
-    paddw.x xmm1,  [values + 0x10];
-    paddw.x xmm2,  [values + 0x20];
-    paddw.x xmm3,  [values + 0x30];
-    paddw.x xmm4,  [values + 0x40];
-    paddw.x xmm5,  [values + 0x50];
-    paddw.x xmm6,  [values + 0x60];
-    paddw.x xmm7,  [values + 0x70];
-    paddw.x xmm8,  [values + 0x80];
-    paddw.x xmm9,  [values + 0x90];
-    paddw.x xmm10, [values + 0xa0];
-    paddw.x xmm11, [values + 0xb0];
-    paddw.x xmm12, [values + 0xc0];
-    paddw.x xmm13, [values + 0xd0];
-    paddw.x xmm14, [values + 0xe0];
-    paddw.x xmm15, [values + 0xf0];
-
-    movaps [acc_values + 0x00], xmm0;
-    movaps [acc_values + 0x10], xmm1;
-    movaps [acc_values + 0x20], xmm2;
-    movaps [acc_values + 0x30], xmm3;
-    movaps [acc_values + 0x40], xmm4;
-    movaps [acc_values + 0x50], xmm5;
-    movaps [acc_values + 0x60], xmm6;
-    movaps [acc_values + 0x70], xmm7;
-    movaps [acc_values + 0x80], xmm8;
-    movaps [acc_values + 0x90], xmm9;
-    movaps [acc_values + 0xa0], xmm10;
-    movaps [acc_values + 0xb0], xmm11;
-    movaps [acc_values + 0xc0], xmm12;
-    movaps [acc_values + 0xd0], xmm13;
-    movaps [acc_values + 0xe0], xmm14;
-    movaps [acc_values + 0xf0], xmm15;
+    movaps [accum + 0x00], xmm0;
+    movaps [accum + 0x10], xmm1;
+    movaps [accum + 0x20], xmm2;
+    movaps [accum + 0x30], xmm3;
+    movaps [accum + 0x40], xmm4;
+    movaps [accum + 0x50], xmm5;
+    movaps [accum + 0x60], xmm6;
+    movaps [accum + 0x70], xmm7;
+    movaps [accum + 0x80], xmm8;
+    movaps [accum + 0x90], xmm9;
+    movaps [accum + 0xa0], xmm10;
+    movaps [accum + 0xb0], xmm11;
+    movaps [accum + 0xc0], xmm12;
+    movaps [accum + 0xd0], xmm13;
+    movaps [accum + 0xe0], xmm14;
+    movaps [accum + 0xf0], xmm15;
   }
 }
 
-relu :: (accum: [][HIDDEN] s16) {
+get_features :: (ksq: int, ally: Pieces, opp: Pieces, SQ: [90] u8) -> Features {
 
-  clamp :: (value: s16) -> s16 {
-    if value < 0 {
-      return 0;
-    } else if value > 127 {
-      return 127;
-    } else {
-      return value;
+  add_features :: (features: *Features, kidx: int, pieces: Pieces, SQ: [90] u8, knight_type: int, rook_type: int, cannon_type: int, pawn_type: int) {
+    for adv : pieces.adv {
+      adv = SQ[adv];
+      append_feature(features, *nnue.feature_weights[kidx][0][adv][0]);
+    }
+  
+    for ele : pieces.ele {
+      ele = SQ[ele];
+      append_feature(features, *nnue.feature_weights[kidx][0][ele][0]);
+    }
+  
+    for kni : pieces.kni {
+      kni = SQ[kni];
+      append_feature(features, *nnue.feature_weights[kidx][knight_type][kni][0]);
+    }
+  
+    for rook : pieces.rook {
+      rook = SQ[rook];
+      append_feature(features, *nnue.feature_weights[kidx][rook_type][rook][0]);
+    }
+  
+    for can : pieces.cannon {
+      can = SQ[can];
+      append_feature(features, *nnue.feature_weights[kidx][cannon_type][can][0]);
+    }
+  
+    for pawn : pieces.pawn {
+      pawn = SQ[pawn];
+      append_feature(features, *nnue.feature_weights[kidx][pawn_type][pawn][0]);
     }
   }
 
-  for i : 0..HIDDEN-1 {
-    accum[0][i] = clamp(accum[0][i]);
-    accum[1][i] = clamp(accum[1][i]);
-  }
+  features: Features;
+  bucket := KSQ_INDEX[ksq];
+  add_features(*features, bucket, ally, SQ, 1, 2, 3, 4);
+  add_features(*features, bucket, opp,  SQ, 5, 6, 7, 8);
+  return features;
 }
 
-output_evaluation :: (turn: int, accum: [2][HIDDEN] s16) -> int {
+compute_output_layer :: (turn: int, accum: [2][HIDDEN] s16) -> int {
+
+  relu :: (value: int) -> int {
+    if value < 0 then
+      return 0;
+    else if value > 127 then
+      return 127;
+    return value;
+  }
+
   eval: int = nnue.output_bias;
-  opp := turn ^ 1;
+  oppo := turn ^ 1;
   for i: 0..HIDDEN-1 {
-    i1: int = accum[turn][i];
-    i2: int = accum[opp ][i];
+    i1: int = relu(accum[turn][i]);
+    i2: int = relu(accum[oppo][i]);
     w1: int = nnue.output_weights[0][i];
     w2: int = nnue.output_weights[1][i];
     eval += i1 * w1;
@@ -165,7 +181,14 @@ load_model :: (filename: string) {
 KSQ_INDEX :: int.[
   -1, -1, -1,  1,  0,  1, -1, -1, -1,
   -1, -1, -1,  2,  1,  2, -1, -1, -1,
-  -1, -1, -1,  2,  2,  2, -1, -1, -1
+  -1, -1, -1,  2,  2,  2, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1,  2,  2,  2, -1, -1, -1,
+  -1, -1, -1,  2,  1,  2, -1, -1, -1,
+  -1, -1, -1,  1,  0,  1, -1, -1, -1,
 ];
 
 SQUARES : [2][90] u8 : .[
