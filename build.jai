@@ -66,7 +66,7 @@ add_ui_files :: (w: Workspace) {
 
 add_ai_files :: (w: Workspace) {
   add_build_file("eval.jai", w);  
-  add_build_file("nnue_sse.jai", w);  
+  add_build_file("nnue_avx2.jai", w);  
   add_build_file("ucci.jai", w);  
   add_build_file("board.jai", w);
   add_build_file("search.jai", w);

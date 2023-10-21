@@ -2,122 +2,269 @@ HIDDEN :: 128;
 
 nnue_evaluate :: (xiangqi: *Xiangqi) -> int {
   accum: [2][HIDDEN] s16 #align 64;
-  memcpy(*accum[0], *nnue.feature_biases[0], size_of([HIDDEN] s16));
-  memcpy(*accum[1], *nnue.feature_biases[0], size_of([HIDDEN] s16));
-
-  pieces_features(accum[0], get_king(xiangqi,0), xiangqi.pieces[0], xiangqi.pieces[1], SQUARES[0]);
-  pieces_features(accum[1], get_king(xiangqi,1), xiangqi.pieces[1], xiangqi.pieces[0], SQUARES[1]);
-  relu(accum);
-  return output_evaluation(xiangqi.turn, accum);
+  red_features := get_features(get_king(xiangqi,0), xiangqi.pieces[0], xiangqi.pieces[1], SQUARES[0]);
+  blk_features := get_features(get_king(xiangqi,1), xiangqi.pieces[1], xiangqi.pieces[0], SQUARES[1]);
+  empty_features: Features;
+  biases := *nnue.feature_biases[0];
+  compute_features(*accum[0][0], biases, red_features, empty_features);
+  compute_features(*accum[1][0], biases, blk_features, empty_features);
+  return compute_output_layer(xiangqi.turn, accum);
 }
 
-pieces_features :: (accum: [] s16, ksq: int, ally: Pieces, opp: Pieces, SQ: [90] u8) {
-  piece_addition :: (accum: [] s16, ksq: int, piece: Pieces, SQ: [90] u8, knight_type: int, rook_type: int, cannon_type: int, pawn_type: int) {
-    for adv : piece.adv {
-      adv = SQ[adv];
-      add_feature_weights(accum, ksq, 0, adv);
-    }
+nnue_evaluate_incr :: (xiangqi: *Xiangqi, h: *History) -> int {
+  ply := h.ply;
+  return compute_output_layer(xiangqi.turn, h.accumulator[ply].values);
+}
+
+// called at the very beginning of search.
+nnue_incremental_init :: (xiangqi: *Xiangqi, h: *History) {
+  red_features := get_features(get_king(xiangqi,0), xiangqi.pieces[0], xiangqi.pieces[1], SQUARES[0]);
+  blk_features := get_features(get_king(xiangqi,1), xiangqi.pieces[1], xiangqi.pieces[0], SQUARES[1]);
+  empty_features: Features;
+  biases := *nnue.feature_biases[0];
+  ply := h.ply;
+  compute_features(*h.accumulator[ply].values[0][0], biases, red_features, empty_features);
+  compute_features(*h.accumulator[ply].values[1][0], biases, blk_features, empty_features);
+}
+
+// can only be called after ply += 1. cannot be called before that.
+nnue_incremental_update :: (xiangqi: *Xiangqi, h: *History, move: Move32) {
+  RED :: s8.[ 0, 0, 0, 0, 0, 0, 1, 5, 2, 6, 3, 7, 4, 8];
+  BLK :: s8.[ 0, 0, 0, 0, 0, 0, 5, 1, 6, 2, 7, 3, 8, 4];
+
+  red_added, red_subtracted, r_reset := incr_features(xiangqi, move, 0, RED, SQUARES[0]);
+  blk_added, blk_subtracted, b_reset := incr_features(xiangqi, move, 1, BLK, SQUARES[1]);
   
-    for ele : piece.ele {
-      ele = SQ[ele];
-      add_feature_weights(accum, ksq, 0, ele);
-    }
-  
-    for kni : piece.kni {
-      kni = SQ[kni];
-      add_feature_weights(accum, ksq, knight_type, kni);
-    }
-  
-    for rook : piece.rook {
-      rook = SQ[rook];
-      add_feature_weights(accum, ksq, rook_type, rook);
-    }
-  
-    for can : piece.cannon {
-      can = SQ[can];
-      add_feature_weights(accum, ksq, cannon_type, can);
-    }
-  
-    for pawn : piece.pawn {
-      pawn = SQ[pawn];
-      add_feature_weights(accum, ksq, pawn_type, pawn);
-    }
+  prev := h.ply - 1;
+  red_biases := ifx r_reset then *nnue.feature_biases[0] else *h.accumulator[prev].values[0][0];
+  blk_biases := ifx b_reset then *nnue.feature_biases[0] else *h.accumulator[prev].values[1][0];
+
+  ply := h.ply;
+  compute_features(*h.accumulator[ply].values[0][0], red_biases, red_added, red_subtracted);
+  compute_features(*h.accumulator[ply].values[1][0], blk_biases, blk_added, blk_subtracted);
+}
+
+// used during null move pruning.
+nnue_incremental_nullmove :: (xiangqi: *Xiangqi, h: *History) {
+  empty: Features;
+  prev := h.ply - 1;
+  ply := h.ply;
+  compute_features(*h.accumulator[ply].values[0][0], *h.accumulator[prev].values[0][0], empty, empty);
+  compute_features(*h.accumulator[ply].values[1][0], *h.accumulator[prev].values[1][0], empty, empty);
+}
+
+incr_features :: (xiangqi: *Xiangqi, move: Move32, turn: int, PIECE: [] s8, SQ: [90] u8) -> added: Features, subtracted: Features, reset: bool {
+  is_king_move :: inline (move: Move32) -> bool {
+    piece := move.piece >> 2;
+    return piece == 0;
   }
 
-  ksq = KSQ_INDEX[SQ[ksq]];
-  piece_addition(accum, ksq, ally, SQ, 1, 2, 3, 4);
-  piece_addition(accum, ksq, opp,  SQ, 5, 6, 7, 8);
-
-}
-
-add_feature_weights :: (accum: [] s16, ksq: int, piece: int, sq: int) {
-  #assert(HIDDEN == 128);
-  values := *nnue.feature_weights[ksq][piece][sq][0];
-  acc_values := *accum[0];
-
-  #asm AVX, AVX2 {
-    movaps.y ymm0:  vec, [acc_values + 0x00];
-    movaps.y ymm1:  vec, [acc_values + 0x20];
-    movaps.y ymm2:  vec, [acc_values + 0x40];
-    movaps.y ymm3:  vec, [acc_values + 0x60];
-    movaps.y ymm4:  vec, [acc_values + 0x80];
-    movaps.y ymm5:  vec, [acc_values + 0xa0];
-    movaps.y ymm6:  vec, [acc_values + 0xc0];
-    movaps.y ymm7:  vec, [acc_values + 0xe0];
-
-    paddw.y ymm0, ymm0, [values + 0x00];
-    paddw.y ymm1, ymm1, [values + 0x20];
-    paddw.y ymm2, ymm2, [values + 0x40];
-    paddw.y ymm3, ymm3, [values + 0x60];
-    paddw.y ymm4, ymm4, [values + 0x80];
-    paddw.y ymm5, ymm5, [values + 0xa0];
-    paddw.y ymm6, ymm6, [values + 0xc0];
-    paddw.y ymm7, ymm7, [values + 0xe0];
-
-    movaps.y [acc_values + 0x00], ymm0;
-    movaps.y [acc_values + 0x20], ymm1;
-    movaps.y [acc_values + 0x40], ymm2;
-    movaps.y [acc_values + 0x60], ymm3;
-    movaps.y [acc_values + 0x80], ymm4;
-    movaps.y [acc_values + 0xa0], ymm5;
-    movaps.y [acc_values + 0xc0], ymm6;
-    movaps.y [acc_values + 0xe0], ymm7;
+  is_turn :: inline (move: Move32, turn: int) -> bool {
+    move_turn := (move.piece >> 1) & 1;
+    return move_turn == turn;
   }
-}
 
-relu :: (accum: [][HIDDEN] s16) {
-
-  clamp :: (value: s16) -> s16 {
-    if value < 0 {
-      return 0;
-    } else if value > 127 {
-      return 127;
+  bucket := KSQ_INDEX[get_king(xiangqi,turn)];
+  added: Features;
+  subtracted: Features;
+  reset := false;
+  if is_king_move(move) {
+    if is_turn(move, turn) {
+      // reset.
+      added = get_features(get_king(xiangqi,turn), xiangqi.pieces[turn], xiangqi.pieces[turn^1], SQUARES[turn]);
+      reset = true;
     } else {
-      return value;
+      if is_capture(move) {
+        type := PIECE[move.capture >> 1];
+        to   := SQ[move.to];
+        weight := *nnue.feature_weights[bucket][type][to][0];
+        append_feature(*subtracted, weight);
+      }
+    }
+  } else {
+    from := SQ[move.from];
+    to   := SQ[move.to];
+    type := PIECE[move.piece >> 1];
+
+    from_weight := *nnue.feature_weights[bucket][type][from][0];
+    append_feature(*subtracted, from_weight);
+
+    to_weight := *nnue.feature_weights[bucket][type][to][0];
+    append_feature(*added, to_weight);
+
+    if is_capture(move) {
+      type := PIECE[move.capture >> 1];
+      capture_weight := *nnue.feature_weights[bucket][type][to][0];
+      append_feature(*subtracted, capture_weight);
     }
   }
 
-  for i : 0..HIDDEN-1 {
-    accum[0][i] = clamp(accum[0][i]);
-    accum[1][i] = clamp(accum[1][i]);
+  return added, subtracted, reset;
+}
+
+Accumulator :: struct {
+  values: [2][HIDDEN] s16;
+}
+
+Features :: struct {
+  values: [32] *s16;
+  count: int;
+}
+
+append_feature :: inline (f: *Features, value: *s16) {
+  f.values[f.count] = value;
+  f.count += 1;
+}
+
+for_expansion :: (features: *Features, body: Code, f: For_Flags) #expand {
+  `it_index := 0;
+  while it_index < features.count {
+    `it := features.values[it_index];
+    #insert body;
+    it_index += 1;
   }
 }
 
-output_evaluation :: (turn: int, accum: [2][HIDDEN] s16) -> int {
-  eval: int = nnue.output_bias;
-  opp := turn ^ 1;
-  for i: 0..HIDDEN-1 {
-    i1: int = accum[turn][i];
-    i2: int = accum[opp ][i];
-    w1: int = nnue.output_weights[0][i];
-    w2: int = nnue.output_weights[1][i];
-    eval += i1 * w1;
-    eval += i2 * w2;
+compute_features :: (accum: *s16, biases: *s16, added_features: Features, subtracted_features: Features) {
+  // load the values.
+  #asm AVX, AVX2 {
+    movaps.y xmm0:  vec, [biases + 0x00];
+    movaps.y xmm1:  vec, [biases + 0x20];
+    movaps.y xmm2:  vec, [biases + 0x40];
+    movaps.y xmm3:  vec, [biases + 0x60];
+    movaps.y xmm4:  vec, [biases + 0x80];
+    movaps.y xmm5:  vec, [biases + 0xa0];
+    movaps.y xmm6:  vec, [biases + 0xc0];
+    movaps.y xmm7:  vec, [biases + 0xe0];
   }
 
-  eval /= 32;
+  for feature : subtracted_features {
+    #asm AVX, AVX2 {
+      psubw.y xmm0, xmm0, [feature + 0x00];
+      psubw.y xmm1, xmm1, [feature + 0x20];
+      psubw.y xmm2, xmm2, [feature + 0x40];
+      psubw.y xmm3, xmm3, [feature + 0x60];
+      psubw.y xmm4, xmm4, [feature + 0x80];
+      psubw.y xmm5, xmm5, [feature + 0xa0];
+      psubw.y xmm6, xmm6, [feature + 0xc0];
+      psubw.y xmm7, xmm7, [feature + 0xe0];
+    }
+  }
 
-  return eval;
+  // add the values up.
+  for feature : added_features {
+    #asm AVX, AVX2 {
+      paddw.y xmm0, xmm0, [feature + 0x00];
+      paddw.y xmm1, xmm1, [feature + 0x20];
+      paddw.y xmm2, xmm2, [feature + 0x40];
+      paddw.y xmm3, xmm3, [feature + 0x60];
+      paddw.y xmm4, xmm4, [feature + 0x80];
+      paddw.y xmm5, xmm5, [feature + 0xa0];
+      paddw.y xmm6, xmm6, [feature + 0xc0];
+      paddw.y xmm7, xmm7, [feature + 0xe0];
+    }
+  }
+
+  // store back the values in the accumulator.
+  #asm AVX, AVX2 {
+    movaps.y [accum + 0x00], xmm0;
+    movaps.y [accum + 0x20], xmm1;
+    movaps.y [accum + 0x40], xmm2;
+    movaps.y [accum + 0x60], xmm3;
+    movaps.y [accum + 0x80], xmm4;
+    movaps.y [accum + 0xa0], xmm5;
+    movaps.y [accum + 0xc0], xmm6;
+    movaps.y [accum + 0xe0], xmm7;
+  }
+}
+
+get_features :: (ksq: int, ally: Pieces, opp: Pieces, SQ: [90] u8) -> Features {
+
+  add_features :: (features: *Features, kidx: int, pieces: Pieces, SQ: [90] u8, N: int, R: int, C: int, P: int) {
+    for adv : pieces.adv {
+      adv = SQ[adv];
+      append_feature(features, *nnue.feature_weights[kidx][0][adv][0]);
+    }
+  
+    for ele : pieces.ele {
+      ele = SQ[ele];
+      append_feature(features, *nnue.feature_weights[kidx][0][ele][0]);
+    }
+  
+    for kni : pieces.kni {
+      kni = SQ[kni];
+      append_feature(features, *nnue.feature_weights[kidx][N][kni][0]);
+    }
+  
+    for rook : pieces.rook {
+      rook = SQ[rook];
+      append_feature(features, *nnue.feature_weights[kidx][R][rook][0]);
+    }
+  
+    for can : pieces.cannon {
+      can = SQ[can];
+      append_feature(features, *nnue.feature_weights[kidx][C][can][0]);
+    }
+  
+    for pawn : pieces.pawn {
+      pawn = SQ[pawn];
+      append_feature(features, *nnue.feature_weights[kidx][P][pawn][0]);
+    }
+  }
+
+  features: Features;
+  bucket := KSQ_INDEX[ksq];
+  add_features(*features, bucket, ally, SQ, 1, 2, 3, 4);
+  add_features(*features, bucket, opp,  SQ, 5, 6, 7, 8);
+  return features;
+}
+
+compute_output_layer :: (turn: int, accum: [2][HIDDEN] s16) -> int {
+  biases := nnue.output_bias;
+  oppo := turn ^ 1;
+  acc0 := *accum[turn][0];
+  acc1 := *accum[oppo][0];
+  weights0 := *nnue.output_weights[0][0];
+  weights1 := *nnue.output_weights[1][0];
+  eax: s32 = 0x0001_0001;
+  #asm SSE {
+    pxor.x   zeroes:, zeroes;
+    movaps.x sum:, zeroes;
+    movd     ones_xmm: vec, eax;
+    pshufd   ones_xmm, ones_xmm, 0x0;
+  }
+
+  for 0..7 {
+    #asm SSE {
+      movaps.x     xmm0:, [acc0];
+      movaps.x     xmm1:, [acc1];
+      packsswb.x   xmm0,  [acc0 + 0x10];
+      packsswb.x   xmm1,  [acc1 + 0x10];
+      pmaxsb.x     xmm0,  zeroes;
+      pmaxsb.x     xmm1,  zeroes;
+      pmaddubsw.x  xmm0,  [weights0];
+      pmaddubsw.x  xmm1,  [weights1];
+      pmaddwd.x    xmm0,  ones_xmm;
+      pmaddwd.x    xmm1,  ones_xmm;
+      paddd.x      sum,   xmm0;
+      paddd.x      sum,   xmm1;
+      add          acc0,  0x20;
+      add          acc1,  0x20;
+      add          weights0, 0x10;
+      add          weights1, 0x10;
+    }
+  }
+
+  #asm SSE {
+    pshufd  xmm0:, sum, 0x1b;
+    paddd.x sum, xmm0;
+    movd eax, sum;
+    pextrd val: gpr, sum, 1;
+    add         eax, val;
+    add         eax, biases;
+  }
+
+  return eax / 32;
 }
 
 NNUE :: struct {
@@ -138,10 +285,17 @@ load_model :: (filename: string) {
   free(weights);
 }
 
-KSQ_INDEX :: int.[
+KSQ_INDEX :: s8.[
   -1, -1, -1,  1,  0,  1, -1, -1, -1,
   -1, -1, -1,  2,  1,  2, -1, -1, -1,
-  -1, -1, -1,  2,  2,  2, -1, -1, -1
+  -1, -1, -1,  2,  2,  2, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1,  2,  2,  2, -1, -1, -1,
+  -1, -1, -1,  2,  1,  2, -1, -1, -1,
+  -1, -1, -1,  1,  0,  1, -1, -1, -1,
 ];
 
 SQUARES : [2][90] u8 : .[
