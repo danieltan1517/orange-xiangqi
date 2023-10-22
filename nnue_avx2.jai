@@ -128,53 +128,53 @@ for_expansion :: (features: *Features, body: Code, f: For_Flags) #expand {
 compute_features :: (accum: *s16, biases: *s16, added_features: Features, subtracted_features: Features) {
   // load the values.
   #asm AVX, AVX2 {
-    movaps.y xmm0:  vec, [biases + 0x00];
-    movaps.y xmm1:  vec, [biases + 0x20];
-    movaps.y xmm2:  vec, [biases + 0x40];
-    movaps.y xmm3:  vec, [biases + 0x60];
-    movaps.y xmm4:  vec, [biases + 0x80];
-    movaps.y xmm5:  vec, [biases + 0xa0];
-    movaps.y xmm6:  vec, [biases + 0xc0];
-    movaps.y xmm7:  vec, [biases + 0xe0];
+    movaps.y ymm0:  vec, [biases + 0x00];
+    movaps.y ymm1:  vec, [biases + 0x20];
+    movaps.y ymm2:  vec, [biases + 0x40];
+    movaps.y ymm3:  vec, [biases + 0x60];
+    movaps.y ymm4:  vec, [biases + 0x80];
+    movaps.y ymm5:  vec, [biases + 0xa0];
+    movaps.y ymm6:  vec, [biases + 0xc0];
+    movaps.y ymm7:  vec, [biases + 0xe0];
   }
 
   for feature : subtracted_features {
     #asm AVX, AVX2 {
-      psubw.y xmm0, xmm0, [feature + 0x00];
-      psubw.y xmm1, xmm1, [feature + 0x20];
-      psubw.y xmm2, xmm2, [feature + 0x40];
-      psubw.y xmm3, xmm3, [feature + 0x60];
-      psubw.y xmm4, xmm4, [feature + 0x80];
-      psubw.y xmm5, xmm5, [feature + 0xa0];
-      psubw.y xmm6, xmm6, [feature + 0xc0];
-      psubw.y xmm7, xmm7, [feature + 0xe0];
+      psubw.y ymm0, ymm0, [feature + 0x00];
+      psubw.y ymm1, ymm1, [feature + 0x20];
+      psubw.y ymm2, ymm2, [feature + 0x40];
+      psubw.y ymm3, ymm3, [feature + 0x60];
+      psubw.y ymm4, ymm4, [feature + 0x80];
+      psubw.y ymm5, ymm5, [feature + 0xa0];
+      psubw.y ymm6, ymm6, [feature + 0xc0];
+      psubw.y ymm7, ymm7, [feature + 0xe0];
     }
   }
 
   // add the values up.
   for feature : added_features {
     #asm AVX, AVX2 {
-      paddw.y xmm0, xmm0, [feature + 0x00];
-      paddw.y xmm1, xmm1, [feature + 0x20];
-      paddw.y xmm2, xmm2, [feature + 0x40];
-      paddw.y xmm3, xmm3, [feature + 0x60];
-      paddw.y xmm4, xmm4, [feature + 0x80];
-      paddw.y xmm5, xmm5, [feature + 0xa0];
-      paddw.y xmm6, xmm6, [feature + 0xc0];
-      paddw.y xmm7, xmm7, [feature + 0xe0];
+      paddw.y ymm0, ymm0, [feature + 0x00];
+      paddw.y ymm1, ymm1, [feature + 0x20];
+      paddw.y ymm2, ymm2, [feature + 0x40];
+      paddw.y ymm3, ymm3, [feature + 0x60];
+      paddw.y ymm4, ymm4, [feature + 0x80];
+      paddw.y ymm5, ymm5, [feature + 0xa0];
+      paddw.y ymm6, ymm6, [feature + 0xc0];
+      paddw.y ymm7, ymm7, [feature + 0xe0];
     }
   }
 
   // store back the values in the accumulator.
   #asm AVX, AVX2 {
-    movaps.y [accum + 0x00], xmm0;
-    movaps.y [accum + 0x20], xmm1;
-    movaps.y [accum + 0x40], xmm2;
-    movaps.y [accum + 0x60], xmm3;
-    movaps.y [accum + 0x80], xmm4;
-    movaps.y [accum + 0xa0], xmm5;
-    movaps.y [accum + 0xc0], xmm6;
-    movaps.y [accum + 0xe0], xmm7;
+    movaps.y [accum + 0x00], ymm0;
+    movaps.y [accum + 0x20], ymm1;
+    movaps.y [accum + 0x40], ymm2;
+    movaps.y [accum + 0x60], ymm3;
+    movaps.y [accum + 0x80], ymm4;
+    movaps.y [accum + 0xa0], ymm5;
+    movaps.y [accum + 0xc0], ymm6;
+    movaps.y [accum + 0xe0], ymm7;
   }
 }
 
