@@ -7,7 +7,7 @@
 
 DEPTH :: 4;
 MOVETIME :: 3_600_000;
-MAX_COMPUTATIONS :: 15_000_000;
+MAX_COMPUTATIONS :: 35_000_000;
 
 main :: () {
   init_xiangqi_tables();
@@ -175,6 +175,7 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   ticks = 300_000_000;
   history.accum[0] = evaluate_absolute(xiangqi);
   history.phase_value = compute_phase(xiangqi);
+  nnue_incremental_init(xiangqi, history);
 
   // do not compute positions which are not 'quiet'. 'quiet' positions are such
   // that a depth of 1 does not change the position much. exchanges will not 
