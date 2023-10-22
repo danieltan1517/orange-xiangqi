@@ -1,6 +1,8 @@
+
+#run load_model("orange10_18_23.nnue");
+
 main :: () {
   init_xiangqi_tables();
-  load_model("orange10_18_23.nnue");
   init_tt(size_in_bytes = 16_000_000);
 
   xiangqi: Xiangqi;

@@ -3,10 +3,11 @@
 // a buggy implementation with infinite loop problems
 // every once in a while, but usable...
 // 
+#run load_model("orange10_18_23.nnue");
 
 DEPTH :: 4;
 MOVETIME :: 3_600_000;
-MAX_COMPUTATIONS :: 25_000_000;
+MAX_COMPUTATIONS :: 15_000_000;
 
 main :: () {
   init_xiangqi_tables();
@@ -43,7 +44,7 @@ main :: () {
     print("----Game %. Time: [%]. Positions in Hash Table: %. Positions Evaluated: %\n", i, time_calendar, table.count, positions_computed, to_standard_error=true);
 
     // the starting position has 32 pieces total
-    count := 32;
+    count := compute_phase(*xiangqi);
     while true {
       fen := to_fenstring(*xiangqi);
       rollout(fen, *table);
@@ -64,10 +65,10 @@ main :: () {
       make_move(*xiangqi, move);
       if is_capture(move) {
         reset_hashes(*xiangqi);
-        count -= 1;
+        count -= phase_incr(move);
       }
 
-      if count <= 14 then {
+      if count < 3 then {
         break;
       }
     }

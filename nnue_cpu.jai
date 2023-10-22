@@ -75,7 +75,6 @@ relu :: (accum: [][HIDDEN] s16) {
 }
 
 output_evaluation :: (turn: int, accum: [2][HIDDEN] s16) -> int {
-  print("%\n", accum);
   eval: int = nnue.output_bias;
   opp := turn ^ 1;
   for i: 0..HIDDEN-1 {
@@ -99,7 +98,7 @@ NNUE :: struct {
   output_bias:     s32;
 }
 
-nnue: NNUE #align 64;
+#no_reset nnue: NNUE #align 64;
 
 load_model :: (filename: string) {
   print("loading file %\n", filename);

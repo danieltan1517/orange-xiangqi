@@ -21,6 +21,7 @@
   build_ai    := false;
   build_ui    := false;
   release     := false;
+  nnue_type = .auto;
   for arg: args {
     if arg == {
     case "nnue";
@@ -42,6 +43,12 @@
       build_dataset = true;
     case "release";
       release = true;
+    case "avx2";
+      nnue_type = .avx2;
+    case "sse";
+      nnue_type = .sse;
+    case "cpu";
+      nnue_type = .cpu;
     }
   }
 
@@ -59,14 +66,45 @@
 
 }
 
+nnue_type: NNUE_Type;
+
+nnue_file :: (w: Workspace) {
+  cpu_info := get_cpu_info();
+  if nnue_type == .auto {
+    print("Detecting CPU instruction set...\n");
+    if check_feature(cpu_info.feature_leaves, .AVX2) {
+      nnue_type = .avx2;
+    } else if check_feature(cpu_info.feature_leaves, .SSE) {
+      nnue_type = .sse;
+    } else {
+      nnue_type = .cpu;
+    }
+  }
+
+  if #complete nnue_type == {
+  case .auto;
+    assert(false);
+  case .cpu;
+    print("Building Engine with NNUE CPU\n");
+    add_build_file("nnue_cpu.jai", w);  
+  case .sse;
+    print("Building Engine with NNUE SSE\n");
+    add_build_file("nnue_sse.jai", w);  
+  case .avx2; 
+    print("Building Engine with NNUE AVX2\n");
+    add_build_file("nnue_avx2.jai", w);
+  }
+}
+
+
 add_ui_files :: (w: Workspace) {
   add_build_file("ui.jai", w);  
   add_build_file("board.jai", w);  
 }
 
 add_ai_files :: (w: Workspace) {
-  add_build_file("eval.jai", w);  
-  add_build_file("nnue_avx2.jai", w);  
+  add_build_file("eval.jai", w);
+  nnue_file(w);
   add_build_file("ucci.jai", w);  
   add_build_file("board.jai", w);
   add_build_file("search.jai", w);
@@ -74,6 +112,7 @@ add_ai_files :: (w: Workspace) {
 
 add_dataset_files :: (w: Workspace) {
   add_build_file("eval.jai", w);  
+  nnue_file(w);
   add_build_file("dataset.jai", w);  
   add_build_file("board.jai", w);
   add_build_file("search.jai", w);
@@ -196,6 +235,13 @@ download_nnue_model :: () {
   run_command("rm", "orange10_18_23.zip");
 }
 
+NNUE_Type :: enum {
+  auto;
+  cpu;
+  sse;
+  avx2;
+}
+
 #if OS == .WINDOWS {
   NEWLINE :: "\r\n";
 } else {
@@ -205,3 +251,4 @@ download_nnue_model :: () {
 #import "Basic";
 #import "Compiler";
 #import "Process";
+#import "Machine_X64";

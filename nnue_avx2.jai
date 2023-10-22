@@ -274,7 +274,7 @@ NNUE :: struct {
   output_bias:     s32;
 }
 
-nnue: NNUE #align 64;
+#no_reset nnue: NNUE #align 64;
 
 load_model :: (filename: string) {
   print("loading file %\n", filename);
