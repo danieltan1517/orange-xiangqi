@@ -122,7 +122,6 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
   best_score := -MATE;
   best_move  := NULL_MOVE;
   flag       := Flag.Alpha;
-  gen_moves(xiangqi, *moves);
   score: int;
   moves_made := 0;
   for mov: xiangqi {
@@ -242,7 +241,6 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
   best_score := -MATE + ply;
   best_move  := NULL_MOVE;
   flag       := Flag.Alpha;
-  gen_moves(xiangqi, *moves);
   for mov: xiangqi {
     if !is_legal(xiangqi, att, mov) then {
       erase_move(*moves, it_index);
@@ -341,7 +339,6 @@ search_extensions :: (tthit: bool, ttentry: Entry, incheck_position: bool, xiang
       moves: Moves;
       best_score := alpha;
       att := attackers(xiangqi);
-      gen_moves(xiangqi, *moves);
       for mov: xiangqi {
         if mov == best_move || !is_legal(xiangqi, att, mov) then {
           erase_move(*moves, it_index);
@@ -445,7 +442,6 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
   score: int = 0;
   best_score := -MATE + ply;
   best_move  := NULL_MOVE;
-  gen_moves(xiangqi, *moves);
   moves_made := 0;
   quiet_moves_made := 0;
 
@@ -550,11 +546,15 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
 for_expansion :: (xiangqi: *Xiangqi, body: Code, f: For_Flags) #expand {
   stage: Stage = .PV;
   `it_index := 0;
-  while it_index < `moves.count {
+  while true {
     defer {
       it_index += 1;
     }
     `it, stage= := pick_move(xiangqi, it_index, stage, *`moves, `ttentry.best_move, `history, `incheck_position);
+    if stage == .Quit then {
+      break;
+    }
+
     #insert body;
   }
 }
@@ -585,8 +585,12 @@ pick_move :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, best_m
       idx += 1;
     }
 
-    moves.array[i], moves.array[best_index] = moves.array[best_index], moves.array[i];
-    return moves.array[i].move;
+    if best_index != -1 {
+      moves.array[i], moves.array[best_index] = moves.array[best_index], moves.array[i];
+      return moves.array[i].move;
+    } else {
+      return NULL_MOVE;
+    }
   }
 
   score_quiet_move :: (move: Move32, board_history: [][90] s32, counter_history: [][90] s32, follow_history: [][90] s32) -> s32 {
@@ -604,22 +608,15 @@ pick_move :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, best_m
   if stage == {
 
   case .PV;
-    success := false;
-    for move, idx : moves {
-      if move == best_move {
-        success = true;
-        moves.array[0], moves.array[idx] = moves.array[idx], moves.array[0];
-        moves.array[0].score = 0x7FFF_FFFF;
-        break;
-      }
-    }
-
     stage += 1;
-    if success == true {
+    if !is_null(best_move) then {
+      append_move(moves, best_move);
       return best_move, stage;
     }
+
     #through;
   case .InitCaptures;
+    gen_captures(xiangqi, moves);
     i := index;
     while i < moves.count {
       move := moves.array[i].move;
@@ -639,14 +636,23 @@ pick_move :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, best_m
     #through; 
   case .InitKillers;
     k1, k2, ch := get_killers(h);
-    for move, idx : moves {
-      if move == k1 then {
-        moves.array[idx].score = 0x7F_FFFF;
-      } else if move == k2 then {
-        moves.array[idx].score = 0x7F_FFFE;
-      } else if move == ch then {
-        moves.array[idx].score = 0x7F_FFFD;
-      }
+    idx := index;
+    if k1 != best_move && is_pseudolegal(xiangqi, k1) {
+      append_move(moves, k1);
+      moves.array[idx].score = 0x7F_FFFF;
+      idx += 1;
+    }
+
+    if k2 != best_move && is_pseudolegal(xiangqi, k2) {
+      append_move(moves, k2);
+      moves.array[idx].score = 0x7F_FFFE;
+      idx += 1;
+    }
+
+    if ch != best_move && is_pseudolegal(xiangqi, ch) {
+      append_move(moves, ch);
+      moves.array[idx].score = 0x7F_FFFD;
+      idx += 1;
     }
     stage += 1;
     #through; 
@@ -658,11 +664,20 @@ pick_move :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, best_m
     stage += 1;
     #through; 
   case .InitQuiets;
+    gen_quiets(xiangqi, moves);
+    k1, k2, ch := get_killers(h);
     if incheck_position == true {
       evasion_history := get_evasion(h); 
       i := index;
       while i < moves.count {
         move := moves.array[i].move;
+        // already search this move.
+        if move == best_move || move == k1 || move == k2 || move == ch {
+          erase_move(moves, i);
+          moves.count -= 1;
+          move_swap(moves, i, moves.count);
+        }
+
         moves.array[i].score = score_evasion(move, evasion_history);
         i += 1;
       }
@@ -672,7 +687,14 @@ pick_move :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, best_m
       follow_history  := get_history(h, 2);
       i := index;
       while i < moves.count {
+        // already search this move.
         move := moves.array[i].move;
+        if move == best_move || move == k1 || move == k2 || move == ch {
+          erase_move(moves, i);
+          moves.count -= 1;
+          move_swap(moves, i, moves.count);
+        }
+
         moves.array[i].score = score_quiet_move(move, board_history, counter_history, follow_history);
         i += 1;
       }
