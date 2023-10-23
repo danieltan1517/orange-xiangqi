@@ -604,20 +604,60 @@ king_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int, color: int) #expand {
   dir_moves(xiangqi, moves, sq, KP_TABLE[color], KING_DIR);
 }
 
+king_quiet_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int, color: int) #expand {
+  dir_quiet_moves(xiangqi, moves, sq, KP_TABLE[color], KING_DIR);
+}
+
+king_capture_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int, color: int) #expand {
+  dir_capture_moves(xiangqi, moves, sq, KP_TABLE[color], KING_DIR);
+}
+
 advisor_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) #expand {
   dir_moves(xiangqi, moves, sq, DEFENSE_SQ_TABLE, ADV_DIR);
+}
+
+advisor_quiet_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) #expand {
+  dir_quiet_moves(xiangqi, moves, sq, DEFENSE_SQ_TABLE, ADV_DIR);
+}
+
+advisor_capture_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) #expand {
+  dir_capture_moves(xiangqi, moves, sq, DEFENSE_SQ_TABLE, ADV_DIR);
 }
 
 pawn_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int, color: int) #expand {
   dir_moves(xiangqi, moves, sq, KP_TABLE[color], KING_DIR);
 }
 
+pawn_quiet_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int, color: int) #expand {
+  dir_quiet_moves(xiangqi, moves, sq, KP_TABLE[color], KING_DIR);
+}
+
+pawn_capture_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int, color: int) #expand {
+  dir_capture_moves(xiangqi, moves, sq, KP_TABLE[color], KING_DIR);
+}
+
 ele_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) #expand {
   blocked_moves(xiangqi, moves, sq, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR);
 }
 
+ele_quiet_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) #expand {
+  blocked_quiet_moves(xiangqi, moves, sq, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR);
+}
+
+ele_capture_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) #expand {
+  blocked_capture_moves(xiangqi, moves, sq, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR);
+}
+
 kni_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) #expand {
   blocked_moves(xiangqi, moves, sq, KNIGHT_TABLE, KNI_DIR, KNI_BLK);
+}
+
+kni_quiet_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) #expand {
+  blocked_quiet_moves(xiangqi, moves, sq, KNIGHT_TABLE, KNI_DIR, KNI_BLK);
+}
+
+kni_capture_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) #expand {
+  blocked_capture_moves(xiangqi, moves, sq, KNIGHT_TABLE, KNI_DIR, KNI_BLK);
 }
 
 row_col_to_index :: (row: int, col: int) -> int #expand {
@@ -667,6 +707,19 @@ rook_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
 
   rows_bits: u64 = ROOK_MAGICS[row][xiangqi.rows[col]] & 0b1_1111_1111; // rows.
   cols_bits: u64 = ROOK_MAGICS[col][xiangqi.cols[row]];
+  add_row_moves(xiangqi, moves, rows_bits, move, col);
+  add_col_moves(xiangqi, moves, cols_bits, move, row);
+}
+
+rook_quiets :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
+  row := sq % 9;
+  col := sq / 9;
+  move: Move32;
+  move.from = cast(u8) sq;
+  move.piece = xiangqi.board[sq];
+
+  rows_bits: u64 = ROOK_MAGICS[row][xiangqi.rows[col]] & (~xiangqi.rows[col]) & 0b1_1111_1111;
+  cols_bits: u64 = ROOK_MAGICS[col][xiangqi.cols[row]] & (~xiangqi.cols[row]);
   add_row_moves(xiangqi, moves, rows_bits, move, col);
   add_col_moves(xiangqi, moves, cols_bits, move, row);
 }
@@ -750,7 +803,36 @@ gen_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   for ele : pieces.ele {
     ele_moves(xiangqi, moves, ele);
   }
+}
 
+gen_quiets :: (xiangqi: *Xiangqi, moves: *Moves) {
+  turn := xiangqi.turn;
+  pieces := *xiangqi.pieces[turn];
+  for kni : pieces.kni {
+    kni_quiet_moves(xiangqi, moves, kni);
+  }
+
+  for rook : pieces.rook {
+    rook_quiets(xiangqi, moves, rook);
+  }
+
+  for can : pieces.cannon {
+    rook_quiets(xiangqi, moves, can);
+  }
+
+  for pawn : pieces.pawn {
+    pawn_quiet_moves(xiangqi, moves, pawn, turn);
+  }
+
+  king_quiet_moves(xiangqi, moves, pieces.king.array[0], turn);
+
+  for adv : pieces.adv {
+    advisor_quiet_moves(xiangqi, moves, adv);
+  }
+
+  for ele : pieces.ele {
+    ele_quiet_moves(xiangqi, moves, ele);
+  }
 }
 
 dir_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90] u8, DIR: [] int) {
@@ -767,6 +849,39 @@ dir_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90] u8, DIR: [
     move.to = cast(u8) to;
     move.capture = capture;
     append_move(moves, move);
+  }
+}
+
+dir_quiet_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90] u8, DIR: [] int) {
+  move: Move32;
+  move.from = cast(u8) ksq;
+  move.piece = xiangqi.board[ksq];
+
+  bits := cast(u64) TABLE[ksq];
+  while bits {
+    i := bit_scan_forward(bits);
+    bits &= bits - 1;
+    to := ksq + DIR[i];
+    capture := xiangqi.board[to];
+    move.to = cast(u8) to;
+    move.capture = capture;
+    append_quiet_move(moves, move);
+  }
+}
+
+dir_capture_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90] u8, DIR: [] int) {
+  move: Move32;
+  move.from = cast(u8) ksq;
+  move.piece = xiangqi.board[ksq];
+  bits := cast(u64) TABLE[ksq];
+  while bits {
+    i := bit_scan_forward(bits);
+    bits &= bits - 1;
+    to := ksq + DIR[i];
+    capture := xiangqi.board[to];
+    move.to = cast(u8) to;
+    move.capture = capture;
+    append_capture_move(moves, move);
   }
 }
 
@@ -792,6 +907,56 @@ blocked_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90] u8, DI
     move.to = cast(u8) to;
     move.capture = capture;
     append_move(moves, move);
+  }
+}
+
+blocked_capture_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90] u8, DIR: [] int, BLOCKS: [] int) {
+  move: Move32;
+  move.from = cast(u8) ksq;
+  move.piece = xiangqi.board[ksq];
+
+  bits := cast(u64) TABLE[ksq];
+  while bits {
+    i := bit_scan_forward(bits);
+    bits &= bits - 1;
+    to := ksq + DIR[i];
+
+    blocking := ksq + BLOCKS[i];
+
+    // piece blocking movement.
+    if xiangqi.board[blocking] != 0 {
+      continue; 
+    }
+
+    capture := xiangqi.board[to];
+    move.to = cast(u8) to;
+    move.capture = capture;
+    append_capture_move(moves, move);
+  }
+}
+
+blocked_quiet_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90] u8, DIR: [] int, BLOCKS: [] int) {
+  move: Move32;
+  move.from = cast(u8) ksq;
+  move.piece = xiangqi.board[ksq];
+
+  bits := cast(u64) TABLE[ksq];
+  while bits {
+    i := bit_scan_forward(bits);
+    bits &= bits - 1;
+    to := ksq + DIR[i];
+
+    blocking := ksq + BLOCKS[i];
+
+    // piece blocking movement.
+    if xiangqi.board[blocking] != 0 {
+      continue; 
+    }
+
+    capture := xiangqi.board[to];
+    move.to = cast(u8) to;
+    move.capture = capture;
+    append_quiet_move(moves, move);
   }
 }
 
@@ -831,8 +996,7 @@ init_rook_magics :: () {
 
 Moves :: struct {
   count: int;
-  flags: int = 0;
-  array: [126] struct {move: Move32; score: s32; };
+  array: [127] struct {move: Move32; score: s32; };
 }
 
 PV :: struct {
@@ -884,11 +1048,10 @@ legal_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
 // a version of movegen but for captures only. used for quiescene search.
 
 gen_captures :: (xiangqi: *Xiangqi, moves: *Moves) {
-  moves.flags = 1;
   turn := xiangqi.turn;
   pieces := *xiangqi.pieces[turn];
   for kni : pieces.kni {
-    kni_moves(xiangqi, moves, kni);
+    kni_capture_moves(xiangqi, moves, kni);
   }
 
   for rook : pieces.rook {
@@ -900,20 +1063,19 @@ gen_captures :: (xiangqi: *Xiangqi, moves: *Moves) {
   }
 
   for pawn : pieces.pawn {
-    pawn_moves(xiangqi, moves, pawn, turn);
+    pawn_capture_moves(xiangqi, moves, pawn, turn);
   }
 
-  king_moves(xiangqi, moves, pieces.king.array[0], turn);
+  king_capture_moves(xiangqi, moves, pieces.king.array[0], turn);
 
   for adv : pieces.adv {
-    advisor_moves(xiangqi, moves, adv);
+    advisor_capture_moves(xiangqi, moves, adv);
   }
 
   for ele : pieces.ele {
-    ele_moves(xiangqi, moves, ele);
+    ele_capture_moves(xiangqi, moves, ele);
   }
 }
-
 
 reset :: (moves: *Moves) {
   moves.count = 0;
@@ -932,7 +1094,23 @@ for_expansion :: (moves: *Moves, body: Code, f: For_Flags) #expand {
 append_move :: (moves: *Moves, move: Move32) {
   capture: int = move.capture;
   piece: int = move.piece;
-  if ((capture ^ piece) & 0x3) && capture >= moves.flags then {
+  if ((capture ^ piece) & 0x3) then {
+    moves.array[moves.count].move = move;
+    moves.count += 1;
+  }
+}
+
+append_quiet_move :: (moves: *Moves, move: Move32) {
+  if move.capture == 0 then {
+    moves.array[moves.count].move = move;
+    moves.count += 1;
+  }
+}
+
+append_capture_move :: (moves: *Moves, move: Move32) {
+  capture: int = move.capture;
+  piece: int = move.piece;
+  if ((capture ^ piece) & 0x3) == 0x2 then {
     moves.array[moves.count].move = move;
     moves.count += 1;
   }

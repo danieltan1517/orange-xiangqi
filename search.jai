@@ -298,14 +298,6 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         flag = Flag.Exact;
         copy_pv(pv, child_pv, best_move);
         if score >= beta then {
-          /*
-          Mating Killers?
-          if score >= MATE-100 then {
-            print("%\n", xiangqi.*);
-            print("%\n", best_move);
-            print("% %\n", score, beta);
-            print("quiet_moves_made % moves_made %\n", quiet_moves_made, moves_made);
-          }*/
           update_hist(history, moves, best_move, depth, incheck_position);
           tt_write(xiangqi, best_move, best_score, depth, .Beta);
           return best_score;
@@ -314,6 +306,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     } 
 
   }
+
   tt_write(xiangqi, best_move, best_score, depth, flag);
   return best_score;
 }
