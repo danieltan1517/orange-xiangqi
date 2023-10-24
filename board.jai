@@ -1079,6 +1079,21 @@ gen_captures :: (xiangqi: *Xiangqi, moves: *Moves) {
   }
 }
 
+// a version of movegen but for quiet moves that evade check. used for quiescene search during check.
+gen_evasions :: (xiangqi: *Xiangqi, moves: *Moves) {
+  turn := xiangqi.turn;
+  pieces := *xiangqi.pieces[turn];
+  for adv : pieces.adv {
+    advisor_quiet_moves(xiangqi, moves, adv);
+  }
+
+  for ele : pieces.ele {
+    ele_quiet_moves(xiangqi, moves, ele);
+  }
+
+  king_quiet_moves(xiangqi, moves, pieces.king.array[0], turn);
+}
+
 reset :: (moves: *Moves) {
   moves.count = 0;
   memset(*moves.array[0], 0, size_of(type_of(moves.array)));

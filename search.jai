@@ -503,7 +503,6 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
   alpha = max(alpha, best_score);
   moves: Moves;
   att := attackers(xiangqi);
-  gen_captures(xiangqi, *moves);
   incheck_position := incheck(xiangqi, att);
  
   // quiescene piece values.
@@ -512,24 +511,36 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
   // these qpiece values are far above the average piece values on purpose, ensuring that the pruning 
   // does not accidentally prune much needed evaluations.
   QPIECE_VALUES :: int.[0, 440, 440, 575, 675, 575, 350];
+
+  evasion_moves := 0;
  
-  for mov: moves {
+  for :captures_only mov: xiangqi {
     if !is_legal(xiangqi, att, mov) then {
       continue;
     }
 
-    // ~10 elo. 
-    // quiescene delta pruning. if a capture move does nothing
-    // to improve the current score, skip the capture move.
-    piece_value := QPIECE_VALUES[mov.capture >> 2]; 
-    if !incheck_position && (futility_base + piece_value) < alpha then {
-      continue;
+    if incheck_position then {
+      if is_quiet(mov) && evasion_moves > 1 then {
+        break;
+      }
+    } else {
+      // ~10 elo. 
+      // quiescene delta pruning. if a capture move does nothing
+      // to improve the current score, skip the capture move.
+      piece_value := QPIECE_VALUES[mov.capture >> 2]; 
+      if is_capture(mov) && !incheck_position && (futility_base + piece_value) < alpha then {
+        continue;
+      }
     }
- 
+
     make_move(xiangqi, history, mov);
     score := -quiescene(xiangqi, history, -beta, -alpha);
     unmake_move(xiangqi, history, mov);
- 
+
+    if incheck_position && is_quiet(mov) then {
+      evasion_moves += 1;
+    }
+
     if score > best_score then {
       best_score = score;
       if score > alpha then {
@@ -540,6 +551,7 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
       }
     }
   }
+
   return best_score;
 }
 
@@ -559,7 +571,24 @@ for_expansion :: (xiangqi: *Xiangqi, body: Code, f: For_Flags) #expand {
   }
 }
 
+captures_only :: (xiangqi: *Xiangqi, body: Code, f: For_Flags) #expand {
+  stage: Stage = .Quiescene;
+  `it_index := 0;
+  while true {
+    defer {
+      it_index += 1;
+    }
+    `it, stage= := pick_quiescene(xiangqi, it_index, stage, *`moves, `history, `incheck_position);
+    if stage == .Quiescene_End then {
+      break;
+    }
+    assert(!is_null(it));
+    #insert body;
+  }
+}
+
 Stage :: enum {
+  // for normal search.
   PV :: 0;
   InitCaptures :: 1;
   Captures :: 2;
@@ -568,41 +597,91 @@ Stage :: enum {
   InitQuiets :: 5;
   Quiets :: 6;
   Quit :: 7;
+
+  // for quiescene search.
+  Quiescene :: 8;
+  Quiescene_Captures :: 9;
+  Quiescene_EvasionsInit :: 10;
+  Quiescene_Evasions :: 11;
+  Quiescene_End :: 12;
+}
+
+pick_quiescene :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, h: *History, incheck_position: bool) -> Move32, Stage {
+  if stage == {
+  
+  case .Quiescene;
+    gen_captures(xiangqi, moves);
+    stage += 1;
+    #through;
+  case .Quiescene_Captures;
+    if index < moves.count {
+      move := moves.array[index].move;
+      return move, stage;
+    }
+    stage += 1;
+    if !incheck_position then {
+      stage = .Quiescene_End;
+      return NULL_MOVE, stage;
+    }
+    #through;
+  case .Quiescene_EvasionsInit;
+    // generate king/advisor/elephant moves only
+    gen_evasions(xiangqi, moves);
+    evasion_history := get_evasion(h); 
+    i := index;
+    while i < moves.count {
+      move := moves.array[i].move;
+      moves.array[i].score = score_evasion(move, evasion_history);
+      i += 1;
+    }
+    stage += 1;
+    #through;
+  case .Quiescene_Evasions;
+    move := partial_sort(moves, index);
+    if !is_null(move) then {
+      return move, stage;
+    }
+    stage += 1;
+  case .Quiescene_End;
+
+  }
+
+  return NULL_MOVE, Stage.Quiescene_End;
+}
+
+partial_sort :: (moves: *Moves, i: int) -> Move32 {
+  greatest := 0x8000_0000_0000_0000;
+  best_index := -1; 
+
+  idx := i;
+  while idx < moves.count {
+    if moves.array[idx].score > greatest {
+      greatest = moves.array[idx].score;
+      best_index = idx;
+    }
+    idx += 1;
+  }
+
+  if best_index != -1 {
+    moves.array[i], moves.array[best_index] = moves.array[best_index], moves.array[i];
+    return moves.array[i].move;
+  } else {
+    return NULL_MOVE;
+  }
+}
+
+score_evasion :: (move: Move32, evasion_history: [][90] s32) -> s32 {
+  piece := move.piece >> 1;
+  to    := move.to;
+  return evasion_history[piece][to];
 }
 
 pick_move :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, best_move: Move32, h: *History, incheck_position: bool) -> Move32, Stage {
-
-  partial_sort :: (moves: *Moves, i: int) -> Move32 {
-    greatest := 0x8000_0000_0000_0000;
-    best_index := -1; 
- 
-    idx := i;
-    while idx < moves.count {
-      if moves.array[idx].score > greatest {
-        greatest = moves.array[idx].score;
-        best_index = idx;
-      }
-      idx += 1;
-    }
-
-    if best_index != -1 {
-      moves.array[i], moves.array[best_index] = moves.array[best_index], moves.array[i];
-      return moves.array[i].move;
-    } else {
-      return NULL_MOVE;
-    }
-  }
 
   score_quiet_move :: (move: Move32, board_history: [][90] s32, counter_history: [][90] s32, follow_history: [][90] s32) -> s32 {
     piece := move.piece >> 1;
     to    := move.to;
     return (2 * board_history[piece][to] / 5) + counter_history[piece][to] + follow_history[piece][to];
-  }
-
-  score_evasion :: (move: Move32, evasion_history: [][90] s32) -> s32 {
-    piece := move.piece >> 1;
-    to    := move.to;
-    return evasion_history[piece][to];
   }
 
   if stage == {
@@ -643,13 +722,13 @@ pick_move :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, best_m
       idx += 1;
     }
 
-    if k2 != best_move && is_pseudolegal(xiangqi, k2) {
+    if k2 != best_move && k2 != k1 && is_pseudolegal(xiangqi, k2) {
       append_move(moves, k2);
       moves.array[idx].score = 0x7F_FFFE;
       idx += 1;
     }
 
-    if ch != best_move && is_pseudolegal(xiangqi, ch) {
+    if ch != best_move && ch != k1 && ch != k2 && is_pseudolegal(xiangqi, ch) {
       append_move(moves, ch);
       moves.array[idx].score = 0x7F_FFFD;
       idx += 1;
@@ -676,6 +755,7 @@ pick_move :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, best_m
           erase_move(moves, i);
           moves.count -= 1;
           move_swap(moves, i, moves.count);
+          continue;
         }
 
         moves.array[i].score = score_evasion(move, evasion_history);
@@ -693,6 +773,7 @@ pick_move :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, best_m
           erase_move(moves, i);
           moves.count -= 1;
           move_swap(moves, i, moves.count);
+          continue;
         }
 
         moves.array[i].score = score_quiet_move(move, board_history, counter_history, follow_history);
