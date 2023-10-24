@@ -26,7 +26,9 @@ protocol complaint Xiangqi Engine. This project supports Windows, Mac, and Linux
 
 ### Board Representation
 * 90 square board
-* Psuedo Legal Move Generation
+* Piece Lists
+* Magic Sliding Bit Rows and Columns
+* Pseudo Legal Move Generation
 * Staged Move Generation
 
 ### Search
