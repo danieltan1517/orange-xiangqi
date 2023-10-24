@@ -228,7 +228,7 @@ is_pseudolegal :: (using xiangqi: *Xiangqi, move: Move32) -> bool {
     }
     count := popcount(occ & between);
 
-    return count == 1 || count == 2;
+    return count == 1 || (count == 2 && xiangqi.board[to] != 0);
   }
 
   is_cannon_pseudolegal :: (xiangqi: *Xiangqi, from: int, to: int) -> bool {
