@@ -226,7 +226,9 @@ is_pseudolegal :: (using xiangqi: *Xiangqi, move: Move32) -> bool {
     } else {
       occ = xiangqi.cols[row];
     }
-    return popcount(occ & between) <= 2;
+    count := popcount(occ & between);
+
+    return count == 1 || count == 2;
   }
 
   is_cannon_pseudolegal :: (xiangqi: *Xiangqi, from: int, to: int) -> bool {
