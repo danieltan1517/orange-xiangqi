@@ -182,7 +182,7 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   // change the evaluation much in quiet positions.
   // this is similar to the 'quiet' position definition found in fairy stockfish
 
-  evaluation_score := evaluate(xiangqi);
+  evaluation_score := evaluate_handcrafted_evaluation(xiangqi);
   quiescene_score  := quiescene(xiangqi, *history, alpha, beta);
 
   if abs(evaluation_score - quiescene_score) > 50 then {

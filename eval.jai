@@ -24,6 +24,16 @@ evaluate_absolute :: (xiangqi: *Xiangqi) -> Score {
   return score;
 }
 
+evaluate_handcrafted_evaluation :: (xiangqi: *Xiangqi) -> int {
+  phase := compute_phase(xiangqi);
+  score := evaluation_phase_scale(evaluate_absolute(xiangqi), phase);
+  if xiangqi.turn == 0 {
+    return score;
+  } else {
+    return -score;
+  }
+}
+
 evaluate :: (xiangqi: *Xiangqi, history: *History) -> int {
   ply := history.ply;
   evaluation := evaluation_phase_scale(history.accum[ply], history.phase_value);
