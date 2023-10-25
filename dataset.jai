@@ -3,7 +3,7 @@
 // a buggy implementation with infinite loop problems
 // every once in a while, but usable...
 // 
-#run load_model("orange10_18_23.nnue");
+#run load_model("orange10_25_23.nnue");
 
 DEPTH :: 4;
 MOVETIME :: 3_600_000;
@@ -173,7 +173,6 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   // aspiration window with iterative deepening.
   searchstarttime = current_time_monotonic();
   ticks = 300_000_000;
-  history.accum[0] = evaluate_absolute(xiangqi);
   history.phase_value = compute_phase(xiangqi);
   nnue_incremental_init(xiangqi, *history);
 
@@ -182,7 +181,7 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   // change the evaluation much in quiet positions.
   // this is similar to the 'quiet' position definition found in fairy stockfish
 
-  evaluation_score := evaluate_handcrafted_evaluation(xiangqi);
+  evaluation_score := evaluate(xiangqi);
   quiescene_score  := quiescene(xiangqi, *history, alpha, beta);
 
   if abs(evaluation_score - quiescene_score) > 50 then {

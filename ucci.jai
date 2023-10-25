@@ -1,5 +1,5 @@
 
-#run load_model("orange10_18_23.nnue");
+#run load_model("orange10_25_23.nnue");
 
 main :: () {
   init_xiangqi_tables();

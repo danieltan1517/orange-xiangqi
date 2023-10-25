@@ -36,7 +36,6 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> Move32 {
   ticks = 300_000_000;
   depth := 1;
   pv: PV;
-  history.accum[0] = evaluate_absolute(xiangqi);
   history.phase_value = compute_phase(xiangqi);
   nnue_incremental_init(xiangqi, history);
 
@@ -266,8 +265,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         R = 1;
       } else {
         // Late Move Reduction. ~30 elo.
-        //R = ifx quiet_moves_made < 5 then 1 else 2;
-        R = 1;
+        R = ifx quiet_moves_made < 2 then 1 else 3;
       }
 
       score = -negamax(xiangqi, history, *child_pv, depth - R, -alpha-1, -alpha);
@@ -460,9 +458,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       R = 1;
     } else {
       // Late Move Reduction. ~30 elo.
-      //R = ifx quiet_moves_made < 5 then 1 else 2;
-      //R = 1;//ifx quiet_moves_made < 5 then 1 else 3;
-      R = 1;
+      R = ifx quiet_moves_made < 2 then 1 else 3;
     }
 
     score = -negascout_sse(xiangqi, history, depth - R, -beta, -alpha);
@@ -822,7 +818,6 @@ make_move :: (xiangqi: *Xiangqi, h: *History, move: Move32) {
   if is_capture(move) then {
     h.phase_value -= phase_incr(move);
   }
-  incr_evaluation(xiangqi.turn, h.accum, h.ply, move);
   make_move(xiangqi, move);
   h.moves[h.ply] = move;
   h.ply += 1;
@@ -840,7 +835,6 @@ unmake_move :: (xiangqi: *Xiangqi, history: *History, move: Move32) {
 }
 
 make_null_move :: (xiangqi: *Xiangqi, hist: *History) {
-  incr_null_evaluation(hist.accum, hist.ply);
   make_null_move(xiangqi);
   hist.moves[hist.ply] = NULL_MOVE;
   hist.ply += 1;
@@ -979,7 +973,6 @@ History :: struct {
   seldepth: int;
   phase_value: int;
   max_search_depth: int;
-  accum:       [128] Score;
   moves:       [128] Move32;
   accumulator: [128] Accumulator #align 64; 
   killer:  [128][2] Move32;
