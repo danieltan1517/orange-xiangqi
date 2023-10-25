@@ -1094,6 +1094,26 @@ gen_evasions :: (xiangqi: *Xiangqi, moves: *Moves) {
   king_quiet_moves(xiangqi, moves, pieces.king.array[0], turn);
 }
 
+gen_blocks :: (xiangqi: *Xiangqi, moves: *Moves) {
+  turn := xiangqi.turn;
+  pieces := *xiangqi.pieces[turn];
+  for kni : pieces.kni {
+    kni_quiet_moves(xiangqi, moves, kni);
+  }
+
+  for rook : pieces.rook {
+    rook_quiets(xiangqi, moves, rook);
+  }
+
+  for can : pieces.cannon {
+    rook_quiets(xiangqi, moves, can);
+  }
+
+  for pawn : pieces.pawn {
+    pawn_quiet_moves(xiangqi, moves, pawn, turn);
+  }
+}
+
 reset :: (moves: *Moves) {
   moves.count = 0;
   memset(*moves.array[0], 0, size_of(type_of(moves.array)));

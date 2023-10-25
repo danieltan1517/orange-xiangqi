@@ -489,21 +489,22 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
 
 quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> eval: int {
   unwrap_time();
+  att := attackers(xiangqi);
+  incheck_position := incheck(xiangqi, att);
+
   ply := history.ply;
-  best_score := evaluate(xiangqi, history);
+  best_score := ifx (incheck_position == true) then -MATE+ply else  evaluate(xiangqi, history);
   if best_score >= beta then
     return best_score;
  
   // quiescene delta pruning.
-  if in_middlegame(history) && best_score + 700 <= alpha then {
+  if !incheck_position && in_middlegame(history) && best_score + 700 <= alpha then {
     return best_score;
   }
  
   futility_base := best_score;
   alpha = max(alpha, best_score);
   moves: Moves;
-  att := attackers(xiangqi);
-  incheck_position := incheck(xiangqi, att);
  
   // quiescene piece values.
   // todo. later, if we want to change the piece values,
@@ -603,7 +604,9 @@ Stage :: enum {
   Quiescene_Captures :: 9;
   Quiescene_EvasionsInit :: 10;
   Quiescene_Evasions :: 11;
-  Quiescene_End :: 12;
+  Quiescene_BlocksInit :: 12;
+  Quiescene_Blocks :: 13;
+  Quiescene_End :: 14;
 }
 
 pick_quiescene :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, h: *History, incheck_position: bool) -> Move32, Stage {
@@ -642,6 +645,25 @@ pick_quiescene :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, h
       return move, stage;
     }
     stage += 1;
+  case .Quiescene_BlocksInit;
+    // other blocking moves.
+    gen_blocks(xiangqi, moves);
+    evasion_history := get_evasion(h); 
+    i := index;
+    while i < moves.count {
+      move := moves.array[i].move;
+      moves.array[i].score = score_evasion(move, evasion_history);
+      i += 1;
+    }
+    stage += 1;
+    #through;
+  case .Quiescene_Blocks;
+    move := partial_sort(moves, index);
+    if !is_null(move) then {
+      return move, stage;
+    }
+    stage += 1;
+    #through;
   case .Quiescene_End;
 
   }
