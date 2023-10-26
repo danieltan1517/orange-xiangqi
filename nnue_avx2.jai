@@ -128,14 +128,14 @@ for_expansion :: (features: *Features, body: Code, f: For_Flags) #expand {
 compute_features :: (accum: *s16, biases: *s16, added_features: Features, subtracted_features: Features) {
   // load the values.
   #asm AVX, AVX2 {
-    movaps.y ymm0:  vec, [biases + 0x00];
-    movaps.y ymm1:  vec, [biases + 0x20];
-    movaps.y ymm2:  vec, [biases + 0x40];
-    movaps.y ymm3:  vec, [biases + 0x60];
-    movaps.y ymm4:  vec, [biases + 0x80];
-    movaps.y ymm5:  vec, [biases + 0xa0];
-    movaps.y ymm6:  vec, [biases + 0xc0];
-    movaps.y ymm7:  vec, [biases + 0xe0];
+    movdqa.y ymm0:  vec, [biases + 0x00];
+    movdqa.y ymm1:  vec, [biases + 0x20];
+    movdqa.y ymm2:  vec, [biases + 0x40];
+    movdqa.y ymm3:  vec, [biases + 0x60];
+    movdqa.y ymm4:  vec, [biases + 0x80];
+    movdqa.y ymm5:  vec, [biases + 0xa0];
+    movdqa.y ymm6:  vec, [biases + 0xc0];
+    movdqa.y ymm7:  vec, [biases + 0xe0];
   }
 
   for feature : subtracted_features {
@@ -167,14 +167,14 @@ compute_features :: (accum: *s16, biases: *s16, added_features: Features, subtra
 
   // store back the values in the accumulator.
   #asm AVX, AVX2 {
-    movaps.y [accum + 0x00], ymm0;
-    movaps.y [accum + 0x20], ymm1;
-    movaps.y [accum + 0x40], ymm2;
-    movaps.y [accum + 0x60], ymm3;
-    movaps.y [accum + 0x80], ymm4;
-    movaps.y [accum + 0xa0], ymm5;
-    movaps.y [accum + 0xc0], ymm6;
-    movaps.y [accum + 0xe0], ymm7;
+    movdqa.y [accum + 0x00], ymm0;
+    movdqa.y [accum + 0x20], ymm1;
+    movdqa.y [accum + 0x40], ymm2;
+    movdqa.y [accum + 0x60], ymm3;
+    movdqa.y [accum + 0x80], ymm4;
+    movdqa.y [accum + 0xa0], ymm5;
+    movdqa.y [accum + 0xc0], ymm6;
+    movdqa.y [accum + 0xe0], ymm7;
   }
 }
 
@@ -229,15 +229,15 @@ compute_output_layer :: (turn: int, accum: [2][HIDDEN] s16) -> int {
   eax: s32 = 0x0001_0001;
   #asm SSE {
     pxor.x   zeroes:, zeroes;
-    movaps.x sum:, zeroes;
+    movdqa.x sum:, zeroes;
     movd     ones_xmm: vec, eax;
     pshufd   ones_xmm, ones_xmm, 0x0;
   }
 
   for 0..7 {
     #asm SSE {
-      movaps.x     xmm0:, [acc0];
-      movaps.x     xmm1:, [acc1];
+      movdqa.x     xmm0:, [acc0];
+      movdqa.x     xmm1:, [acc1];
       packsswb.x   xmm0,  [acc0 + 0x10];
       packsswb.x   xmm1,  [acc1 + 0x10];
       pmaxsb.x     xmm0,  zeroes;

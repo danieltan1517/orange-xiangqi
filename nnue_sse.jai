@@ -128,22 +128,22 @@ for_expansion :: (features: *Features, body: Code, f: For_Flags) #expand {
 compute_features :: (accum: *s16, biases: *s16, added_features: Features, subtracted_features: Features) {
   // load the values.
   #asm SSE {
-    movaps.x xmm0:  vec, [biases + 0x00];
-    movaps.x xmm1:  vec, [biases + 0x10];
-    movaps.x xmm2:  vec, [biases + 0x20];
-    movaps.x xmm3:  vec, [biases + 0x30];
-    movaps.x xmm4:  vec, [biases + 0x40];
-    movaps.x xmm5:  vec, [biases + 0x50];
-    movaps.x xmm6:  vec, [biases + 0x60];
-    movaps.x xmm7:  vec, [biases + 0x70];
-    movaps.x xmm8:  vec, [biases + 0x80];
-    movaps.x xmm9:  vec, [biases + 0x90];
-    movaps.x xmm10: vec, [biases + 0xa0];
-    movaps.x xmm11: vec, [biases + 0xb0];
-    movaps.x xmm12: vec, [biases + 0xc0];
-    movaps.x xmm13: vec, [biases + 0xd0];
-    movaps.x xmm14: vec, [biases + 0xe0];
-    movaps.x xmm15: vec, [biases + 0xf0];
+    movdqa.x xmm0:  vec, [biases + 0x00];
+    movdqa.x xmm1:  vec, [biases + 0x10];
+    movdqa.x xmm2:  vec, [biases + 0x20];
+    movdqa.x xmm3:  vec, [biases + 0x30];
+    movdqa.x xmm4:  vec, [biases + 0x40];
+    movdqa.x xmm5:  vec, [biases + 0x50];
+    movdqa.x xmm6:  vec, [biases + 0x60];
+    movdqa.x xmm7:  vec, [biases + 0x70];
+    movdqa.x xmm8:  vec, [biases + 0x80];
+    movdqa.x xmm9:  vec, [biases + 0x90];
+    movdqa.x xmm10: vec, [biases + 0xa0];
+    movdqa.x xmm11: vec, [biases + 0xb0];
+    movdqa.x xmm12: vec, [biases + 0xc0];
+    movdqa.x xmm13: vec, [biases + 0xd0];
+    movdqa.x xmm14: vec, [biases + 0xe0];
+    movdqa.x xmm15: vec, [biases + 0xf0];
   }
 
   for feature : subtracted_features {
@@ -191,22 +191,22 @@ compute_features :: (accum: *s16, biases: *s16, added_features: Features, subtra
 
   // store back the values in the accumulator.
   #asm SSE {
-    movaps.x [accum + 0x00], xmm0;
-    movaps.x [accum + 0x10], xmm1;
-    movaps.x [accum + 0x20], xmm2;
-    movaps.x [accum + 0x30], xmm3;
-    movaps.x [accum + 0x40], xmm4;
-    movaps.x [accum + 0x50], xmm5;
-    movaps.x [accum + 0x60], xmm6;
-    movaps.x [accum + 0x70], xmm7;
-    movaps.x [accum + 0x80], xmm8;
-    movaps.x [accum + 0x90], xmm9;
-    movaps.x [accum + 0xa0], xmm10;
-    movaps.x [accum + 0xb0], xmm11;
-    movaps.x [accum + 0xc0], xmm12;
-    movaps.x [accum + 0xd0], xmm13;
-    movaps.x [accum + 0xe0], xmm14;
-    movaps.x [accum + 0xf0], xmm15;
+    movdqa.x [accum + 0x00], xmm0;
+    movdqa.x [accum + 0x10], xmm1;
+    movdqa.x [accum + 0x20], xmm2;
+    movdqa.x [accum + 0x30], xmm3;
+    movdqa.x [accum + 0x40], xmm4;
+    movdqa.x [accum + 0x50], xmm5;
+    movdqa.x [accum + 0x60], xmm6;
+    movdqa.x [accum + 0x70], xmm7;
+    movdqa.x [accum + 0x80], xmm8;
+    movdqa.x [accum + 0x90], xmm9;
+    movdqa.x [accum + 0xa0], xmm10;
+    movdqa.x [accum + 0xb0], xmm11;
+    movdqa.x [accum + 0xc0], xmm12;
+    movdqa.x [accum + 0xd0], xmm13;
+    movdqa.x [accum + 0xe0], xmm14;
+    movdqa.x [accum + 0xf0], xmm15;
   }
 }
 
@@ -261,15 +261,15 @@ compute_output_layer :: (turn: int, accum: [2][HIDDEN] s16) -> int {
   eax: s32 = 0x0001_0001;
   #asm SSE {
     pxor.x   zeroes:, zeroes;
-    movaps.x sum:, zeroes;
+    movdqa.x sum:, zeroes;
     movd     ones_xmm: vec, eax;
     pshufd   ones_xmm, ones_xmm, 0x0;
   }
 
   for 0..7 {
     #asm SSE {
-      movaps.x     xmm0:, [acc0];
-      movaps.x     xmm1:, [acc1];
+      movdqa.x     xmm0:, [acc0];
+      movdqa.x     xmm1:, [acc1];
       packsswb.x   xmm0,  [acc0 + 0x10];
       packsswb.x   xmm1,  [acc1 + 0x10];
       pmaxsb.x     xmm0,  zeroes;
