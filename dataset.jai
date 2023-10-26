@@ -5,7 +5,7 @@
 // 
 #run load_model("orange10_25_23.nnue");
 
-DEPTH :: 4;
+DEPTH :: 6;
 MOVETIME :: 3_600_000;
 MAX_COMPUTATIONS :: 35_000_000;
 
@@ -184,7 +184,7 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   evaluation_score := evaluate(xiangqi);
   quiescene_score  := quiescene(xiangqi, *history, alpha, beta);
 
-  if abs(evaluation_score - quiescene_score) > 30 then {
+  if abs(evaluation_score - quiescene_score) > 40 then {
     return quiescene_score, Status.TacticalPosition;
   }
   
@@ -201,7 +201,7 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
 
   best_move = pv.moves[0];
   status: Status;
-  if abs(evaluation_score - score) > 50 {
+  if abs(evaluation_score - score) > 60 {
     status = Status.CriticalPosition;
   } else {
     status = Status.QuietPosition;
