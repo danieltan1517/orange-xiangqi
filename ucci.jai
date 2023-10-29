@@ -15,11 +15,14 @@ main :: () {
  
     case "quit";
       print("bye\n");
+      free_threads();
       break;
  
     case "ucci";
       print("id name Orange\n");
       print("id author Daniel Tan, Xiaofan Sun\n");
+      print("option Clear Hash type button\n");
+      print("option Threads type spin min 1 max 256 default 1\n");
       print("ucciok\n");
  
     case "isready";
@@ -80,11 +83,33 @@ main :: () {
         }
       }
 
+    case "setoption";
+      str = eat_spaces(str);
+      setoption_command(str);
+
     case "go";
       go_command(str, *xiangqi);
+
+    case;
+      print("str [%]",str);
     }
   }
 
+}
+
+setoption_command :: (str: string) {
+  // begins_with
+  if equal(str, "Clear Hash") {
+    print("info string Clear Transposition Table\n");
+    clear_tt();
+  } else if begins_with(str, "Threads ") {
+    parse_token(*str);
+    value, success := parse_int(*str);
+    if success == true && value >= 1 && value <= 256 {
+      print("info string %\n", value);
+      set_threads(value);
+    }
+  }
 }
 
 go_command :: (command: string, xiangqi: *Xiangqi) {
@@ -171,6 +196,25 @@ time_management :: (time: int, incr: int) -> movetime: int {
 
 }
 
+set_threads :: (num: int) {
+  num -= 1;
+  if num_threads == num then
+    return;
+  free_threads();
+
+
+
+
+}
+
+free_threads :: () {
+  if num_threads > 0 then {
+    shutdown(*thread_group);
+  }
+}
+
+thread_group: Thread_Group;
+num_threads: int = 0;
 
 #if OS == .LINUX {
   #import "POSIX";
@@ -206,5 +250,6 @@ time_management :: (time: int, incr: int) -> movetime: int {
       str.count -= 1;
     return str;
   }
-
 } 
+
+#import "Thread";

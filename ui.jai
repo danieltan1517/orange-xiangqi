@@ -974,6 +974,20 @@ engines_panel :: (height: float, board_margin: float, width: float, k: float) #e
       }
     }
 
+    protocol_prefix := "";
+    if engine.protocol == Protocol.uci then {
+      protocol_prefix = "setoption name";
+    } else if engine.protocol == Protocol.ucci then {
+      protocol_prefix = "setoption";
+    }
+
+    protocol_suffix := "";
+    if engine.protocol == Protocol.uci then {
+      protocol_suffix = "value ";
+    } else if engine.protocol == Protocol.ucci then {
+      protocol_suffix = "";
+    }
+
     r.y += k * 1.1;
     if button(r, "Set Option") {
       process := *engine.process;
@@ -983,26 +997,26 @@ engines_panel :: (height: float, board_margin: float, width: float, k: float) #e
         case .check;
           if check_value != check_value_old {
             check_value_old = check_value;
-            opt := tprint("setoption name % value %\n", name, check_value);
+            opt := tprint("%1 %2 %3%4\n", protocol_prefix, name, protocol_suffix, check_value);
             write_to_process(process, to_u8_array(opt));
           }
         case .spin;
           if spin_value != spin_value_old {
             spin_value_old = spin_value;
-            opt := tprint("setoption name % value %\n", name, spin_value);
+            opt := tprint("%1 %2 %3%4\n", protocol_prefix, name, protocol_suffix, spin_value);
             write_to_process(process, to_u8_array(opt));
           }
         case .combo;
           if combo_value != combo_value_old {
             combo_value_old = combo_value;
-            opt := tprint("setoption name % value %\n", name, combo_value);
+            opt := tprint("%1 %2 %3%4\n", protocol_prefix, name, protocol_suffix, combo_value);
             write_to_process(process, to_u8_array(opt));
           }
         case .button;
         case .ucci_string;
           if !equal(string_value, string_value_old) {
             string_value = string_value_old;
-            opt := tprint("setoption name % value %\n", name, string_value);
+            opt := tprint("%1 %2 %3%4\n", protocol_prefix, name, protocol_suffix, string_value);
             write_to_process(process, to_u8_array(opt));
           }
         }
@@ -1043,7 +1057,13 @@ engines_panel :: (height: float, board_margin: float, width: float, k: float) #e
       case .button;
         process := *engine.process;
         if button(s, name, identifier=index) {
-          opt := tprint("setoption name %\n", name);
+          prefix := "";
+          if engine.protocol == Protocol.uci then {
+            prefix = "setoption name";
+          } else if engine.protocol == Protocol.ucci then {
+            prefix = "setoption";
+          }
+          opt := tprint("% %\n", prefix, name);
           write_to_process(process, to_u8_array(opt));
         }
         index += 1;
