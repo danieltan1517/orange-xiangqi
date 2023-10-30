@@ -824,7 +824,7 @@ make_move :: (xiangqi: *Xiangqi, h: *History, move: Move32) {
   h.ply += 1;
   // called after h.ply. cannot be called before that.
   nnue_incremental_update(xiangqi, h, move);
-  nodes += 1;
+  fetch_and_add(*nodes);
 }
 
 unmake_move :: (xiangqi: *Xiangqi, history: *History, move: Move32) {
@@ -841,12 +841,25 @@ make_null_move :: (xiangqi: *Xiangqi, hist: *History) {
   hist.ply += 1;
   nnue_incremental_nullmove(xiangqi, hist);
   hist.seldepth = max(hist.ply, hist.seldepth);
-  nodes += 1;
+  fetch_and_add(*nodes);
 }
 
 unmake_null_move :: (xiangqi: *Xiangqi, history: *History) {
   unmake_null_move(xiangqi);
   history.ply -= 1;
+}
+
+fetch_and_add :: (val: *int) #expand {
+  #if CPU == .X64 {
+    #asm {
+      mov incr: gpr, 1;
+      xadd.q [val], incr;
+    }
+  } else {
+    // unknown cpu architecture. just default to simple incrementing of number.
+    // this doesn't support multi-threading...but it should be okay-ish...
+    val.* += 1;
+  }
 }
 
 mvv_lva :: (move: Move32) -> s32 {
