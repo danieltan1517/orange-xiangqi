@@ -22,6 +22,7 @@ main :: () {
       print("id name Orange\n");
       print("id author Daniel Tan, Xiaofan Sun\n");
       print("option Clear Hash type button\n");
+      print("option Hash type spin min 1 max 2000 default 16\n");
       print("option Threads type spin min 1 max 256 default 1\n");
       print("ucciok\n");
  
@@ -108,6 +109,14 @@ setoption_command :: (str: string) {
     if success == true && value >= 1 && value <= 256 {
       print("info string Threads %\n", value);
       set_threads(value);
+    }
+  } else if begins_with(str, "Hash ") {
+    parse_token(*str);
+    value, success := parse_int(*str);
+    if success == true && value >= 1 && value <= 2000 {
+      print("info string Hash %\n", value);
+      value *= 1_000_000;
+      init_tt(value);
     }
   }
 }
