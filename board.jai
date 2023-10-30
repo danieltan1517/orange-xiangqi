@@ -1197,6 +1197,7 @@ Xiangqi :: struct {
 
   turn: int;
   hash: u32;
+  main_thread: bool = true;
   
   hashes: Board_Hash;
 }
@@ -2020,6 +2021,10 @@ init_xiangqi_tables :: () {
   init_zobrist();
   init_rook_magics();
   init_between_table();
+  setup_xiangqi_print();
+}
+
+setup_xiangqi_print :: inline () {
   context.print_style.struct_printer = xiangqi_printer;
 }
 

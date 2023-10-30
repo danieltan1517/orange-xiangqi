@@ -63,7 +63,7 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> Move32 {
     time_ms := max(1, to_milliseconds(time_taken)); // convert secs to ms, minimum is 1 to avoid division by zero.
     seldepth := history.seldepth;
     nps  := nodes * 1000 / time_ms; // max to avoid a divide by zero bug.
-    print_info(depth, seldepth, nodes, time_ms, score, nps, pv);
+    print_info(xiangqi.main_thread, depth, seldepth, nodes, time_ms, score, nps, pv);
     depth += 1;
   }
 
@@ -74,7 +74,8 @@ searchstarttime: Apollo_Time;
 time_stop_ms: int;
 search_should_stop: bool = false;
 
-print_info :: (depth: int, seldepth: int, nodes: int, time_ms: int, score: int, nps: int, pv: PV) {
+print_info :: (main_thread: bool, depth: int, seldepth: int, nodes: int, time_ms: int, score: int, nps: int, pv: PV) {
+  if main_thread == false return;
   if abs(score) > 19980 {
 
     // translate the score into a mating score.

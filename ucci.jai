@@ -106,7 +106,7 @@ setoption_command :: (str: string) {
     parse_token(*str);
     value, success := parse_int(*str);
     if success == true && value >= 1 && value <= 256 {
-      print("info string %\n", value);
+      print("info string Threads %\n", value);
       set_threads(value);
     }
   }
@@ -164,7 +164,10 @@ go_command :: (command: string, xiangqi: *Xiangqi) {
     movetime_ms = time_management(time, increment);
   }
 
+  start_threads(xiangqi, depth, movetime_ms);
+  xiangqi.main_thread = true;
   bestmove := search(xiangqi, depth, movetime_ms);
+  wait_for_threads_finish();
   print("bestmove %\n", bestmove);
 }
 
@@ -196,15 +199,56 @@ time_management :: (time: int, incr: int) -> movetime: int {
 
 }
 
+start_threads :: (xiangqi: *Xiangqi, depth: int, movetime_ms: int) {
+  if num_threads > 0 then {
+    for *work: work_array {
+      copy_board(*work.xiangqi, xiangqi);
+      work.search_depth = depth;
+      work.searchtime_ms = movetime_ms;
+      add_work(*thread_group, work);
+    }
+    start(*thread_group);
+  }
+}
+
+wait_for_threads_finish :: () {
+  work_remaining := num_threads;
+  while work_remaining > 0 {
+    results := get_completed_work(*thread_group);
+    work_remaining -= results.count;
+    reset_temporary_storage();
+  }
+}
+
 set_threads :: (num: int) {
   num -= 1;
   if num_threads == num then
     return;
   free_threads();
 
+  num_threads = num;
+  init(*thread_group, cast(s32)num_threads, search_thread, false);
+  thread_group.logging = false;
 
+  // initialize the workers
+  if work_array.count > 0 then {
+    array_free(work_array);
+  }
 
+  work_array = NewArray(num_threads, Xiangqi_Work, alignment=64);
+  for *work: work_array {
+    work.main_thread = false;
+  }
+}
 
+search_thread :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
+  setup_xiangqi_print();
+  parameters := cast(*Xiangqi_Work) work;
+  xiangqi := *parameters.xiangqi;
+  search_depth := parameters.search_depth;
+  searchtime_ms := parameters.searchtime_ms;
+  bestmove := search(xiangqi, search_depth, searchtime_ms);
+  return .CONTINUE;
 }
 
 free_threads :: () {
@@ -215,6 +259,15 @@ free_threads :: () {
 
 thread_group: Thread_Group;
 num_threads: int = 0;
+
+Xiangqi_Work :: struct {
+  using xiangqi: Xiangqi;
+  search_depth: int = 0;
+  searchtime_ms: int = 0;
+  bestmove: Move32;
+}
+
+work_array: [] Xiangqi_Work;
 
 #if OS == .LINUX {
   #import "POSIX";
