@@ -30,7 +30,7 @@ main :: () {
     free_threads();
   }
   print("eval,positions\n");
-  for i: 0..3 {
+  for i: 0..1_000_000_000 {
     reset_temporary_storage();
     clear_tt();
     found, line, rest := split_from_left(text, #char "\n");
@@ -253,7 +253,7 @@ wait_for_threads_finish :: (table: *Table(u32,void), work_remaining: int) -> bes
         table_add(table, hash, VOID);
         add_evaluation(fen, score);
       }
-      if is_king_move(move) || is_capture(move) then {
+      if status == .CriticalPosition || is_king_move(move) || is_capture(move) then {
         bestmove = move;
       }
     }
