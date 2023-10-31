@@ -13,6 +13,7 @@ main :: () {
   init_xiangqi_tables();
   init_tt(size_in_bytes = 16_000_000);
   random_seed(0xcafe_babe_10_31_1517);
+  set_threads(2);
   FILE_NAME :: "xiangqi_games.txt";
   text, success := read_entire_file(FILE_NAME);
   if !success {
@@ -25,9 +26,12 @@ main :: () {
 
   xiangqi: Xiangqi;
   xiangqi_startpos(*xiangqi);
-
+  start(*thread_group);
+  defer {
+    free_threads();
+  }
   print("eval,positions\n");
-  for i: 0..1_000_000 {
+  for i: 0..1 {
     reset_temporary_storage();
     clear_tt();
     found, line, rest := split_from_left(text, #char "\n");
@@ -82,6 +86,13 @@ add_evaluation :: (xiangqi: *Xiangqi, evaluation: int) {
   positions_computed += 1;
 }
 
+
+add_evaluation :: inline (fen: string, evaluation: int) {
+  // print("%,%\n", evaluation, fen);
+  positions_computed += 1;
+}
+
+
 positions_computed := 0;
 
 position_outbounds :: inline (evaluation: int) -> bool {
@@ -102,10 +113,9 @@ rollout :: (fen: string, table: *Table(u32, void)) {
   xiangqi_fen(*xiangqi, fen);
   moves: Moves;
 
+  work_started := 0;
+
   for 0..5 {
-
-    mov_make: Move32 = NULL_MOVE;
-
     reset(*moves);
     legal_moves(*xiangqi, *moves);
     for mov : moves {
@@ -122,26 +132,35 @@ rollout :: (fen: string, table: *Table(u32, void)) {
       if incheck(*xiangqi, att) then {
         continue;
       }
- 
-      evaluation, status := search_evaluation(*xiangqi, DEPTH, MOVETIME);
-      if position_outbounds(evaluation) then {
+
+      history: History;
+      alpha := -MATE;
+      beta  :=  MATE;
+      delta :=  100;
+  
+      // aspiration window with iterative deepening.
+      searchstarttime = current_time_monotonic();
+      ticks = 300_000_000;
+      history.phase_value = compute_phase(*xiangqi);
+      nnue_incremental_init(*xiangqi, *history);
+  
+      // do not compute positions which are not 'quiet'. 'quiet' positions are such
+      // that a depth of 1 does not change the position much. exchanges will not 
+      // change the evaluation much in quiet positions.
+      // this is similar to the 'quiet' position definition found in fairy stockfish
+      evaluation_score := evaluate(*xiangqi);
+      quiescene_score  := quiescene(*xiangqi, *history, alpha, beta);
+  
+      if abs(evaluation_score - quiescene_score) > 40 then {
         continue;
       }
- 
-      if status == .QuietPosition then {
-        none: void;
-        table_add(table, xiangqi.hash, none);
-        add_evaluation(*xiangqi, evaluation);
 
-        if (is_capture(mov) || (mov.piece >> 2) == 0) && is_null(mov_make) then {
-          mov_make = mov;
-        }
-      } 
-
-      if status == .CriticalPosition then {
-        mov_make = mov;
-      }
+      work_started += 1;
+      start_threads(*xiangqi, mov, DEPTH, MOVETIME);
     }
+
+    mov_make := wait_for_threads_finish(work_started);
+    print("move = %\n", mov_make);
 
     if is_null(mov_make) then {
       break;
@@ -164,7 +183,6 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   time_stop_ms = searchtime_ms;
   search_should_stop = false;
   nodes = 0;
-  best_move := NULL_MOVE;
   history: History;
   alpha := -MATE;
   beta  :=  MATE;
@@ -173,35 +191,22 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   // aspiration window with iterative deepening.
   searchstarttime = current_time_monotonic();
   ticks = 300_000_000;
+  evaluation_score := evaluate(xiangqi);
   history.phase_value = compute_phase(xiangqi);
   nnue_incremental_init(xiangqi, *history);
-
-  // do not compute positions which are not 'quiet'. 'quiet' positions are such
-  // that a depth of 1 does not change the position much. exchanges will not 
-  // change the evaluation much in quiet positions.
-  // this is similar to the 'quiet' position definition found in fairy stockfish
-
-  evaluation_score := evaluate(xiangqi);
-  quiescene_score  := quiescene(xiangqi, *history, alpha, beta);
-
-  if abs(evaluation_score - quiescene_score) > 50 then {
-    return quiescene_score, Status.TacticalPosition;
-  }
   
   pv: PV;
   depth := 1;
   score: int = 0;
   while depth <= search_depth {
     score = negamax_root(xiangqi, *history, *pv, depth, alpha, beta);
-    best_move = pv.moves[0];
     alpha = max(score - delta, -MATE);
     beta  = min(score + delta,  MATE);
     depth += 1;
   }
 
-  best_move = pv.moves[0];
   status: Status;
-  if abs(evaluation_score - score) > 65 {
+  if abs(evaluation_score - score) > 60 {
     status = Status.CriticalPosition;
   } else {
     status = Status.QuietPosition;
@@ -210,8 +215,109 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   return score, status;
 }
 
+start_threads :: (xiangqi: *Xiangqi, move: Move32, depth: int, movetime_ms: int) {
+  if num_threads > 0 then {
+    for *work: work_array {
+      work.fen = to_fenstring(xiangqi);
+      work.bestmove = move;
+      work.search_depth = DEPTH;
+      work.searchtime_ms = MOVETIME;
+      work.search_depth = depth;
+      work.searchtime_ms = movetime_ms;
+      add_work(*thread_group, work);
+    }
+  }
+}
+
+wait_for_threads_finish :: (work_remaining: int) -> bestmove: Move32 {
+
+  is_king_move :: inline (move: Move32) -> bool {
+    piece := move.piece >> 2;
+    return piece == 0;
+  }
+
+  bestmove: Move32;
+  while work_remaining > 0 {
+    results := get_completed_work(*thread_group);
+    for r : results {
+      work := cast(*Xiangqi_Work) r;
+      score    := work.score;
+      status   := work.status;
+      fen      := work.fen;
+      move     := work.bestmove;
+      if position_outbounds(score) then {
+        continue;
+      }
+      if status == .QuietPosition then {
+        add_evaluation(fen, score);
+      }
+      if is_king_move(move) || is_capture(move) then {
+        bestmove = move;
+      }
+    }
+    work_remaining -= results.count;
+    sleep_milliseconds(10);
+    print("waiting for %\n", work_remaining);
+  }
+
+  reset_temporary_storage();
+  return bestmove;
+}
+
+set_threads :: (num: int) {
+  num -= 1;
+  if num_threads == num then
+    return;
+  free_threads();
+
+  num_threads = num;
+  init(*thread_group, cast(s32)num_threads, search_thread, false);
+  thread_group.logging = false;
+
+  // initialize the workers
+  if work_array.count > 0 then {
+    array_free(work_array);
+  }
+
+  work_array = NewArray(num_threads, Xiangqi_Work, alignment=64);
+}
+
+search_thread :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
+  setup_xiangqi_print();
+  parameters := cast(*Xiangqi_Work) work;
+  xiangqi: Xiangqi;
+  xiangqi_fen(*xiangqi, parameters.fen);
+  search_depth := parameters.search_depth;
+  searchtime_ms := parameters.searchtime_ms;
+  score, status := search_evaluation(*xiangqi, search_depth, searchtime_ms);
+  parameters.score = score;
+  parameters.status = status;
+  return .CONTINUE;
+}
+
+free_threads :: () {
+  if num_threads > 0 then {
+    shutdown(*thread_group);
+  }
+}
+
+thread_group: Thread_Group;
+num_threads: int = 0;
+
+Xiangqi_Work :: struct {
+  fen: string;
+  bestmove: Move32;
+  search_depth: int = 0;
+  searchtime_ms: int = 0;
+  score: int = 0;
+  status: Status;
+}
+
+work_array: [] Xiangqi_Work;
+
 #import "Basic";
 #import "File";
 #import "String";
 #import "Random";
 #import "Hash_Table";
+#import "Thread";
