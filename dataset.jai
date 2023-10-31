@@ -13,7 +13,7 @@ main :: () {
   init_xiangqi_tables();
   init_tt(size_in_bytes = 16_000_000);
   random_seed(0xcafe_babe_10_31_1517);
-  set_threads(2);
+  set_threads(4);
   FILE_NAME :: "xiangqi_games.txt";
   text, success := read_entire_file(FILE_NAME);
   if !success {
@@ -26,12 +26,11 @@ main :: () {
 
   xiangqi: Xiangqi;
   xiangqi_startpos(*xiangqi);
-  start(*thread_group);
   defer {
     free_threads();
   }
   print("eval,positions\n");
-  for i: 0..1 {
+  for i: 0..3 {
     reset_temporary_storage();
     clear_tt();
     found, line, rest := split_from_left(text, #char "\n");
@@ -86,12 +85,10 @@ add_evaluation :: (xiangqi: *Xiangqi, evaluation: int) {
   positions_computed += 1;
 }
 
-
 add_evaluation :: inline (fen: string, evaluation: int) {
-  // print("%,%\n", evaluation, fen);
+  print("%,%\n", evaluation, fen);
   positions_computed += 1;
 }
-
 
 positions_computed := 0;
 
@@ -115,7 +112,7 @@ rollout :: (fen: string, table: *Table(u32, void)) {
 
   work_started := 0;
 
-  for 0..5 {
+  for 0..0 {
     reset(*moves);
     legal_moves(*xiangqi, *moves);
     for mov : moves {
@@ -160,8 +157,6 @@ rollout :: (fen: string, table: *Table(u32, void)) {
     }
 
     mov_make := wait_for_threads_finish(work_started);
-    print("move = %\n", mov_make);
-
     if is_null(mov_make) then {
       break;
     }
@@ -217,6 +212,7 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
 
 start_threads :: (xiangqi: *Xiangqi, move: Move32, depth: int, movetime_ms: int) {
   if num_threads > 0 then {
+    work := New(Xiangqi_Work, allocator=temp);
     work.fen = to_fenstring(xiangqi);
     work.bestmove = move;
     work.search_depth = DEPTH;
@@ -234,6 +230,7 @@ wait_for_threads_finish :: (work_remaining: int) -> bestmove: Move32 {
     return piece == 0;
   }
 
+  start(*thread_group);
   bestmove: Move32;
   while work_remaining > 0 {
     results := get_completed_work(*thread_group);
@@ -255,7 +252,6 @@ wait_for_threads_finish :: (work_remaining: int) -> bestmove: Move32 {
     }
     work_remaining -= results.count;
     sleep_milliseconds(10);
-    print("waiting for %\n", work_remaining);
   }
 
   reset_temporary_storage();
@@ -269,7 +265,7 @@ set_threads :: (num: int) {
   free_threads();
 
   num_threads = num;
-  init(*thread_group, cast(s32)num_threads, search_thread, false);
+  init(*thread_group, cast(s32)num_threads, search_thread, true);
   thread_group.logging = false;
 
   // initialize the workers
