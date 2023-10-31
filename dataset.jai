@@ -5,7 +5,7 @@
 // 
 #run load_model("orange10_25_23.nnue");
 
-DEPTH :: 4;
+DEPTH :: 5;
 MOVETIME :: 3_600_000;
 MAX_COMPUTATIONS :: 35_000_000;
 
@@ -13,7 +13,7 @@ main :: () {
   init_xiangqi_tables();
   init_tt(size_in_bytes = 16_000_000);
   random_seed(0xcafe_babe_10_31_1517);
-  set_threads(4);
+  set_threads(5);
   FILE_NAME :: "xiangqi_games.txt";
   text, success := read_entire_file(FILE_NAME);
   if !success {
@@ -112,9 +112,12 @@ rollout :: (fen: string, table: *Table(u32, void)) {
 
   work_started := 0;
 
-  for 0..0 {
+  for 0..5 {
     reset(*moves);
     legal_moves(*xiangqi, *moves);
+
+    // reset work started to zero
+    work_started = 0;
     for mov : moves {
       make_move(*xiangqi, mov);
       defer {
@@ -156,7 +159,7 @@ rollout :: (fen: string, table: *Table(u32, void)) {
       start_threads(*xiangqi, mov, DEPTH, MOVETIME);
     }
 
-    mov_make := wait_for_threads_finish(work_started);
+    mov_make := wait_for_threads_finish(table, work_started);
     if is_null(mov_make) then {
       break;
     }
@@ -214,6 +217,7 @@ start_threads :: (xiangqi: *Xiangqi, move: Move32, depth: int, movetime_ms: int)
   if num_threads > 0 then {
     work := New(Xiangqi_Work, allocator=temp);
     work.fen = to_fenstring(xiangqi);
+    work.hash = xiangqi.hash;
     work.bestmove = move;
     work.search_depth = DEPTH;
     work.searchtime_ms = MOVETIME;
@@ -223,7 +227,7 @@ start_threads :: (xiangqi: *Xiangqi, move: Move32, depth: int, movetime_ms: int)
   }
 }
 
-wait_for_threads_finish :: (work_remaining: int) -> bestmove: Move32 {
+wait_for_threads_finish :: (table: *Table(u32,void), work_remaining: int) -> bestmove: Move32 {
 
   is_king_move :: inline (move: Move32) -> bool {
     piece := move.piece >> 2;
@@ -236,6 +240,7 @@ wait_for_threads_finish :: (work_remaining: int) -> bestmove: Move32 {
     results := get_completed_work(*thread_group);
     for r : results {
       work := cast(*Xiangqi_Work) r;
+      hash     := work.hash;
       score    := work.score;
       status   := work.status;
       fen      := work.fen;
@@ -244,6 +249,8 @@ wait_for_threads_finish :: (work_remaining: int) -> bestmove: Move32 {
         continue;
       }
       if status == .QuietPosition then {
+        VOID: void;
+        table_add(table, hash, VOID);
         add_evaluation(fen, score);
       }
       if is_king_move(move) || is_capture(move) then {
@@ -251,7 +258,7 @@ wait_for_threads_finish :: (work_remaining: int) -> bestmove: Move32 {
       }
     }
     work_remaining -= results.count;
-    sleep_milliseconds(10);
+    sleep_milliseconds(1);
   }
 
   reset_temporary_storage();
@@ -267,13 +274,6 @@ set_threads :: (num: int) {
   num_threads = num;
   init(*thread_group, cast(s32)num_threads, search_thread, true);
   thread_group.logging = false;
-
-  // initialize the workers
-  if work_array.count > 0 then {
-    array_free(work_array);
-  }
-
-  work_array = NewArray(num_threads, Xiangqi_Work, alignment=64);
 }
 
 search_thread :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
@@ -301,13 +301,12 @@ num_threads: int = 0;
 Xiangqi_Work :: struct {
   fen: string;
   bestmove: Move32;
+  hash: u32;
   search_depth: int = 0;
   searchtime_ms: int = 0;
   score: int = 0;
   status: Status;
 }
-
-work_array: [] Xiangqi_Work;
 
 #import "Basic";
 #import "File";
