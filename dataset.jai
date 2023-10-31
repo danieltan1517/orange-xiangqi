@@ -44,7 +44,7 @@ main :: () {
     xiangqi_startpos(*xiangqi);
 
     time_calendar := calendar_to_string(to_calendar(current_time_consensus()));
-    print("----Game %. Time: [%]. Positions in Hash Table: %. Positions Evaluated: %\n", i, time_calendar, table.count, positions_computed, to_standard_error=true);
+    print("----Game %. Time: [%]. Positions in Hash Table: %. Positions Evaluated: %. Depth %. Total %\n", i, time_calendar, table.count, positions_computed, DEPTH, MAX_COMPUTATIONS, to_standard_error=true);
 
     // the starting position has 32 pieces total
     count := compute_phase(*xiangqi);
