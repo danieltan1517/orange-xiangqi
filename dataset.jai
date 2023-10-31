@@ -217,15 +217,13 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
 
 start_threads :: (xiangqi: *Xiangqi, move: Move32, depth: int, movetime_ms: int) {
   if num_threads > 0 then {
-    for *work: work_array {
-      work.fen = to_fenstring(xiangqi);
-      work.bestmove = move;
-      work.search_depth = DEPTH;
-      work.searchtime_ms = MOVETIME;
-      work.search_depth = depth;
-      work.searchtime_ms = movetime_ms;
-      add_work(*thread_group, work);
-    }
+    work.fen = to_fenstring(xiangqi);
+    work.bestmove = move;
+    work.search_depth = DEPTH;
+    work.searchtime_ms = MOVETIME;
+    work.search_depth = depth;
+    work.searchtime_ms = movetime_ms;
+    add_work(*thread_group, work);
   }
 }
 
