@@ -7,7 +7,7 @@
 
 DEPTH :: 5;
 MOVETIME :: 3_600_000;
-MAX_COMPUTATIONS :: 35_000_000;
+MAX_COMPUTATIONS :: 100_000_000;
 
 main :: () {
   init_xiangqi_tables();
