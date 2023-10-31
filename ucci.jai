@@ -175,8 +175,8 @@ go_command :: (command: string, xiangqi: *Xiangqi) {
 
   start_threads(xiangqi, depth, movetime_ms);
   xiangqi.main_thread = true;
-  bestmove := search(xiangqi, depth, movetime_ms);
-  wait_for_threads_finish();
+  bestmove, score := search(xiangqi, depth, movetime_ms);
+  bestmove = wait_for_threads_finish(bestmove, score, depth);
   print("bestmove %\n", bestmove);
 }
 
@@ -220,13 +220,28 @@ start_threads :: (xiangqi: *Xiangqi, depth: int, movetime_ms: int) {
   }
 }
 
-wait_for_threads_finish :: () {
+wait_for_threads_finish :: (bestmove: Move32, bestscore: int, search_depth: int) -> bestmove: Move32 {
+  MATE_BOUND :: MATE - 30;
+
   work_remaining := num_threads;
   while work_remaining > 0 {
     results := get_completed_work(*thread_group);
+    for r : results {
+      work := cast(*Xiangqi_Work) r;
+      bestmove := work.bestmove;
+      score    := work.score;
+      depth    := work.search_depth;
+      if score > bestscore && (depth >= search_depth || score >= MATE_BOUND) {
+        bestscore = score;
+        search_depth = depth;
+        bestmove = work.bestmove;
+      }
+    }
     work_remaining -= results.count;
     reset_temporary_storage();
   }
+
+  return bestmove;
 }
 
 set_threads :: (num: int) {
@@ -256,7 +271,9 @@ search_thread :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_
   xiangqi := *parameters.xiangqi;
   search_depth := parameters.search_depth;
   searchtime_ms := parameters.searchtime_ms;
-  bestmove := search(xiangqi, search_depth, searchtime_ms);
+  bestmove, score := search(xiangqi, search_depth, searchtime_ms);
+  parameters.bestmove = bestmove;
+  parameters.score = score;
   return .CONTINUE;
 }
 
@@ -274,6 +291,7 @@ Xiangqi_Work :: struct {
   search_depth: int = 0;
   searchtime_ms: int = 0;
   bestmove: Move32;
+  score: int = 0;
 }
 
 work_array: [] Xiangqi_Work;

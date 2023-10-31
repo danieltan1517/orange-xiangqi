@@ -1,9 +1,9 @@
 // main search evaluation function.
-search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> Move32 {
+search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> bestmove: Move32, score: int #must {
 
   unwrap :: (eval: int) -> int #expand {
     if search_should_stop == true {
-      `return best_move;
+      `return best_move, 0;
     }
     return eval;
   }
@@ -35,12 +35,13 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> Move32 {
   searchstarttime = current_time_monotonic();
   ticks = 300_000_000;
   depth := 1;
+  score: int;
   pv: PV;
   history.phase_value = compute_phase(xiangqi);
   nnue_incremental_init(xiangqi, history);
 
   while depth <= search_depth {
-    score := unwrap(negamax_root(xiangqi, history, *pv, depth, alpha, beta));
+    score = unwrap(negamax_root(xiangqi, history, *pv, depth, alpha, beta));
     time_taken := current_time_monotonic() - searchstarttime;
     if score <= alpha then {
       print("info lowerbound score %\n", score);
@@ -67,7 +68,7 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> Move32 {
     depth += 1;
   }
 
-  return best_move;
+  return best_move, score;
 }
 
 searchstarttime: Apollo_Time;
@@ -266,7 +267,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         R = 1;
       } else {
         // Late Move Reduction. ~30 elo.
-        R = ifx quiet_moves_made < 2 then 1 else 3;
+        R = ifx quiet_moves_made < 2 || depth < 3 then 1 else 3;
       }
 
       score = -negamax(xiangqi, history, *child_pv, depth - R, -alpha-1, -alpha);
@@ -459,7 +460,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       R = 1;
     } else {
       // Late Move Reduction. ~30 elo.
-      R = ifx quiet_moves_made < 2 then 1 else 3;
+      R = ifx quiet_moves_made < 2 || depth < 3 then 1 else 3;
     }
 
     score = -negascout_sse(xiangqi, history, depth - R, -beta, -alpha);
