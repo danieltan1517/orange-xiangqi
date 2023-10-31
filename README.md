@@ -31,6 +31,10 @@ protocol complaint Xiangqi Engine. This project supports Windows, Mac, and Linux
 * Pseudo Legal Move Generation
 * Staged Move Generation
 
+### Threading
+* Supports up to 256 Threads
+* Lazy Shared Memory Processing Parallel Search
+
 ### Search
 * Negamax Search with Alpha Beta Pruning
 * Principle Variation Search
@@ -66,7 +70,6 @@ protocol complaint Xiangqi Engine. This project supports Windows, Mac, and Linux
 * Efficiently Updatable Neural Networks with Incremental Update
 * 2 Hidden Layers
 * Supports AVX2, SSE, and CPU without SIMD
-* Handcrafted Evaluation with Piece Square Tables
 
 
 
