@@ -1526,7 +1526,6 @@ gui_make_move :: (move: Move32, animate: bool) {
         on_game_end(.Draw);
       }
       move_list_scroll_value = 10000;
-      print("FEN = %\n", to_fenstring(*xiangqi));
       break;
     }
   }
