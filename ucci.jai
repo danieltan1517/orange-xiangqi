@@ -1,3 +1,30 @@
+// TODO: Implement Draws/Chasing correctly!
+
+// perpetual check. loss for red.
+// c2a1k3/2c1a2R1/b6P1/8p/9/9/9/9/4K4/9 w - - 0 1
+// 9/4k4/9/9/9/9/9/9/2p6/3K1RBc1 w - - 0 1
+// 4R4/3k5/5R3/9/9/2B6/n8/3pB4/4p4/3K5 w - - 0 1
+
+// if both players check the opponent perpetually, the game will be ruled a draw
+// 3akr3/5c3/1P2b4/4R4/9/9/9/9/9/4CK3 w - - 0 1
+
+
+// red committed perpetual check. black's check and idle sequence is permissible. red must change his moves, or he losses.
+// 5c3/8R/4k2P1/3P5/5P3/6P2/5pN2/5A3/4CK3/6rn1 w - - 0 1 
+
+// perpetual kill is permissible and the game will be ruled a draw.
+// all of these are draws.
+// 3ak1b2/4a4/4b4/r3C2R1/p8/9/P8/4p4/4p4/5K3 w - - 0 1
+// 2b2k3/9/4b2P1/3N5/1R6p/6P2/5p2r/8n/4p4/5K3 w - - 0 1
+// 3aka3/4n4/4b4/4C4/p3p3p/9/2c6/2C6/4K4/9 w - - 0 1
+// 2bNka3/1N2aPP2/n3b4/p8/5c3/2C6/9/4B4/4A4/r1BK1A1n1 w - - 0 1 
+// 2bNka3/1N2aPP2/n3b4/p8/5c3/2C6/9/4B4/4A4/r1BK1A1n1 w - - 0 1
+// 5k3/2CPP4/9/9/9/9/9/B3p4/r8/4K4 w - - 0 1
+
+
+
+
+
 
 #run load_model("orange10_25_23.nnue");
 
