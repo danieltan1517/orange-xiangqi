@@ -119,7 +119,7 @@ main :: () {
       go_command(str, *xiangqi);
 
     case;
-      print("str [%]",str);
+
     }
   }
 
