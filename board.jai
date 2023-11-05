@@ -1776,7 +1776,7 @@ is_repeating_ntimes :: (xiangqi: *Xiangqi, nrepeats: int) -> bool {
 }
 
 perft :: (xiangqi: *Xiangqi, depth: int) -> int {
-  if depth == 0 then
+  if depth <= 0 then
     return 1;
 
   moves: Moves;
