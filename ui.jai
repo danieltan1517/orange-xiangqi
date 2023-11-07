@@ -1390,21 +1390,6 @@ row_col_of :: (sq: int) -> int, int {
   return row, col;
 }
 
-xiangqi_openings :: string.[
-  "2cakabr1/9/2n3n2/pRN1p2cp/2b3r2/2R6/P3P3P/2C1C1N2/9/2BAKAB2 w - - 0 1",
-  "r2akab2/1r1n5/2c1b2cn/p1p1p1p1p/9/2PN5/P3P1P1P/C3C1N2/9/R1BAKABR1 b - - 0 1",
-  "1r1akab2/9/2n1bcn2/p1C1p1p1p/3r5/2P3P2/Pc2P3P/N3C1N2/9/1RBAKABR1 w - - 0 1",
-  "4kab2/3ra4/2c1b2cn/p1p1p1p1p/9/2PN3R1/r3P1P1P/C3B1N2/4A4/R1B1KA3 w - - 0 1",
-  "r1bakab1r/9/1cn2cn2/p1p1p1p1p/9/6P2/P1P1P3P/1C2C1N2/9/RNBAKAB1R w - - 0 1",
-  "r3kab2/3ra4/2n1b1cRn/2R3p1C/9/p5P2/3pP3P/N3B1N2/4A4/4KAB2 b - - 0 1",
-  "r2akabr1/9/1cn1b1n2/p1N1p3p/6pc1/2p6/P3P1P1P/1C2C1N2/5R3/R1BAKAB2 w - - 0 1",
-  "2cakabr1/9/2n1b1n2/p1N1p3p/6rc1/2R6/P3P3P/2C1C1N2/9/1RBAKAB2 b - - 0 1",
-  "rn1akabn1/8r/2c1b2c1/p1p1p1p1p/9/2P6/P3P1P1P/1CN1C1N2/9/R1BAKAB1R b - - 0 1",
-  "1rbakab2/9/2n2cn2/p1p1p1p1p/7r1/2P3P2/Pc2P3P/N1C1C1N2/9/1RBAKAB1R w - - 0 1",
-  "r3kab2/3ra4/2n1b1c1n/p1R3p1C/9/P6R1/3pP1P1P/N3B1N2/4A4/4KAB2 b - - 0 1",
-  "rn1akabnr/9/2c1b2c1/p3p1p1p/2p6/2P6/P3P1P1P/NC2C1N2/9/R1BAKAB1R b - - 0 1",
-];
-
 gui_undo_move :: () {
 
   human_turn :: () -> bool #expand {

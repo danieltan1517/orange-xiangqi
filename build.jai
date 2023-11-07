@@ -100,6 +100,7 @@ nnue_file :: (w: Workspace) {
 add_ui_files :: (w: Workspace) {
   add_build_file("ui.jai", w);  
   add_build_file("board.jai", w);  
+  add_build_file("opening_book.jai", w);
 }
 
 add_ai_files :: (w: Workspace) {
