@@ -26,7 +26,7 @@
 
 
 
-#run load_model("orange10_25_23.nnue");
+#run load_model("orange11_6_23.nnue");
 
 main :: () {
   init_xiangqi_tables();
@@ -48,6 +48,7 @@ main :: () {
     case "ucci";
       print("id name Orange\n");
       print("id author Daniel Tan, Xiaofan Sun\n");
+      print("info string NNUE %\n", get_nnuename());
       print("option Clear Hash type button\n");
       print("option Hash type spin min 1 max 2000 default 16\n");
       print("option Threads type spin min 1 max 256 default 1\n");

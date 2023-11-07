@@ -228,11 +228,11 @@ download_xiangqi_games :: () {
 }
 
 download_nnue_model :: () {
-  fileId :: "1ZvX0zCSmrS7er3rUGkGr6icynHQ4lFYU";
+  fileId :: "1XSKDCii4jSm83vWACLmuTsMCqmj5dyab";
   link := tprint("https://drive.google.com/uc?export=download&id=%1", fileId);
-  run_command("wget", link, "-O", "orange10_25_23.zip");
-  run_command("unzip", "orange10_25_23.zip");
-  run_command("rm", "orange10_25_23.zip");
+  run_command("wget", link, "-O", "orange11_6_23.zip");
+  run_command("unzip", "orange11_6_23.zip");
+  run_command("rm", "orange11_6_23.zip");
 }
 
 NNUE_Type :: enum {

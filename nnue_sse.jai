@@ -310,6 +310,8 @@ NNUE :: struct {
 
 load_model :: (filename: string) {
   print("loading file %\n", filename);
+  memcpy(_nnuename.data, filename.data, size_of(u8) * filename.count);
+  filename_count = cast(s8) filename.count;
   weights, success := read_entire_file(filename);
   assert(success, "File % not found.", filename);
   assert(weights.count == size_of(NNUE), "Size of file does not match struct size. Expect % Got %", size_of(NNUE), weights.count);
@@ -317,16 +319,24 @@ load_model :: (filename: string) {
   free(weights);
 }
 
+get_nnuename :: () -> string {
+  print("filename count %\n", filename_count);
+  return to_string(_nnuename.data, filename_count);
+}
+
+#no_reset _nnuename: [32] u8 #align 16;
+#no_reset filename_count: s8 = 0;
+
 KSQ_INDEX :: s8.[
   -1, -1, -1,  1,  0,  1, -1, -1, -1,
-  -1, -1, -1,  2,  1,  2, -1, -1, -1,
+  -1, -1, -1,  2,  2,  2, -1, -1, -1,
   -1, -1, -1,  2,  2,  2, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1,  2,  2,  2, -1, -1, -1,
-  -1, -1, -1,  2,  1,  2, -1, -1, -1,
+  -1, -1, -1,  2,  2,  2, -1, -1, -1,
   -1, -1, -1,  1,  0,  1, -1, -1, -1,
 ];
 
