@@ -2017,6 +2017,18 @@ Board_Hash :: struct {
   hashes: [1023] u32;
 }
 
+is_chase :: inline (move: Move32) -> bool {
+  piece := move.piece >> 2;
+  return is_capture(move) && piece != G && piece != S;
+}
+
+PosStatus :: enum s8 {
+  Idle;
+  Capture;
+  Chase;
+  Check;
+}
+
 init_xiangqi_tables :: () {
   init_zobrist();
   init_rook_magics();

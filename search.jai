@@ -21,7 +21,6 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> bestmove
     }
   } 
 
-
   time_stop_ms = searchtime_ms;
   search_should_stop = false;
   nodes = 0;
@@ -174,10 +173,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     return alpha;
   }
 
-  // you know...I don't exactly know all the xiangqi repetition rules.
-  // and I am not going to focus on that at the moment. so let's just make this simple
-  // and return -300. This is a little trick by Dutch Programmer HGM that hits most cases
-  // easily...
+  //judgement_day(xiangqi, history);
   if is_repeating(xiangqi) {
     return -300;
   }
@@ -193,7 +189,10 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
   incheck_position := true;
   child_pv: PV;
 
-  if !incheck(xiangqi, att) then {
+  if incheck(xiangqi, att) then {
+    history.status[history.ply-1] = .Check;
+    incheck_position = true;
+  } else {
     incheck_position = false;
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
     // reverse futility pruning.
@@ -217,6 +216,13 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
           if score >= beta {
             return score;
           }
+        }
+      }
+
+      if score > -MATE+50 && score + 80 < alpha then {
+        bestmove := child_pv.moves[0];
+        if is_chase(bestmove) then {
+          history.status[history.ply-1] = .Chase;
         }
       }
     }
@@ -385,10 +391,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
     return alpha;
   }
 
-  // you know...I don't exactly know all the xiangqi repetition rules.
-  // and I am not going to focus on that at the moment. so let's just make this simple
-  // and return -300. This is a little trick by Dutch Programmer HGM that hits most cases
-  // easily...
+  //judgement_day(xiangqi, history);
   if is_repeating(xiangqi) {
     return -300;
   }
@@ -401,7 +404,10 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
   tt_prune(tthit, ttentry, alpha, beta, depth, false);
   att := attackers(xiangqi);
   incheck_position := true;
-  if !incheck(xiangqi, att) then {
+  if incheck(xiangqi, att) then {
+    history.status[history.ply-1] = .Check;
+    incheck_position = true;
+  } else {
     incheck_position = false;
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
     // reverse futility pruning.
@@ -819,6 +825,7 @@ pick_move :: (xiangqi: *Xiangqi, index: int, stage: Stage, moves: *Moves, best_m
 make_move :: (xiangqi: *Xiangqi, h: *History, move: Move32) {
   if is_capture(move) then {
     h.phase_value -= phase_incr(move);
+    h.status[h.ply] = .Capture;
   }
   make_move(xiangqi, move);
   h.moves[h.ply] = move;
@@ -831,6 +838,7 @@ make_move :: (xiangqi: *Xiangqi, h: *History, move: Move32) {
 unmake_move :: (xiangqi: *Xiangqi, history: *History, move: Move32) {
   if is_capture(move) then {
     history.phase_value += phase_incr(move);
+    history.status[history.ply] = .Idle;
   }
   unmake_move(xiangqi, move);
   history.ply -= 1;
@@ -988,6 +996,7 @@ History :: struct {
   seldepth: int;
   phase_value: int;
   max_search_depth: int;
+  status:      [128] PosStatus;
   moves:       [128] Move32;
   accumulator: [128] Accumulator #align 64; 
   killer:  [128][2] Move32;
@@ -1089,5 +1098,108 @@ in_middlegame :: inline (history: *History) -> bool {
   return history.phase_value > 4;
 }
 
+// terminator: judgement day.
+judgement_day :: (xiangqi: *Xiangqi, history: *History) #expand {
+  is_repeating, score := judge(xiangqi, history.ply, history.status);
+  if is_repeating == true then {
+    //print("%\nSCORE: %\n", to_fenstring(xiangqi), score);
+    //print("[%] => %\n", history.ply, history.status);
+    //print("%\n", xiangqi.hashes.hashes);
+    `return score;
+  }
+}
+
+judge :: (xiangqi: *Xiangqi, ply: int, status: [] PosStatus) -> bool, score: int {
+  history_ply := ply;
+  opp := ply - 1;
+  our_count := xiangqi.hashes.count - 1;
+  opp_count := xiangqi.hashes.count - 2;
+  hashes: [] u32 = xiangqi.hashes.hashes;
+  our_hash := hashes[our_count];
+  opp_hash := hashes[opp_count];
+
+  our_idle := false;
+  opp_idle := false;
+
+  our_check := false;
+  opp_check := false;
+
+  our_chase := false;
+  opp_chase := false;
+  if status[ply] == .Capture || status[opp] == .Capture {
+    return false, 0;
+  }
+
+  ply -= 2;
+  opp -= 2;
+  our_count -= 2;
+  opp_count -= 2;
+
+  repeating: bool = false;
+
+  while opp_count >= 0 {
+    if status[ply] == .Capture || status[opp] == .Capture {
+      break;
+    }
+
+    if status[ply] == .Idle {
+      our_idle = true;
+    }
+
+    if status[opp] == .Idle {
+      opp_idle = true;
+    }
+
+    if our_hash == hashes[our_count] {
+      repeating = true;
+      if our_idle == false && status[ply] == .Check {
+        our_check = true;
+      }
+
+      if our_idle == false && status[ply] == .Chase {
+        our_chase = true;
+      }
+    }
+
+    if opp_hash == hashes[opp_count] {
+      repeating = true;
+      if opp_idle == false && status[opp] == .Check {
+        opp_check = true;
+      }
+
+      if opp_idle == false && status[ply] == .Chase {
+        opp_chase = true;
+      }
+    }
+
+    our_count -= 2;
+    opp_count -= 2;
+    ply -= 2;
+    opp -= 2;
+  }
+
+  if repeating == false then {
+    return false, 0;
+  }
+
+  ply = history_ply;
+  if our_check == true && opp_check == false {
+    return true, -MATE + ply;
+  }
+
+  if opp_check == true && our_check == false {
+    return true, MATE - ply;
+  }
+
+  if our_chase == true && opp_chase == false {
+    return true, -MATE + ply;
+  }
+
+  if opp_chase == true && our_chase == false {
+    return true, MATE - ply;
+  }
+
+  return true, 0;
+}
 
 

@@ -3,9 +3,9 @@
 // a buggy implementation with infinite loop problems
 // every once in a while, but usable...
 // 
-#run load_model("orange10_25_23.nnue");
+#run load_model("orange11_6_23.nnue");
 
-DEPTH :: 5;
+DEPTH :: 4;
 MOVETIME :: 3_600_000;
 MAX_COMPUTATIONS :: 100_000_000;
 
@@ -13,7 +13,7 @@ main :: () {
   init_xiangqi_tables();
   init_tt(size_in_bytes = 16_000_000);
   random_seed(0xcafe_babe_10_31_1517);
-  set_threads(5);
+  set_threads(6);
   FILE_NAME :: "xiangqi_games.txt";
   text, success := read_entire_file(FILE_NAME);
   if !success {
