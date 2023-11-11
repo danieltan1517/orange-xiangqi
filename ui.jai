@@ -1476,17 +1476,32 @@ gui_make_move :: (move: Move32, animate: bool) {
       att := attackers(*xiangqi);
       if incheck(*xiangqi, att) then {
         status_string = "Check";
-        /*if is_repeating_ntimes(*xiangqi, 3) then {
-          winner: GameEnd;
-          if xiangqi.turn == 0 {
-            status_string = "Threefold Repetitive Check. Red Wins";  
-            winner = .Red_Wins;
-          } else {
-            status_string = "Threefold Repetitive Check. Black Wins";  
-            winner = .Black_Wins;
-          }
-          on_game_end(winner);
-        }*/
+        mark_previous_move_check(*xiangqi);
+      }
+
+      if judge(*xiangqi) == {
+      case .Undecided;
+      case .Win;
+        winner: GameEnd;
+        if xiangqi.turn == 0 {
+          status_string = "Perpetual Check. Red Wins";  
+          winner = .Red_Wins;
+        } else {
+          status_string = "Perpetual Check. Black Wins";  
+          winner = .Black_Wins;
+        }
+        on_game_end(winner);
+      case .Draw;
+      case .Loss;
+        winner: GameEnd;
+        if xiangqi.turn == 0 {
+          status_string = "Perpetual Check. Black Wins";  
+          winner = .Black_Wins;
+        } else {
+          status_string = "Perpetual Check. Red Wins";  
+          winner = .Red_Wins;
+        }
+        on_game_end(winner);
       }
 
       if moves.count == 0 then {
@@ -1511,6 +1526,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         on_game_end(.Draw);
       }
       move_list_scroll_value = 10000;
+
       break;
     }
   }

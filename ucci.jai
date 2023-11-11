@@ -21,11 +21,6 @@
 // 2bNka3/1N2aPP2/n3b4/p8/5c3/2C6/9/4B4/4A4/r1BK1A1n1 w - - 0 1
 // 5k3/2CPP4/9/9/9/9/9/B3p4/r8/4K4 w - - 0 1
 
-
-
-
-
-
 #run load_model("orange11_6_23.nnue");
 
 main :: () {
@@ -109,6 +104,8 @@ main :: () {
         make_move(*xiangqi, move);
         if is_capture(move) then {
           reset_hashes(*xiangqi);
+        } else if incheck(*xiangqi) {
+          mark_previous_move_check(*xiangqi);
         }
       }
 

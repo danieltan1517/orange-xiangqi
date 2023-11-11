@@ -359,6 +359,11 @@ popcount :: (value: u64) -> int #expand {
   return result;
 }
 
+incheck :: inline (xiangqi: *Xiangqi) -> bool {
+  att := attackers(xiangqi);
+  return incheck(xiangqi, att);
+}
+
 incheck :: (xiangqi: *Xiangqi, attflags: AttFlags) -> bool {
 
   knight_check :: (xiangqi: *Xiangqi, kni: int, diff: int) -> bool {
@@ -1737,7 +1742,7 @@ perft_divide :: (xiangqi: *Xiangqi, depth: int) -> int {
 }
 
 is_repeating :: (xiangqi: *Xiangqi) -> bool {
-  count := xiangqi.hashes.count - 1;
+  /*count := xiangqi.hashes.count - 1;
   hashes: [] u32 = xiangqi.hashes.hashes;
   hash := hashes[count];
   count -= 2;
@@ -1746,13 +1751,14 @@ is_repeating :: (xiangqi: *Xiangqi) -> bool {
       return true;
     }
     count -= 2;
-  }
+  }*/
 
   return false;
 }
 
 is_repeating_ntimes :: (xiangqi: *Xiangqi, nrepeats: int) -> bool {
 
+  /*
   // consecutive checks disallowed. however, check + chase + check allowed.
   count := xiangqi.hashes.count - 1;
   hashes: [] u32 = xiangqi.hashes.hashes;
@@ -1770,7 +1776,7 @@ is_repeating_ntimes :: (xiangqi: *Xiangqi, nrepeats: int) -> bool {
     }
     count -= 2;
     ntimes -= 1;
-  }
+  }*/
 
   return false;
 }
@@ -2004,17 +2010,32 @@ init_zobrist :: () {
 
 pop_hash :: (board_hash: *Board_Hash) -> u32 {
   board_hash.count -= 1;
-  return board_hash.hashes[board_hash.count];
+  return board_hash.info[board_hash.count].hash;
 }
 
 add_hash :: (board_hash: *Board_Hash, hash: u32) {
-  board_hash.hashes[board_hash.count] = hash;
+  board_hash.info[board_hash.count].hash = hash;
   board_hash.count += 1;
 }
 
+mark_previous_move_check :: inline (xiangqi: *Xiangqi) {
+  count := xiangqi.hashes.count - 1;
+  xiangqi.hashes.info[count].status = .Check;
+}
+
+mark_previous_move :: inline (xiangqi: *Xiangqi, status: Status) {
+  count := xiangqi.hashes.count - 1;
+  xiangqi.hashes.info[count].status = status;
+}
+
 Board_Hash :: struct {
-  count: s32;
-  hashes: [1023] u32;
+  count: int;
+  info: [511] Info;
+}
+
+Info :: struct {
+  hash: u32;
+  status: Status;
 }
 
 is_chase :: inline (move: Move32) -> bool {
@@ -2022,9 +2043,105 @@ is_chase :: inline (move: Move32) -> bool {
   return is_capture(move) && piece != G && piece != S;
 }
 
-PosStatus :: enum s8 {
+// judge relative to the side playing the game.
+judge :: (xiangqi: *Xiangqi) -> GameState {
+  judge_one :: (hashes: Board_Hash, count: int) -> bool, Violations {
+    if count < 0 then
+      return false, .PerpetualIdle;
+    
+    states: enum {Initial; Checking; Chasing;} = .Initial;
+
+    if hashes.info[count].status == .Cancel then {
+      return false, .PerpetualIdle;
+    }
+
+    repeating := false;
+    hash := hashes.info[count].hash;
+    violation: Violations = .PerpetualIdle;
+    count -= 2;
+    while count >= 0 {
+      if hashes.info[count].hash == hash then {
+        repeating = true;
+      }
+
+      if hashes.info[count + 1].status == .Cancel then {
+        break;
+      }
+      status := hashes.info[count].status;
+      if status == .Cancel then {
+        break;
+      }
+      if states == {
+      case .Initial;
+        if status == .Idle then {
+          states = .Initial; 
+        } else if status == .Check {
+          states = .Checking;
+        } else if status == .Chase {
+          states = .Chasing;
+        }
+      case .Checking;
+        if status != .Check {
+          violation = .PerpetualIdle;
+          break;
+        } else {
+          if hashes.info[count].hash == hash then {
+            violation = .PerpetualCheck;
+            break;
+          } 
+        }
+      case .Chasing;
+        if status != .Chase {
+          violation = .PerpetualIdle;
+          break;
+        } else {
+          if hashes.info[count].hash == hash then {
+            violation = .PerpetualChase;
+            break;
+          } 
+        }
+      }
+      count -= 2;
+    }
+
+    return repeating, violation;
+  }
+  
+  count := xiangqi.hashes.count - 1;
+  success, opps := judge_one(xiangqi.hashes, count);
+  if success == false then {
+    return .Undecided;
+  }
+  success=, ours := judge_one(xiangqi.hashes, count-1);
+  if success == false then {
+    return .Undecided;
+  }
+
+  if ours == opps then {
+    return .Draw;
+  } else if ours > opps then {
+    return .Loss;
+  } else {
+    return .Win;
+  }
+}
+
+Violations :: enum {
+  PerpetualIdle :: 0;
+  PerpetualChase :: 1;
+  PerpetualCheck :: 2;
+}
+
+GameState :: enum {
+  Undecided;
+  Win;
+  Draw;
+  Loss;
+}
+
+Status :: enum s32 {
   Idle;
-  Capture;
+  Cancel;
   Chase;
   Check;
 }
