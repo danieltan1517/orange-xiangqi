@@ -1481,7 +1481,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         mark_previous_move(*xiangqi, .Idle);
       }
 
-      if judge(*xiangqi) == {
+      if judge_ntimes(*xiangqi, 4) == {
       case .Undecided;
       case .Win;
         winner: GameEnd;

@@ -2106,6 +2106,74 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
   }
 }
 
+// judge relative to the side playing the game.
+judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState {
+  judge_one :: (hashes: Board_Hash, count: int, ntimes: int) -> bool, Violations {
+    if count < 0 then {
+      return false, .PerpetualIdle;
+    }
+    
+    if hashes.info[count].status == .Cancel then {
+      return false, .PerpetualIdle;
+    }
+
+    hash := hashes.info[count].hash;
+
+    count -= 2;
+    status: Status = 0;
+    repeating: bool = false;
+    while count >= 0 {
+      if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
+        break;
+      }
+      status |= hashes.info[count].status;
+      if hash == hashes.info[count].hash then {
+        repeating = true;
+        ntimes -= 1;
+        if ntimes >= 0 then {
+          break;
+        }
+      }
+      count -= 2;
+    }
+
+    if repeating == false then {
+      return false, .PerpetualIdle;
+    }
+
+    if status == .Check then {
+      return true, .PerpetualCheck;
+    }
+    
+    if status == .Chase then {
+      return true, .PerpetualChase;
+    }
+
+    return true, .PerpetualIdle;
+  }
+  
+  count := xiangqi.hashes.count - 1;
+  success, opps := judge_one(xiangqi.hashes, count, ntimes);
+  if success == false then {
+    return .Undecided;
+  }
+
+  success=, ours := judge_one(xiangqi.hashes, count-1, ntimes);
+  if success == false then {
+    return .Undecided;
+  }
+
+  if ours == opps then {
+    return .Draw;
+  } else if ours > opps then {
+    return .Loss;
+  } else {
+    return .Win;
+  }
+}
+
+
+
 Violations :: enum {
   PerpetualIdle :: 0;
   PerpetualChase :: 1;
