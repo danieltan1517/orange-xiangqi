@@ -84,13 +84,32 @@ main :: () {
         } else if incheck(*xiangqi) {
           mark_previous_move_check(*xiangqi);
         } else {
-          mark_previous_move(*xiangqi, .Idle);
+          /// TODO: Not optimal! bad, but for completeness of xiangqi rules.
+          nodes = 0;
+          hist: History;
+          hist.phase_value = compute_phase(*xiangqi);
+          nnue_incremental_init(*xiangqi, *hist);
+          evaluation := evaluate(*xiangqi, *hist);
+          make_null_move(*xiangqi, *hist);
+          score := -quiescene(*xiangqi, *hist, -MATE, MATE);
+          unmake_null_move(*xiangqi, *hist);
+          if score > (evaluation + 80) then {
+            mark_previous_move(*xiangqi, .Chase);
+          } else {
+            mark_previous_move(*xiangqi, .Idle);
+          }
         }
       }
 
     case "setoption";
       str = eat_spaces(str);
       setoption_command(str);
+
+    case "see";
+      str = eat_spaces(str);
+      token := parse_token(*str);
+      move := to_move32(*xiangqi, token);
+      see(*xiangqi, move);
 
     case "go";
       go_command(str, *xiangqi);

@@ -58,6 +58,34 @@ KNIGHT_TABLE : [90] u8 : u8.[
   0b00001010, 0b00001011, 0b00001111, 0b00001111, 0b00001111, 0b00001111, 0b00001111, 0b00000111, 0b00000101, 
 ];
 
+SQUARES : [2][90] u8 : .[
+  u8.[
+     0,  1,  2,  3,  4,  5,  6,  7,  8,  
+     9, 10, 11, 12, 13, 14, 15, 16, 17,  
+    18, 19, 20, 21, 22, 23, 24, 25, 26,  
+    27, 28, 29, 30, 31, 32, 33, 34, 35, 
+    36, 37, 38, 39, 40, 41, 42, 43, 44,
+    45, 46, 47, 48, 49, 50, 51, 52, 53,
+    54, 55, 56, 57, 58, 59, 60, 61, 62,
+    63, 64, 65, 66, 67, 68, 69, 70, 71,
+    72, 73, 74, 75, 76, 77, 78, 79, 80,
+    81, 82, 83, 84, 85, 86, 87, 88, 89,
+  ],
+
+  u8.[
+    81, 82, 83, 84, 85, 86, 87, 88, 89,
+    72, 73, 74, 75, 76, 77, 78, 79, 80,
+    63, 64, 65, 66, 67, 68, 69, 70, 71,
+    54, 55, 56, 57, 58, 59, 60, 61, 62,
+    45, 46, 47, 48, 49, 50, 51, 52, 53,
+    36, 37, 38, 39, 40, 41, 42, 43, 44,
+    27, 28, 29, 30, 31, 32, 33, 34, 35, 
+    18, 19, 20, 21, 22, 23, 24, 25, 26,  
+     9, 10, 11, 12, 13, 14, 15, 16, 17,  
+     0,  1,  2,  3,  4,  5,  6,  7,  8,  
+  ]
+];
+
 KING_DIR :: int.[-9, -1, 9, 1];
 ADV_DIR  :: int.[-10, -8, 8, 10];
 ELE_DIR  :: int.[-20, -16, 16, 20];
@@ -109,9 +137,37 @@ AttFlags :: enum_flags {
   Rook;
   Cannon;
   Pawn;
-
   All :: King | Advisor | Elephant | Knight | Rook | Cannon | Pawn;
+  KingEle :: King | Elephant;
+  KingAdv :: King | Advisor;
 }
+
+SEE_Flags :: enum_flags u8 {
+  King;
+  Adv;
+  Ele;
+  Pawn;
+  Knight;
+  Rook;
+  Cannon;
+  KingEle :: King | Ele;
+  KingAdv :: King | Adv;
+  PawnEle :: Pawn | Ele;
+  Attacking :: Knight | Rook | Cannon;
+}
+
+SEE_TABLE : [90] SEE_Flags: SEE_Flags.[
+     0,     0,     .Ele, .KingAdv,    .King, .KingAdv,     .Ele,     0,     0,
+     0,     0,        0,    .King, .KingAdv,    .King,        0,     0,     0,
+  .Ele,     0,        0, .KingAdv, .KingEle, .KingAdv,        0,     0,  .Ele,
+ .Pawn,     0,    .Pawn,        0,    .Pawn,        0,    .Pawn,     0, .Pawn,
+ .Pawn,     0, .PawnEle,        0,    .Pawn,        0, .PawnEle,     0, .Pawn,
+ .Pawn, .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn, .Pawn, .Pawn,
+ .Pawn, .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn, .Pawn, .Pawn,
+ .Pawn, .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn, .Pawn, .Pawn,
+ .Pawn, .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn, .Pawn, .Pawn,
+ .Pawn, .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn, .Pawn, .Pawn,
+];                                                       
 
 attackers :: (xiangqi: *Xiangqi) -> AttFlags #must {
 
@@ -1819,7 +1875,7 @@ to_move32 :: (xiangqi: *Xiangqi, str: string) -> Move32 {
 
 perft_test_suite :: () {
   // Perft Test Results from: https://www.chessprogramming.org/Chinese_Chess_Perft_Results
-  // TODO: Would be good to be able to find more perft results, so we can permutationally test
+  // Would be good to be able to find more perft results, so we can permutationally test
   // the movegen better. - Daniel (Feb 19. 2023)
 
   test :: (xiangqi: *Xiangqi, title: string, depth: int, expected: int) {
@@ -2171,8 +2227,6 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState {
     return .Win;
   }
 }
-
-
 
 Violations :: enum {
   PerpetualIdle :: 0;

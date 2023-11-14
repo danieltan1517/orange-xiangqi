@@ -198,7 +198,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     }
 
     // null move pruning.
-    if evaluation >= beta && depth > 2 {
+    if evaluation >= alpha && !in_nullmove(history) && depth > 2 {
       R := max(2, depth / 3) + 1;
       make_null_move(xiangqi, history);
       score := -negamax(xiangqi, history, *child_pv, depth - R, -beta, -beta+1);
@@ -411,7 +411,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
     }
 
     // null move pruning.
-    if evaluation >= beta && depth > 2 {
+    if evaluation >= alpha && !in_nullmove(history) && depth > 2 {
       R := max(2, depth / 3) + 1;
       make_null_move(xiangqi, history);
       score := -negascout_sse(xiangqi, history, depth - R, -beta, -beta+1);
@@ -841,7 +841,9 @@ unmake_move :: (xiangqi: *Xiangqi, history: *History, move: Move32) {
 }
 
 make_null_move :: (xiangqi: *Xiangqi, hist: *History) {
+  hist.null_flag = 1;
   make_null_move(xiangqi);
+  mark_previous_move(xiangqi, .Cancel);
   hist.moves[hist.ply] = NULL_MOVE;
   hist.ply += 1;
   nnue_incremental_nullmove(xiangqi, hist);
@@ -849,9 +851,11 @@ make_null_move :: (xiangqi: *Xiangqi, hist: *History) {
   fetch_and_add(*nodes);
 }
 
-unmake_null_move :: (xiangqi: *Xiangqi, history: *History) {
+unmake_null_move :: (xiangqi: *Xiangqi, hist: *History) {
+  hist.null_flag = 0;
+  mark_previous_move(xiangqi, .Idle);
   unmake_null_move(xiangqi);
-  history.ply -= 1;
+  hist.ply -= 1;
 }
 
 fetch_and_add :: (val: *int) #expand {
@@ -992,11 +996,16 @@ History :: struct {
   seldepth: int;
   phase_value: int;
   max_search_depth: int;
+  null_flag: int = 0;
   moves:       [128] Move32;
   accumulator: [128] Accumulator #align 64; 
   killer:  [128][2] Move32;
   counter: [14][90] Move32;
   history: [14][90][14][90] s32;
+}
+
+in_nullmove :: inline (h: *History) -> bool {
+  return h.null_flag == 1;
 }
 
 Flag :: enum s16 {
@@ -1105,4 +1114,42 @@ judge_position :: (xiangqi: *Xiangqi) #expand {
     `return -MATE + `ply;
   }
 }
+
+see :: (xiangqi: *Xiangqi, move: Move32) -> int {
+
+  add_attackers :: (xiangqi: *Xiangqi, flags: SEE_Flags, turn: int) -> bool {
+    return true;
+  }
+
+
+
+  // SQUARES
+  turn: int = xiangqi.turn;
+  from: int = move.from;
+  to: int = move.to;
+  ours: SEE_Flags = SEE_TABLE[SQUARES[turn ^ 1][to]] | SEE_Flags.Attacking;
+  opps: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
+  print("move %\n", move);
+  print("ours=%\nopps=%\n", ours, opps);
+  attackers: [4] s8;
+
+
+
+
+
+
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
