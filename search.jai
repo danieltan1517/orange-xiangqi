@@ -173,6 +173,8 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     return alpha;
   }
 
+  judge_position(xiangqi);
+
   if depth <= 0 then {
     pv.count = 0;
     return quiescene(xiangqi, history, alpha, beta);
@@ -215,12 +217,12 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
       }
 
       // null move pruning has failed. 
-      if score > -MATE+50 && score + 80 < alpha then {
+      if score > -MATE+100 && score + 50 < evaluation then {
         bestmove := child_pv.moves[0];
         if is_chase(bestmove) then {
           mark_previous_move(xiangqi, .Chase);
         }
-      }
+      } 
     }
 
     // razoring.
@@ -231,8 +233,6 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
       }
     }
   }
-
-  judge_position(xiangqi);
 
   extension := search_extensions(tthit, ttentry, incheck_position, xiangqi, history, depth, alpha, beta);
   if extension == -100 {
@@ -388,6 +388,9 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
   if alpha >= beta then {
     return alpha;
   }
+
+  judge_position(xiangqi);
+
   if depth <= 0 then {
     return quiescene(xiangqi, history, alpha, beta);
   }
@@ -435,8 +438,6 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       }
     }
   }
-
-  judge_position(xiangqi);
 
   moves: Moves;
   score: int = 0;

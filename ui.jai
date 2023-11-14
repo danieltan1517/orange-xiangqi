@@ -202,7 +202,7 @@ main :: () {
     }
      
     if status_string {
-      r = get_rect(5.0, 5.0, 8.5*k, k);
+      r = get_rect(5.0, 5.0, 15*k, k);
       label(r, status_string, label_theme);
     }
   }
@@ -1477,6 +1477,8 @@ gui_make_move :: (move: Move32, animate: bool) {
       if incheck(*xiangqi, att) then {
         status_string = "Check";
         mark_previous_move_check(*xiangqi);
+      } else {
+        mark_previous_move(*xiangqi, .Idle);
       }
 
       if judge(*xiangqi) == {
@@ -1492,6 +1494,8 @@ gui_make_move :: (move: Move32, animate: bool) {
         }
         on_game_end(winner);
       case .Draw;
+        status_string = "Threefold Repetition. No Rule Violation. Draw.";
+        on_game_end(.Draw);
       case .Loss;
         winner: GameEnd;
         if xiangqi.turn == 0 {
@@ -1542,6 +1546,9 @@ GameEnd :: enum {
 // winner = true, RED wins. 
 // winner = false, BLACK wins.
 on_game_end :: (winner: GameEnd) {
+
+  if winner == .Draw then 
+    record_draw();
 
   // record down the game to a pgn file.
   builder: String_Builder;
@@ -2636,8 +2643,6 @@ parse_uci_option :: (message: string) -> bool, Engine_Option #must {
 
 
 create_pgn :: (builder: *String_Builder, winner: GameEnd) {
-  // TODO: not complete...
-
   player_name :: (index: int) -> string {
     if index == -1 then
       return "John Doe";
@@ -2689,6 +2694,15 @@ create_pgn :: (builder: *String_Builder, winner: GameEnd) {
   if success {
     data := builder_to_string(builder, allocator=temp);
     file_write(*file, data);
+    file_close(*file);
+  }
+}
+
+record_draw :: () {
+  file, success := file_open("draws.txt", for_writing=true, keep_existing_content=true);
+  if success {
+    file_write(*file, to_fenstring(*xiangqi));
+    file_write(*file, "\n");
     file_close(*file);
   }
 }

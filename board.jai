@@ -1985,7 +1985,7 @@ init_between_table :: () {
   }
 }
 
-rseedu32: u32 = 1804289383;
+rseedu32: u32 = 0x1517_11_31;
 
 rand_u32 :: () -> u32 {
   rseedu32 ^= rseedu32 << 13;
@@ -2046,65 +2046,44 @@ is_chase :: inline (move: Move32) -> bool {
 // judge relative to the side playing the game.
 judge :: (xiangqi: *Xiangqi) -> GameState {
   judge_one :: (hashes: Board_Hash, count: int) -> bool, Violations {
-    if count < 0 then
+    if count < 0 then {
       return false, .PerpetualIdle;
+    }
     
-    states: enum {Initial; Checking; Chasing;} = .Initial;
-
     if hashes.info[count].status == .Cancel then {
       return false, .PerpetualIdle;
     }
 
-    repeating := false;
     hash := hashes.info[count].hash;
-    violation: Violations = .PerpetualIdle;
-    count -= 2;
-    while count >= 0 {
-      if hashes.info[count].hash == hash then {
-        repeating = true;
-      }
 
-      if hashes.info[count + 1].status == .Cancel then {
+    count -= 2;
+    status: Status = 0;
+    repeating: bool = false;
+    while count >= 0 {
+      if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
         break;
       }
-      status := hashes.info[count].status;
-      if status == .Cancel then {
+      status |= hashes.info[count].status;
+      if hash == hashes.info[count].hash then {
+        repeating = true;
         break;
-      }
-      if states == {
-      case .Initial;
-        if status == .Idle then {
-          states = .Initial; 
-        } else if status == .Check {
-          states = .Checking;
-        } else if status == .Chase {
-          states = .Chasing;
-        }
-      case .Checking;
-        if status != .Check {
-          violation = .PerpetualIdle;
-          break;
-        } else {
-          if hashes.info[count].hash == hash then {
-            violation = .PerpetualCheck;
-            break;
-          } 
-        }
-      case .Chasing;
-        if status != .Chase {
-          violation = .PerpetualIdle;
-          break;
-        } else {
-          if hashes.info[count].hash == hash then {
-            violation = .PerpetualChase;
-            break;
-          } 
-        }
       }
       count -= 2;
     }
 
-    return repeating, violation;
+    if repeating == false then {
+      return false, .PerpetualIdle;
+    }
+
+    if status == .Check then {
+      return true, .PerpetualCheck;
+    }
+    
+    if status == .Chase then {
+      return true, .PerpetualChase;
+    }
+
+    return true, .PerpetualIdle;
   }
   
   count := xiangqi.hashes.count - 1;
@@ -2112,6 +2091,7 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
   if success == false then {
     return .Undecided;
   }
+
   success=, ours := judge_one(xiangqi.hashes, count-1);
   if success == false then {
     return .Undecided;
@@ -2139,7 +2119,7 @@ GameState :: enum {
   Loss;
 }
 
-Status :: enum s32 {
+Status :: enum_flags s32 {
   Idle;
   Cancel;
   Chase;

@@ -83,6 +83,8 @@ main :: () {
           reset_hashes(*xiangqi);
         } else if incheck(*xiangqi) {
           mark_previous_move_check(*xiangqi);
+        } else {
+          mark_previous_move(*xiangqi, .Idle);
         }
       }
 
