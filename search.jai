@@ -76,7 +76,7 @@ search_should_stop: bool = false;
 
 print_info :: (main_thread: bool, depth: int, seldepth: int, nodes: int, time_ms: int, score: int, nps: int, pv: PV) {
   if main_thread == false return;
-  if abs(score) > 19980 {
+  if abs(score) > 19900 {
 
     // translate the score into a mating score.
     if score < 0 then {
@@ -1117,11 +1117,60 @@ judge_position :: (xiangqi: *Xiangqi) #expand {
 
 see :: (xiangqi: *Xiangqi, move: Move32) -> int {
 
-  add_attackers :: (xiangqi: *Xiangqi, flags: SEE_Flags, turn: int) -> bool {
-    return true;
+  Stack :: struct {
+    values: [8] s8;
+    count:  int;
   }
 
+  is_empty :: inline (stack: *Stack) -> bool {
+    return stack.count <= 0;
+  }
 
+  push :: inline (stack: *Stack, value: s8) {
+    stack.values[stack.count] = value;
+    stack.count += 1;
+  }
+
+  pop :: inline (stack: *Stack) -> s8 {
+    stack.count -= 1;
+    return stack.values[stack.count];
+  }
+
+  get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int) -> int {
+    if !is_empty(stack) then {
+      return pop(stack);
+    }
+
+    if flags & .Adv then {
+      
+    }
+
+    if flags & .Ele then {
+
+    }
+
+    if flags & .Pawn then {
+
+    }
+
+    if flags & .Cannon then {
+
+    }
+ 
+    if flags & .Knight then {
+
+    }
+
+    if flags & .Rook then {
+
+    }
+
+    if flags & .King then {
+
+    }
+
+    return -1;
+  }
 
   // SQUARES
   turn: int = xiangqi.turn;
@@ -1131,10 +1180,9 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
   opps: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
   print("move %\n", move);
   print("ours=%\nopps=%\n", ours, opps);
-  attackers: [4] s8;
 
-
-
+  our_stack: Stack;
+  opp_stack: Stack;
 
 
 

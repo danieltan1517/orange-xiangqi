@@ -1494,6 +1494,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         }
         on_game_end(winner);
       case .Draw;
+        record_draw();
         status_string = "Threefold Repetition. No Rule Violation. Draw.";
         on_game_end(.Draw);
       case .Loss;
@@ -1546,9 +1547,6 @@ GameEnd :: enum {
 // winner = true, RED wins. 
 // winner = false, BLACK wins.
 on_game_end :: (winner: GameEnd) {
-
-  if winner == .Draw then 
-    record_draw();
 
   // record down the game to a pgn file.
   builder: String_Builder;

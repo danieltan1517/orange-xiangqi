@@ -157,16 +157,16 @@ SEE_Flags :: enum_flags u8 {
 }
 
 SEE_TABLE : [90] SEE_Flags: SEE_Flags.[
-     0,     0,     .Ele, .KingAdv,    .King, .KingAdv,     .Ele,     0,     0,
-     0,     0,        0,    .King, .KingAdv,    .King,        0,     0,     0,
-  .Ele,     0,        0, .KingAdv, .KingEle, .KingAdv,        0,     0,  .Ele,
- .Pawn,     0,    .Pawn,        0,    .Pawn,        0,    .Pawn,     0, .Pawn,
- .Pawn,     0, .PawnEle,        0,    .Pawn,        0, .PawnEle,     0, .Pawn,
- .Pawn, .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn, .Pawn, .Pawn,
- .Pawn, .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn, .Pawn, .Pawn,
- .Pawn, .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn, .Pawn, .Pawn,
- .Pawn, .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn, .Pawn, .Pawn,
- .Pawn, .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn,    .Pawn, .Pawn, .Pawn,
+      0,      0,      .Ele,  .KingAdv,     .King,  .KingAdv,      .Ele,      0,      0,
+      0,      0,         0,     .King,  .KingAdv,     .King,         0,      0,      0,
+   .Ele,      0,         0,  .KingAdv,  .KingEle,  .KingAdv,         0,      0,   .Ele,
+  .Pawn,      0,     .Pawn,         0,     .Pawn,         0,     .Pawn,      0,  .Pawn,
+  .Pawn,      0,  .PawnEle,         0,     .Pawn,         0,  .PawnEle,      0,  .Pawn,
+  .Pawn,  .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,  .Pawn,  .Pawn,
+  .Pawn,  .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,  .Pawn,  .Pawn,
+  .Pawn,  .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,  .Pawn,  .Pawn,
+  .Pawn,  .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,  .Pawn,  .Pawn,
+  .Pawn,  .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,  .Pawn,  .Pawn,
 ];                                                       
 
 attackers :: (xiangqi: *Xiangqi) -> AttFlags #must {
