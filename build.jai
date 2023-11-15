@@ -14,6 +14,10 @@
     print("Type 'ui' to build the ui\n");
     print("Type 'nnue' to download the NNUE model.\n");
     print("Type 'release' to build an optimized build\n");
+    print("Type 'avx2' to build NNUE with AVX2 instructions\n");
+    print("Type 'sse' to build NNUE with SSE instructions\n");
+    print("Type 'cpu' to build NNUE with CPU instructions\n");
+    print("Type 'clean' to clean the build.\n");
     return;
   }
 
@@ -21,6 +25,7 @@
   build_ai    := false;
   build_ui    := false;
   release     := false;
+  clean_build := false;
   nnue_type = .auto;
   for arg: args {
     if arg == {
@@ -49,7 +54,13 @@
       nnue_type = .sse;
     case "cpu";
       nnue_type = .cpu;
+    case "clean";
+      clean_build = true;
     }
+  }
+  
+  if clean_build == true {
+    clean();
   }
 
   if build_ai == true {
@@ -137,6 +148,29 @@ build :: (exe_name: string, $add_files: #type (Workspace), release: bool) -> w: 
   return w;
 }
 
+remove_file :: (path: string) {
+  if file_exists(path) {
+    #if OS == .WINDOWS {
+      run_command("powershell", "-Command", sprint("rm -R -Fo %", path));
+    } else {
+      run_command("rm", "-rf", path);
+    }
+  }
+}
+
+clean :: () {
+  remove_file(".build");
+  #if OS == .WINDOWS {
+    remove_file("orange.exe");
+    remove_file("orange.pdb");
+    remove_file("xiangqi.exe");
+    remove_file("xiangqi.pdb");
+  } else {
+    remove_file("orange");
+    remove_file("xiangqi");
+  }
+}
+
 install_bayesian_elo :: () {
   // (Daniel) Feb 20, 2023
   // install/make Bayesian Elo by Remi Coulom.
@@ -219,21 +253,37 @@ bayeselo_run_pgn :: (output_file: string, pgn_files: ..string) {
   run_command("cat", output_file);
 }
 
+download_file :: (link: string, output_file: string) {
+  #if OS == .WINDOWS {
+    run_command("powershell", "-Command", sprint("Invoke-WebRequest \"%\" -O %", link, output_file));
+  } else {
+    run_command("wget", link, "-O", output_file);
+  }
+}
+
+unzip_file :: (zip_file: string) {
+  #if OS == .WINDOWS {
+    run_command("powershell", "-Command", sprint("Expand-Archive % -DestinationPath .", zip_file));
+  } else {
+    run_command("unzip", zip_file);
+  }
+}
+
 // how to download something from the command line using "wget".
 download_xiangqi_games :: () {
   fileId :: "14h_pI8Tel_Z6NV2SL9Z7_Y2hNdvC7-26";
   link := tprint("https://drive.google.com/uc?export=download&id=%1", fileId);
-  run_command("wget", link, "-O", "xiangqi_games.zip");
-  run_command("unzip", "xiangqi_games.zip");
-  run_command("rm", "xiangqi_games.zip");
+  download_file(link, "xiangqi_games.zip");
+  unzip_file("xiangqi_games.zip");
+  remove_file("xiangqi_games.zip");
 }
 
 download_nnue_model :: () {
   fileId :: "1XSKDCii4jSm83vWACLmuTsMCqmj5dyab";
   link := tprint("https://drive.google.com/uc?export=download&id=%1", fileId);
-  run_command("wget", link, "-O", "orange11_6_23.zip");
-  run_command("unzip", "orange11_6_23.zip");
-  run_command("rm", "orange11_6_23.zip");
+  download_file(link, "orange11_6_23.zip");
+  unzip_file("orange11_6_23.zip");
+  remove_file("orange11_6_23.zip");
 }
 
 NNUE_Type :: enum {
@@ -253,3 +303,4 @@ NNUE_Type :: enum {
 #import "Compiler";
 #import "Process";
 #import "Machine_X64";
+#import "File_Utilities";
