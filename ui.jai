@@ -141,7 +141,7 @@ main :: () {
       }
 
       r.y -= k + 5.0;
-      dropdown(r, string.["Moves", "Engines", "None"], *right_panel_display);
+      dropdown(r, get_ui_str().right_panel, *right_panel_display);
      
       r.y -= k + 5.0;
       if button(r, get_ui_str().undo) then {
@@ -162,7 +162,7 @@ main :: () {
       }
 
       r.y -= k + 5.0;
-      if base_checkbox(r, "Blindfold", blindfold) then {
+      if base_checkbox(r, get_ui_str().blindfold, blindfold) then {
         blindfold = !blindfold;
       }
 
@@ -189,10 +189,10 @@ main :: () {
 
       slider_theme := *default_overall_theme.slider_theme;
       r.y -= k + 5.0;
-      slider(r, *mov_anim_complete, 0.00, 1.0, 0.01, slider_theme, prefix=" Animation Speed ");
+      slider(r, *mov_anim_complete, 0.00, 1.0, 0.01, slider_theme, prefix=get_ui_str().animation_speed);
       r.y -= k + 5.0;
 
-      if base_checkbox(r, "Engine Logging", engine_logging) {
+      if base_checkbox(r, get_ui_str().logging, engine_logging) {
         engine_logging = !engine_logging;
       }      
       r.y -= k + 5.0;
@@ -756,7 +756,7 @@ main :: () {
 
   subwindow_newgame.rect = get_rect(50,50,580,580);
   subwindow_newgame.draw = draw_subwindow_newgame;
-  subwindow_newgame.title_text = "New Game";
+  subwindow_newgame.title_text = get_ui_str().new_game;
   subwindow_newgame.open = false;
 
   defer {
@@ -2479,11 +2479,15 @@ UI_String :: struct {
   redo: string = "Redo (Ctrl+Y)";
   piece_style: [] string = string.["European Set", "Chinese Set", "Chinese Calligraphy Set"];
   board_style: [] string = string.["White Board", "Mocha Board", "Bamboo Board", "Rust Board"];
+  right_panel: [] string = string.["Moves on Right Panel", "Engines Info on Right Panel", "None"];
   show_moves: string = "Show Moves";
   orientation: string = "Orientation";
   audio: string = "Audio";
   highlight_move: string = "Highlight Move";
   animations: string = "Animations";
+  animation_speed: string = "Animation Speed";
+  blindfold: string = "Blindfold";
+  logging: string = "Engine Logging";
 }
 
 English_UI := UI_String.{};
@@ -2493,11 +2497,15 @@ Chinese_UI := UI_String.{
   "重做 (Ctrl+Y)",
   string.["欧洲棋子", "中国棋子", "中国书法棋子"],
   string.["白棋盘", "咖啡棋盘", "竹子棋盘", "铁棋盘"],
-  "显示走法",
+  string.["显示着棋历史", "显示引擎配置", "无"],
+  "显示可行走法",
   "棋盘方向",
   "音效",
   "高亮走法",
   "动画",
+  "动画速度",
+  "盲棋模式",
+  "日志"
 };
 
 get_ui_str :: () -> *UI_String {
