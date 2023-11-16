@@ -2482,7 +2482,7 @@ UI_String :: struct {
   audio: string = "Audio";
   highlight_move: string = "Highlight Move";
   animations: string = "Animations";
-  animation_speed: string = "Animation Speed";
+  animation_speed: string = "Animation Speed ";
   blindfold: string = "Blindfold";
   logging: string = "Engine Logging";
   red_pv: string = "Red PV";
