@@ -215,14 +215,6 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
           }
         }
       }
-
-      // null move pruning has failed. 
-      if score > -MATE+100 && score + 50 < evaluation then {
-        bestmove := child_pv.moves[0];
-        if is_chase(bestmove) then {
-          mark_previous_move(xiangqi, .Chase);
-        }
-      } 
     }
 
     // razoring.
