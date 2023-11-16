@@ -1107,7 +1107,7 @@ judge_position :: (xiangqi: *Xiangqi) #expand {
   if state == {
   case .Undecided;
   case .Win;
-    `return MATE + `ply;
+    `return MATE - `ply;
   case .Draw;
     `return 0;
   case .Loss;
