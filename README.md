@@ -20,6 +20,7 @@ protocol complaint Xiangqi Engine. This project supports Windows, Mac, and Linux
 * Blindfold Mode
 * Drawing Arrows with Right Click
 * Display Engine Lines
+* English/Chinese Language Options
 
 ## Xiangqi Artificial Intelligence Engine
 * UCCI Protocol
