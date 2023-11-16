@@ -1526,7 +1526,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         on_game_end(.Draw);
       }
 
-      if counter30 >= 60 {
+      if counter30 >= 120 {
         status_string = get_ui_str().status_string[7];
         on_game_end(.Draw);
       }
@@ -2503,7 +2503,7 @@ UI_String :: struct {
     "Perpetual Check. Black Wins",
     "Threefold Repetition. No Rule Violation. Draw.",
     "Draw by Insufficient Material",
-    "Draw by 30 Move Rule"
+    "Draw by 60 Move Rule"
   ];
   time: string = "Time";
   time_ctrl: [] string = string.["None", "Clock", "Time Per Move", "Depth"];
@@ -2551,7 +2551,7 @@ Chinese_UI := UI_String.{
     "违规长将. 黑方胜",
     "三次重复局面. 无违规. 和棋.",
     "和棋. 双方无足够子力",
-    "和棋. 30步规则"
+    "和棋. 60步规则"
   ],
   "时间",
   string.["无", "限时", "限制每步搜索时间", "限制搜索深度"],
@@ -2816,11 +2816,12 @@ to_move32 :: (xiangqi: *Xiangqi, str: string) -> Move32 {
 }
 
 incr_count30 :: (move: Move32, count30: s8) -> s8 #expand {
-  if is_quiet(move) {
-    return count30 + 1;
-  } else {
+
+  if is_capture(move) || is_pawn_advance(move) {
     return 0;
   }
+  
+  return count30 + 1;
 }
 
 Engine_Option :: struct {

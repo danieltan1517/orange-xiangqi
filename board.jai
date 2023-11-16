@@ -735,6 +735,13 @@ is_capture :: (mov: Move32) -> bool #expand {
   return mov.capture != 0;
 }
 
+is_pawn_advance :: (move: Move32) -> bool {
+  piece := move.piece >> 2;
+  from: int = move.from;
+  to:   int = move.to;
+  return piece == 6 && abs(from - to) == 9;
+}
+
 add_row_moves :: (xiangqi: *Xiangqi, moves: *Moves, rows_bits: u64, move: Move32, col: int) {
   mov := move;
   while rows_bits {
