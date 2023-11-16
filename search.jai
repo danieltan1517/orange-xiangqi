@@ -528,7 +528,7 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
       // quiescene delta pruning. if a capture move does nothing
       // to improve the current score, skip the capture move.
       piece_value := QPIECE_VALUES[mov.capture >> 2]; 
-      if is_capture(mov) && !incheck_position && (futility_base + piece_value) < alpha then {
+      if is_capture(mov) && (futility_base + piece_value) < alpha then {
         continue;
       }
     }
