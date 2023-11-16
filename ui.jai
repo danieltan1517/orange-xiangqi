@@ -569,14 +569,14 @@ main :: () {
     label_r.x -= k;
     label_r.w *= .5;
 
-    if base_checkbox(label_r, "Red PV", show_r_eval) {
+    if base_checkbox(label_r, get_ui_str().red_pv, show_r_eval) {
       if red_ai == -1 then
         show_r_eval = false;
       else
         show_r_eval = !show_r_eval;
     }
     label_r.x += label_r.w + 5.0;
-    if base_checkbox(label_r, "Black PV", show_b_eval) {
+    if base_checkbox(label_r, get_ui_str().black_pv, show_b_eval) {
       if black_ai == -1 then
         show_b_eval = false;
       else
@@ -900,7 +900,7 @@ engines_panel :: (height: float, board_margin: float, width: float, k: float) #e
   for *engine: engines_array {
     array_add(*engine_names, engine.name);
   }
-  array_add(*engine_names, "Add Engine");
+  array_add(*engine_names, get_ui_str().add_engine);
 
   dropdown(r, engine_names, *engine_selection);
   slider_theme := *default_overall_theme.slider_theme;
@@ -910,7 +910,7 @@ engines_panel :: (height: float, board_margin: float, width: float, k: float) #e
 
   r.y -= k + 10.0;
   if engine_selection == engine_names.count - 1 {
-    label(r, "Name", label_theme);
+    label(r, get_ui_str().name, label_theme);
     r.x += k * XVAL;
     r.w -= k * XVAL;
     act1, _, name_state := text_input(r, engine_name_input, text_theme);
@@ -920,7 +920,7 @@ engines_panel :: (height: float, board_margin: float, width: float, k: float) #e
     r.x -= k * XVAL;
     r.w += k * XVAL;
     r.y -= k + 10.0;
-    label(r, "Path", label_theme);
+    label(r, get_ui_str().path, label_theme);
     r.x += k * XVAL;
     r.w -= k * XVAL;
     act2, __, engine_path_state := text_input(r, engine_path_input, text_theme);
@@ -930,13 +930,13 @@ engines_panel :: (height: float, board_margin: float, width: float, k: float) #e
     r.x -= k * XVAL;
     r.w += k * XVAL;
     r.y -= k + 10.0;
-    label(r, "Protocol", label_theme);
+    label(r, get_ui_str().protocol, label_theme);
     r.x += k * XVAL;
     r.w -= k * XVAL;
     dropdown(r, .["uci", "ucci"], *protocol_choice);
     r.y -= k + 10.0;
 
-    if button(r, "Load Engine") {
+    if button(r, get_ui_str().load_engine) {
       path := get_result(engine_path_state);
       engine, success := load_engine(path, cast(Protocol)protocol_choice);
       if success == true {
@@ -959,12 +959,12 @@ engines_panel :: (height: float, board_margin: float, width: float, k: float) #e
     y := r.y;
     engine := *engines_array[engine_selection];
     if engine.options.count == 0 {
-      label(r, "No Options Available", label_theme);
+      label(r, get_ui_str().no_options_available, label_theme);
       return;
     }
 
     r.y = board_margin + 3.0;
-    if button(r, "Cancel") {
+    if button(r, get_ui_str().cancel) {
       for *option: engine.options {
           using option;
           check_value = check_value_old;
@@ -989,7 +989,7 @@ engines_panel :: (height: float, board_margin: float, width: float, k: float) #e
     }
 
     r.y += k * 1.1;
-    if button(r, "Set Option") {
+    if button(r, get_ui_str().set_option) {
       process := *engine.process;
       for *option: engine.options {
         using option;
@@ -1475,7 +1475,7 @@ gui_make_move :: (move: Move32, animate: bool) {
 
       att := attackers(*xiangqi);
       if incheck(*xiangqi, att) then {
-        status_string = "Check";
+        status_string = get_ui_str().status_string[0];
         mark_previous_move_check(*xiangqi);
       } else {
         mark_previous_move(*xiangqi, .Idle);
@@ -1486,24 +1486,24 @@ gui_make_move :: (move: Move32, animate: bool) {
       case .Win;
         winner: GameEnd;
         if xiangqi.turn == 0 {
-          status_string = "Perpetual Check. Red Wins";  
+          status_string = get_ui_str().status_string[3];  
           winner = .Red_Wins;
         } else {
-          status_string = "Perpetual Check. Black Wins";  
+          status_string = get_ui_str().status_string[4];  
           winner = .Black_Wins;
         }
         on_game_end(winner);
       case .Draw;
         record_draw();
-        status_string = "Threefold Repetition. No Rule Violation. Draw.";
+        status_string = get_ui_str().status_string[5];
         on_game_end(.Draw);
       case .Loss;
         winner: GameEnd;
         if xiangqi.turn == 0 {
-          status_string = "Perpetual Check. Black Wins";  
+          status_string = get_ui_str().status_string[4];  
           winner = .Black_Wins;
         } else {
-          status_string = "Perpetual Check. Red Wins";  
+          status_string = get_ui_str().status_string[3];  
           winner = .Red_Wins;
         }
         on_game_end(winner);
@@ -1512,22 +1512,22 @@ gui_make_move :: (move: Move32, animate: bool) {
       if moves.count == 0 then {
         winner: GameEnd;
         if xiangqi.turn == 0 {
-          status_string = "Checkmate. Black Wins";  
+          status_string = get_ui_str().status_string[1];  
           winner = .Black_Wins;
         } else {
-          status_string = "Checkmate. Red Wins";  
+          status_string = get_ui_str().status_string[2];  
           winner = .Red_Wins;
         }
         on_game_end(winner);
       }
 
       if moves_made_count >= moves_made.count || is_draw(*xiangqi) {
-        status_string = "Draw by Insufficient Material";
+        status_string = get_ui_str().status_string[6];
         on_game_end(.Draw);
       }
 
       if counter30 >= 60 {
-        status_string = "Draw by 30 Move Rule";
+        status_string = get_ui_str().status_string[7];
         on_game_end(.Draw);
       }
       move_list_scroll_value = 10000;
@@ -2200,7 +2200,7 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
     text_theme: *Text_Input_Theme = *default_overall_theme.text_input_theme;
     label(rect, name, label_theme);
     rect.x += k * 2.5;
-    dropdown(rect, TimeCtrl, cast(*s32)*time_manager.time_control, identifier=id);
+    dropdown(rect, get_ui_str().time_ctrl, cast(*s32)*time_manager.time_control, identifier=id);
     rect.y -= k * 1.1;
     if time_manager.time_control == {
     case .Clock;
@@ -2223,8 +2223,6 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
     rect.x -= k * 2.5;
   }
 
-  TimeCtrl :: string.["None", "Clock", "Time Per Move", "Depth"];
-
   // themes
   slider_theme := *default_overall_theme.slider_theme;
   label_theme := *default_overall_theme.label_theme;
@@ -2244,16 +2242,15 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
   display_settings = false;
   k := clamp(height * 0.05, 15.0, 45.0);
   rect := get_rect(r.x + 3, r.y + r.h - k - 3, r.w - k*2.5 - 9, k);
-  label(rect, "Mode", label_theme);
+  label(rect, get_ui_str().mode, label_theme);
   rect.x += k * 2.5;
-  modes :: string.["Normal Game", "Engine Testing"];
   // TODO...UI is buggy. sometimes you press a button and it does not respond...
-  dropdown(rect, modes, *game_mode_type);
+  dropdown(rect, get_ui_str().modes, *game_mode_type);
   rect.x -= k * 2.5;
   rect.y -= k * 1.6;
   if game_mode_type == 0 {
     arr := get_engine_names(true);
-    label(rect, "Fen", label_theme);
+    label(rect, get_ui_str().fen, label_theme);
     rect.x += k * 2.5;
     action_c, _, fen_state := text_input(rect, subwindow_fenstring, text_theme);
     if action_c & .TEXT_MODIFIED {
@@ -2261,31 +2258,31 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
     }
     rect.y -= k * 1.1;
     rect.x -= k * 2.5;
-    label(rect, "Red", label_theme);
+    label(rect, get_ui_str().red, label_theme);
     rect.x += k * 2.5;
     dropdown(rect, arr, *newgame_w_choice);
     rect.x -= k * 2.5;
     rect.y -= k * 1.1;
-    label(rect, "Black", label_theme);
+    label(rect, get_ui_str().black, label_theme);
     rect.x += k * 2.5;
     dropdown(rect, arr, *newgame_b_choice);
     rect.y -= k * 1.1;
-    if base_checkbox(rect, "Equal Time Control", equal_time_control) {
+    if base_checkbox(rect, get_ui_str().equal_time_control, equal_time_control) {
       equal_time_control = !equal_time_control;
     }
  
     rect.x -= k * 2.5;
     rect.y -= k * 1.1;
  
-    time_management_ui(*rect, ifx equal_time_control then "Time" else "Red", *r_time_manager, k, 0);
+    time_management_ui(*rect, ifx equal_time_control then get_ui_str().time else get_ui_str().red, *r_time_manager, k, 0);
     if equal_time_control == false {
-      time_management_ui(*rect, "Black", *b_time_manager, k, 3);
+      time_management_ui(*rect, get_ui_str().black, *b_time_manager, k, 3);
     } else {
       b_time_manager = r_time_manager;
     }
  
     rect.x += k * 2.5;
-    if button(rect, "Play") {
+    if button(rect, get_ui_str().play) {
       counter30 = 0;
       subwindow_newgame.open = false;
       str := get_result(fen_state);
@@ -2323,7 +2320,7 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
     }
   } else if game_mode_type == 1 {
     arr := get_engine_names(false);
-    label(rect, "File", label_theme);
+    label(rect, get_ui_str().file, label_theme);
     rect.x += k * 2.5;
     ac3, _, file_state := text_input(rect, bookfilename, text_theme);
     if ac3 & .TEXT_MODIFIED {
@@ -2364,13 +2361,13 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
 
     rect.y -= k * 1.1;
     rect.x -= k * 2.5;
-    time_management_ui(*rect, "Time", *r_time_manager, k, 0);
+    time_management_ui(*rect, get_ui_str().time, *r_time_manager, k, 0);
     b_time_manager = r_time_manager;
 
     rect.y -= k * 1.1;
     rect.x += k * 2.5;
     // TODO: Copy/pasted the code...
-    if button(rect, "Play") {
+    if button(rect, get_ui_str().play) {
       counter30 = 0;
       subwindow_newgame.open = false;
       subwindow_fenstring = "startpos";
@@ -2488,6 +2485,36 @@ UI_String :: struct {
   animation_speed: string = "Animation Speed";
   blindfold: string = "Blindfold";
   logging: string = "Engine Logging";
+  red_pv: string = "Red PV";
+  black_pv: string = "Black PV";
+  add_engine: string = "Add Engine";
+  name: string = "Name";
+  path: string = "Path";
+  protocol: string = "Protocol";
+  load_engine: string = "Load Engine";
+  no_options_available: string = "No Options Available";
+  cancel: string = "Cancel";
+  set_option: string = "Set Option";
+  status_string: [] string = string.[
+    "Check",
+    "Checkmate. Black Wins",
+    "Checkmate. Red Wins",
+    "Perpetual Check. Red Wins",
+    "Perpetual Check. Black Wins",
+    "Threefold Repetition. No Rule Violation. Draw.",
+    "Draw by Insufficient Material",
+    "Draw by 30 Move Rule"
+  ];
+  time: string = "Time";
+  time_ctrl: [] string = string.["None", "Clock", "Time Per Move", "Depth"];
+  mode: string = "Mode";
+  modes: [] string = string.["Normal Game", "Engine Testing"];
+  fen: string = "Fen";
+  red: string = "Red";
+  black: string = "Black";
+  equal_time_control: string = "Equal Time Control";
+  play: string = "Play";
+  file: string = "File";
 }
 
 English_UI := UI_String.{};
@@ -2505,7 +2532,37 @@ Chinese_UI := UI_String.{
   "动画",
   "动画速度",
   "盲棋模式",
-  "日志"
+  "日志",
+  "红方走法",
+  "黑方走法",
+  "添加引擎",
+  "引擎名",
+  "引擎路径",
+  "引擎协议",
+  "加载引擎",
+  "无可用选项",
+  "取消",
+  "设置选项",
+  string.[
+    "将军",
+    "将死. 黑方胜",
+    "将死. 红方胜",
+    "违规长将. 红方胜",
+    "违规长将. 黑方胜",
+    "三次重复局面. 无违规. 和棋.",
+    "和棋. 双方无足够子力",
+    "和棋. 30步规则"
+  ],
+  "时间",
+  string.["无", "限时", "限制每步搜索时间", "限制搜索深度"],
+  "模式",
+  string.["普通对局", "引擎测试"],
+  "Fen",
+  "红方",
+  "黑方",
+  "等时控制",
+  "开始游戏",
+  "文件",
 };
 
 get_ui_str :: () -> *UI_String {
