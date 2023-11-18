@@ -1100,34 +1100,49 @@ judge_position :: (xiangqi: *Xiangqi) #expand {
   }
 }
 
+Stack :: struct {
+  values: [8] s8;
+  count:  int;
+}
+
+is_empty :: inline (stack: *Stack) -> bool {
+  return stack.count <= 0;
+}
+
+push :: inline (stack: *Stack, value: s8) {
+  stack.values[stack.count] = value;
+  stack.count += 1;
+}
+
+pop :: inline (stack: *Stack) -> s8 {
+  stack.count -= 1;
+  return stack.values[stack.count];
+}
+
+dir_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, TABLE: [90] u8, DIR: [] int, code: int) {
+  bits: u64 = TABLE[to];
+  while bits {
+    i := bit_scan_forward(bits);
+    bits &= bits - 1;
+    from := cast(s8)(to + DIR[i]);
+    if (xiangqi.board[from] >> 2) == code then {
+      push(stack, from);
+    }
+  }
+}
+
 see :: (xiangqi: *Xiangqi, move: Move32) -> int {
 
-  Stack :: struct {
-    values: [8] s8;
-    count:  int;
-  }
-
-  is_empty :: inline (stack: *Stack) -> bool {
-    return stack.count <= 0;
-  }
-
-  push :: inline (stack: *Stack, value: s8) {
-    stack.values[stack.count] = value;
-    stack.count += 1;
-  }
-
-  pop :: inline (stack: *Stack) -> s8 {
-    stack.count -= 1;
-    return stack.values[stack.count];
-  }
-
-  get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int) -> int {
+  get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int, to: int) -> int {
     if !is_empty(stack) then {
       return pop(stack);
     }
 
     if flags & .Adv then {
-      
+      dir_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ADV_DIR, 1);
+      if !is_empty(stack) then {
+        return pop(stack);
+      }
     }
 
     if flags & .Ele then {
@@ -1135,7 +1150,11 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
     }
 
     if flags & .Pawn then {
-
+      PAWN_SEE : [2][3] int : .[ .[-1, 1, -9], .[9, -1, 1]];
+      dir_see(xiangqi, stack, to, KP_TABLE[turn], PAWN_SEE[turn], 6);
+      if !is_empty(stack) then {
+        return pop(stack);
+      }
     }
 
     if flags & .Cannon then {
@@ -1151,7 +1170,10 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
     }
 
     if flags & .King then {
-
+      dir_see(xiangqi, stack, to, KP_TABLE[turn], KING_DIR, 0);
+      if !is_empty(stack) then {
+        return pop(stack);
+      }
     }
 
     return -1;
@@ -1169,7 +1191,25 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
   our_stack: Stack;
   opp_stack: Stack;
 
+  // Rook: 800
+  // Cannon: 400
+  // Horse: 400
+  // Elephant: 200
+  // Advisor: 200
+  // Pawn: 100 (homeland). 200 (passed)
+  VALUES :: int.[0, 200, 200, 400, 800, 400, 100];
 
+  gain: [16] int;
+  gain[0] = VALUES[xiangqi.board[to] >> 2];
+
+  d := 0;
+  while true {
+    d += 1;
+    turn ^= 1;
+    stack_to_pop := ifx turn == xiangqi.turn then *our_stack else *opp_stack;
+   
+
+  }
 
   return 0;
 }
