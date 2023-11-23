@@ -38,6 +38,13 @@ main :: () {
  
     case "d";
       print("%\n", xiangqi);
+
+    case "flip";
+      if incheck(*xiangqi) {
+        print("info string in check. cannot flip\n");
+      } else {
+        make_null_move(*xiangqi);
+      }
  
     case "eval";
       eval := evaluate(*xiangqi);
@@ -96,7 +103,8 @@ main :: () {
       str = eat_spaces(str);
       token := parse_token(*str);
       move := to_move32(*xiangqi, token);
-      see(*xiangqi, move);
+      see_score := see(*xiangqi, move);
+      print("info string SEE Score %\n", see_score);
 
     case "go";
       go_command(str, *xiangqi);

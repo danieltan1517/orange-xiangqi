@@ -492,28 +492,28 @@ incheck :: (xiangqi: *Xiangqi, attflags: AttFlags) -> bool {
   return false;
 }
 
-is_legal_ksq :: (xiangqi: *Xiangqi, move: Move32, ksq: int, attflags: AttFlags) -> bool {
-
-  is_attacked_by_knight :: (xiangqi: *Xiangqi, kni: int, diff: int, from: int, to: int) -> bool {
-    start := 0;
-    end := 3;
-    if diff > 0 {
-      start = 4;
-      end = 7;
-    } 
-    for i : start..end {
-      if diff == KNI_DIR[i] then {
-        index := kni + KNI_BLK[i];
-        if to == index {
-          break;
-        }
-        if from == index || xiangqi.board[index] == 0 then {
-          return true;
-        }
+is_attacked_by_knight :: (xiangqi: *Xiangqi, kni: int, diff: int, from: int, to: int) -> bool {
+  start := 0;
+  end := 3;
+  if diff > 0 {
+    start = 4;
+    end = 7;
+  } 
+  for i : start..end {
+    if diff == KNI_DIR[i] then {
+      index := kni + KNI_BLK[i];
+      if to == index {
+        break;
+      }
+      if from == index || xiangqi.board[index] == 0 then {
+        return true;
       }
     }
-    return false;
   }
+  return false;
+}
+
+is_legal_ksq :: (xiangqi: *Xiangqi, move: Move32, ksq: int, attflags: AttFlags) -> bool {
 
   legal :: (pieces: Array_u8, arr: [2] u64, ksq: int, to: int, attflags: AttFlags, type: AttFlags, number: int) -> bool {
     if attflags & type {

@@ -523,6 +523,10 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
       if is_capture(mov) && (futility_base + piece_value) < alpha then {
         continue;
       }
+
+      /*if is_capture(mov) && see(xiangqi, mov) < 0 then {
+        continue;
+      }*/
     }
 
     make_move(xiangqi, history, mov);
@@ -1119,77 +1123,138 @@ pop :: inline (stack: *Stack) -> s8 {
   return stack.values[stack.count];
 }
 
-dir_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, TABLE: [90] u8, DIR: [] int, code: int) {
+dir_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, TABLE: [90] u8, DIR: [] int, code: int, turn: int) {
   bits: u64 = TABLE[to];
+  piece_code := (code << 2) | (turn << 1) | 1;
   while bits {
     i := bit_scan_forward(bits);
     bits &= bits - 1;
     from := cast(s8)(to + DIR[i]);
-    if (xiangqi.board[from] >> 2) == code then {
+    if xiangqi.board[from] == piece_code then {
       push(stack, from);
+    }
+  }
+}
+
+ele_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, TABLE: [90] u8, DIR: [] int, BLOCKS: [] int, code: int, turn: int) {
+  bits: u64 = TABLE[to];
+  piece_code := (code << 2) | (turn << 1) | 1;
+  while bits {
+    i := bit_scan_forward(bits);
+    bits &= bits - 1;
+    blocking := to + BLOCKS[i];
+    // piece blocking movement.
+    if xiangqi.board[blocking] != 0 {
+      continue; 
+    }
+
+    from := cast(s8) (to + DIR[i]);
+    if xiangqi.board[from] == piece_code then {
+      push(stack, from);
+    }
+  }
+}
+
+kni_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, turn: int) {
+  // todo: this function doesn't correctly interact with advisors...
+  for kni : xiangqi.pieces[turn].kni {
+    abs_diff, diff := index_abs_diff(to, kni);
+    if abs_diff > 19 then {
+      continue;
+    }
+  
+    if is_attacked_by_knight(xiangqi, kni, diff, kni, to) then {
+      push(stack, cast(s8) kni);
+    }
+  }
+}
+
+sliding_see :: (pieces: Array_u8, stack: *Stack, arr: [2] u64, to: int, count: int) {
+  for sq : pieces {
+    between, r := get_table_entry(sq, to);
+    p := popcount(arr[r] & between);
+
+    if p == count then {
+      //print("push ups\n");
+      push(stack, cast(s8) sq);
     }
   }
 }
 
 see :: (xiangqi: *Xiangqi, move: Move32) -> int {
 
-  get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int, to: int) -> int {
+  get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int, to: int, arr: [2] u64) -> int, SEE_Flags {
     if !is_empty(stack) then {
-      return pop(stack);
+      return pop(stack), flags;
     }
 
     if flags & .Adv then {
-      dir_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ADV_DIR, 1);
+      dir_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ADV_DIR, 1, turn);
+      flags &= ~.Adv;
       if !is_empty(stack) then {
-        return pop(stack);
+        return pop(stack), flags;
       }
     }
 
     if flags & .Ele then {
-
+      ele_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, 2, turn);
+      flags &= ~.Ele;
+      if !is_empty(stack) then {
+        return pop(stack), flags;
+      }
     }
 
     if flags & .Pawn then {
-      PAWN_SEE : [2][3] int : .[ .[-1, 1, -9], .[9, -1, 1]];
-      dir_see(xiangqi, stack, to, KP_TABLE[turn], PAWN_SEE[turn], 6);
-      if !is_empty(stack) then {
-        return pop(stack);
+      dir_see(xiangqi, stack, to, KP_TABLE[turn ^ 1], KING_DIR, 6, turn);
+      flags &= ~.Pawn;
+      while !is_empty(stack) {
+        pawn_sq := pop(stack);
+        //print("shit % %\n", formatInt(arr[0], 2), formatInt(1 << (pawn_sq % 9), 2));
+        //print("shit % %\n", formatInt(arr[1], 2), formatInt(1 << (pawn_sq / 9), 2));
+        if pawn_sq % 9 != to % 9 && arr[0] & cast(u64)(1 << (pawn_sq % 9)) {
+          return pawn_sq, flags;
+        }
+
+        if pawn_sq / 9 != to / 9 && arr[1] & cast(u64)(1 << (pawn_sq / 9)) {
+          return pawn_sq, flags;
+        }
       }
     }
 
     if flags & .Cannon then {
-
+      sliding_see(xiangqi.pieces[turn].cannon, stack, arr, to, 3);
+      flags &= ~.Cannon;
+      if !is_empty(stack) then {
+        return pop(stack), flags;
+      }
     }
  
     if flags & .Knight then {
-
-    }
-
-    if flags & .Rook then {
-
-    }
-
-    if flags & .King then {
-      dir_see(xiangqi, stack, to, KP_TABLE[turn], KING_DIR, 0);
+      kni_see(xiangqi, stack, to, turn);
+      flags &= ~.Knight;
       if !is_empty(stack) then {
-        return pop(stack);
+        return pop(stack), flags;
       }
     }
 
-    return -1;
+    if flags & .Rook then {
+      sliding_see(xiangqi.pieces[turn].rook, stack, arr, to, 2);
+      flags &= ~.Rook;
+      if !is_empty(stack) then {
+        return pop(stack), flags;
+      }
+    }
+
+    if flags & .King then {
+      flags &= ~.King;
+      dir_see(xiangqi, stack, to, KP_TABLE[turn], KING_DIR, 0, turn);
+      if !is_empty(stack) then {
+        return pop(stack), flags;
+      }
+    }
+
+    return -1, flags;
   }
-
-  // SQUARES
-  turn: int = xiangqi.turn;
-  from: int = move.from;
-  to: int = move.to;
-  ours: SEE_Flags = SEE_TABLE[SQUARES[turn ^ 1][to]] | SEE_Flags.Attacking;
-  opps: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
-  print("move %\n", move);
-  print("ours=%\nopps=%\n", ours, opps);
-
-  our_stack: Stack;
-  opp_stack: Stack;
 
   // Rook: 800
   // Cannon: 400
@@ -1197,21 +1262,96 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
   // Elephant: 200
   // Advisor: 200
   // Pawn: 100 (homeland). 200 (passed)
-  VALUES :: int.[0, 200, 200, 400, 800, 400, 100];
+  VALUES :: int.[50000, 200, 200, 400, 800, 450, 200];
+
+  // SQUARES
+  turn: int = xiangqi.turn;
+  from: int = move.from;
+  to: int = move.to;
+
+  if xiangqi.board[to] != 0 && VALUES[xiangqi.board[to] >> 2] > VALUES[xiangqi.board[from] >> 2] then {
+    return VALUES[xiangqi.board[to] >> 2];
+  }
+
+  ours: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
+  opps: SEE_Flags = SEE_TABLE[SQUARES[turn ^ 1][to]] | SEE_Flags.Attacking;
+  //print("move %\n", move);
+
+
+  row := to % 9;
+  col := to / 9;
+  occ_row: u64 = xiangqi.rows[col];
+  occ_col: u64 = xiangqi.cols[row];
+  arr: [2] u64 = .[occ_row, occ_col];
+  arr[0] |= cast(u64)(1 << row);
+  arr[1] |= cast(u64)(1 << col);
+  our_stack: Stack;
+  opp_stack: Stack;
 
   gain: [16] int;
-  gain[0] = VALUES[xiangqi.board[to] >> 2];
+  if xiangqi.board[to] != 0 then {
+    gain[0] = VALUES[xiangqi.board[to] >> 2];
+  } else {
+    gain[0] = 0;
+  }
 
   d := 0;
   while true {
     d += 1;
     turn ^= 1;
-    stack_to_pop := ifx turn == xiangqi.turn then *our_stack else *opp_stack;
-   
+    gain[d] = VALUES[xiangqi.board[from] >> 2] - gain[d-1];
 
+    piecey := xiangqi.board[from] >> 2;
+    /*if piecey == 0 {
+      //print("G %\n", from);
+    } else if piecey == 1 {
+      print("A %\n", from);
+    } else if piecey == 2 {
+      print("E %\n", from);
+    } else if piecey == 3 {
+      print("N %\n", from);
+    } else if piecey == 4 {
+      print("R %\n", from);
+    } else if piecey == 5 {
+      print("C %\n", from);
+    } else {
+      print("S %\n", from);
+    }*/
+    //print("GAIN: %\n", gain[d]);
+    // prune.
+    if max(-gain[d-1], gain[d]) < 0 then
+      break; 
+
+    stack_to_pop := ifx turn == xiangqi.turn then *our_stack else *opp_stack;
+    flags := ifx turn == xiangqi.turn then ours else opps;
+
+    // consider x-rays
+    // from.
+    from_r := from % 9;
+    from_c := from / 9;
+    if from_r != row then {
+      arr[0] ^= cast(u64)(1 << from_r);
+    } else if from_c != col {
+      arr[1] ^= cast(u64)(1 << from_c);
+    }
+
+    // get the next attacker.
+    from, flags= = get_attackers(xiangqi, stack_to_pop, flags, turn, to, arr);
+    if turn == xiangqi.turn then {
+      ours = flags;
+    } else {
+      opps = flags;
+    }
+
+    if from == -1 then break;
+    //print("% % %\n", from, flags, ifx turn == 0 then "red" else "black");
   }
 
-  return 0;
+  for < i: d-1..1 {
+    gain[i-1]= -max(-gain[i-1], gain[i]);
+  }
+
+  return gain[0];
 }
 
 
