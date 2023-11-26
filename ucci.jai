@@ -35,7 +35,7 @@ main :: () {
  
     case "perft_all";
       perft_test_suite();
- 
+
     case "d";
       print("%\n", xiangqi);
 

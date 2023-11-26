@@ -502,7 +502,7 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
   // we may need to do some reevaluation.
   // these qpiece values are far above the average piece values on purpose, ensuring that the pruning 
   // does not accidentally prune much needed evaluations.
-  QPIECE_VALUES :: int.[0, 440, 440, 575, 675, 575, 350];
+  QPIECE_VALUES :: int.[0, 240, 240, 375, 675, 375, 250];
 
   evasion_moves := 0;
  
@@ -524,9 +524,10 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
         continue;
       }
 
-      /*if is_capture(mov) && see(xiangqi, mov) < 0 then {
+      // SEE quiescene pruning.
+      if is_capture(mov) && see(xiangqi, mov) < 0 then {
         continue;
-      }*/
+      }
     }
 
     make_move(xiangqi, history, mov);
@@ -1123,145 +1124,187 @@ pop :: inline (stack: *Stack) -> s8 {
   return stack.values[stack.count];
 }
 
-dir_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, TABLE: [90] u8, DIR: [] int, code: int, turn: int) {
+dir_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, TABLE: [90] u8, DIR: [] int, code: int, turn: int, bitboard: Bitboard128) {
   bits: u64 = TABLE[to];
   piece_code := (code << 2) | (turn << 1) | 1;
   while bits {
     i := bit_scan_forward(bits);
     bits &= bits - 1;
     from := cast(s8)(to + DIR[i]);
+    if is_set(bitboard, from) then {
+      continue;
+    }
+
     if xiangqi.board[from] == piece_code then {
       push(stack, from);
     }
   }
 }
 
-ele_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, TABLE: [90] u8, DIR: [] int, BLOCKS: [] int, code: int, turn: int) {
+ele_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, TABLE: [90] u8, DIR: [] int, BLOCKS: [] int, code: int, turn: int, bitboard: Bitboard128) {
   bits: u64 = TABLE[to];
   piece_code := (code << 2) | (turn << 1) | 1;
   while bits {
     i := bit_scan_forward(bits);
     bits &= bits - 1;
     blocking := to + BLOCKS[i];
+
+    from := cast(s8) (to + DIR[i]);
+    if is_set(bitboard, from) then {
+      continue;
+    }
+
     // piece blocking movement.
     if xiangqi.board[blocking] != 0 {
       continue; 
     }
 
-    from := cast(s8) (to + DIR[i]);
     if xiangqi.board[from] == piece_code then {
       push(stack, from);
     }
   }
 }
 
-kni_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, turn: int) {
-  // todo: this function doesn't correctly interact with advisors...
+is_attacked_by_knight :: (xiangqi: *Xiangqi, kni: int, diff: int, from: int, to: int, bitboard: Bitboard128) -> bool {
+  start := 0;
+  end := 3;
+  if diff > 0 {
+    start = 4;
+    end = 7;
+  } 
+  for i : start..end {
+    if diff == KNI_DIR[i] then {
+      index := kni + KNI_BLK[i];
+      if xiangqi.board[index] == 0 || is_set(bitboard, index) then {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+kni_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, turn: int, bitboard: Bitboard128) {
   for kni : xiangqi.pieces[turn].kni {
+    if is_set(bitboard, kni) then {
+      continue;
+    }
+
     abs_diff, diff := index_abs_diff(to, kni);
     if abs_diff > 19 then {
       continue;
     }
   
-    if is_attacked_by_knight(xiangqi, kni, diff, kni, to) then {
+    if is_attacked_by_knight(xiangqi, kni, diff, kni, to, bitboard) then {
       push(stack, cast(s8) kni);
     }
   }
 }
 
-sliding_see :: (pieces: Array_u8, stack: *Stack, arr: [2] u64, to: int, count: int) {
+sliding_see :: (pieces: Array_u8, stack: *Stack, arr: [2] u64, to: int, count: int, bitboard: Bitboard128) {
   for sq : pieces {
+    if is_set(bitboard, sq) then {
+      continue;
+    }
+
     between, r := get_table_entry(sq, to);
     p := popcount(arr[r] & between);
-
+    move: Move32;
+    move.from = xx sq;
+    move.to = xx to;
     if p == count then {
-      //print("push ups\n");
       push(stack, cast(s8) sq);
     }
   }
 }
 
+// static exchange evaluation. SEE.
+// todo: maybe this function should handle pins also.
 see :: (xiangqi: *Xiangqi, move: Move32) -> int {
 
-  get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int, to: int, arr: [2] u64) -> int, SEE_Flags {
-    if !is_empty(stack) then {
-      return pop(stack), flags;
+  get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int, to: int, arr: [2] u64, bitboard: Bitboard128, flying_general: bool) -> int, SEE_Flags {
+    if !is_empty(stack) {
+      sq := pop(stack);
+      return sq, flags;
     }
 
     if flags & .Adv then {
-      dir_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ADV_DIR, 1, turn);
+      dir_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ADV_DIR, 1, turn, bitboard);
       flags &= ~.Adv;
-      if !is_empty(stack) then {
-        return pop(stack), flags;
+      if !is_empty(stack) {
+        sq := pop(stack);
+        return sq, flags;
       }
     }
 
     if flags & .Ele then {
-      ele_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, 2, turn);
+      ele_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, 2, turn, bitboard);
       flags &= ~.Ele;
-      if !is_empty(stack) then {
-        return pop(stack), flags;
+      if !is_empty(stack) {
+        sq := pop(stack);
+        return sq, flags;
       }
     }
 
     if flags & .Pawn then {
-      dir_see(xiangqi, stack, to, KP_TABLE[turn ^ 1], KING_DIR, 6, turn);
+      dir_see(xiangqi, stack, to, KP_TABLE[turn ^ 1], KING_DIR, 6, turn, bitboard);
       flags &= ~.Pawn;
-      while !is_empty(stack) {
-        pawn_sq := pop(stack);
-        //print("shit % %\n", formatInt(arr[0], 2), formatInt(1 << (pawn_sq % 9), 2));
-        //print("shit % %\n", formatInt(arr[1], 2), formatInt(1 << (pawn_sq / 9), 2));
-        if pawn_sq % 9 != to % 9 && arr[0] & cast(u64)(1 << (pawn_sq % 9)) {
-          return pawn_sq, flags;
-        }
-
-        if pawn_sq / 9 != to / 9 && arr[1] & cast(u64)(1 << (pawn_sq / 9)) {
-          return pawn_sq, flags;
-        }
+      if !is_empty(stack) {
+        sq := pop(stack);
+        return sq, flags;
       }
     }
 
     if flags & .Cannon then {
-      sliding_see(xiangqi.pieces[turn].cannon, stack, arr, to, 3);
+      sliding_see(xiangqi.pieces[turn].cannon, stack, arr, to, 3, bitboard);
       flags &= ~.Cannon;
-      if !is_empty(stack) then {
-        return pop(stack), flags;
+      if !is_empty(stack) {
+        sq := pop(stack);
+        return sq, flags;
       }
     }
  
     if flags & .Knight then {
-      kni_see(xiangqi, stack, to, turn);
+      kni_see(xiangqi, stack, to, turn, bitboard);
       flags &= ~.Knight;
-      if !is_empty(stack) then {
-        return pop(stack), flags;
+      if !is_empty(stack) {
+        sq := pop(stack);
+        return sq, flags;
       }
     }
 
     if flags & .Rook then {
-      sliding_see(xiangqi.pieces[turn].rook, stack, arr, to, 2);
+      sliding_see(xiangqi.pieces[turn].rook, stack, arr, to, 2, bitboard);
       flags &= ~.Rook;
-      if !is_empty(stack) then {
-        return pop(stack), flags;
+      if !is_empty(stack) {
+        sq := pop(stack);
+        return sq, flags;
       }
     }
 
     if flags & .King then {
       flags &= ~.King;
-      dir_see(xiangqi, stack, to, KP_TABLE[turn], KING_DIR, 0, turn);
-      if !is_empty(stack) then {
-        return pop(stack), flags;
+      dir_see(xiangqi, stack, to, KP_TABLE[turn], KING_DIR, 0, turn, bitboard);
+      if !is_empty(stack) {
+        sq := pop(stack);
+        return sq, flags;
+      }
+    }
+
+    if flying_general == true then {
+      sliding_see(xiangqi.pieces[turn].king, stack, arr, to, 2, bitboard);
+      while !is_empty(stack) {
+        sq := pop(stack);
+        if is_set(bitboard, sq) {
+          continue;
+        }
+        return sq, flags;
       }
     }
 
     return -1, flags;
   }
 
-  // Rook: 800
-  // Cannon: 400
-  // Horse: 400
-  // Elephant: 200
-  // Advisor: 200
-  // Pawn: 100 (homeland). 200 (passed)
+  // values for SEE algorithm.
   VALUES :: int.[50000, 200, 200, 400, 800, 450, 200];
 
   // SQUARES
@@ -1275,9 +1318,6 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
 
   ours: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
   opps: SEE_Flags = SEE_TABLE[SQUARES[turn ^ 1][to]] | SEE_Flags.Attacking;
-  //print("move %\n", move);
-
-
   row := to % 9;
   col := to / 9;
   occ_row: u64 = xiangqi.rows[col];
@@ -1287,10 +1327,16 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
   arr[1] |= cast(u64)(1 << col);
   our_stack: Stack;
   opp_stack: Stack;
+  flying_general := false;
+
+  piece_code := xiangqi.board[from] >> 2;
+  bitboard: Bitboard128;
 
   gain: [16] int;
-  if xiangqi.board[to] != 0 then {
-    gain[0] = VALUES[xiangqi.board[to] >> 2];
+
+  vic := xiangqi.board[to];
+  if vic != 0 then {
+    gain[0] = VALUES[vic >> 2];
   } else {
     gain[0] = 0;
   }
@@ -1299,66 +1345,81 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
   while true {
     d += 1;
     turn ^= 1;
-    gain[d] = VALUES[xiangqi.board[from] >> 2] - gain[d-1];
 
-    piecey := xiangqi.board[from] >> 2;
-    /*if piecey == 0 {
-      //print("G %\n", from);
-    } else if piecey == 1 {
-      print("A %\n", from);
-    } else if piecey == 2 {
-      print("E %\n", from);
-    } else if piecey == 3 {
-      print("N %\n", from);
-    } else if piecey == 4 {
-      print("R %\n", from);
-    } else if piecey == 5 {
-      print("C %\n", from);
-    } else {
-      print("S %\n", from);
-    }*/
-    //print("GAIN: %\n", gain[d]);
+    gain[d] = VALUES[piece_code] - gain[d-1];
     // prune.
-    if max(-gain[d-1], gain[d]) < 0 then
+    if max(-gain[d-1], gain[d]) < 0 then {
       break; 
+    }
+
+    if piece_code == 1 then {
+      // search for possible discovery knight.
+      ours |= .Knight;
+      opps |= .Knight;
+    } else if piece_code == 5 {
+      // search for possible cannon battery.
+      ours |= .Cannon;
+      opps |= .Cannon;
+    } else if piece_code == 6 {
+      // search for possible rook battery.
+      ours |= .Rook;
+      opps |= .Rook;
+    } else if piece_code == 0 then {
+      flying_general = true;
+    }
 
     stack_to_pop := ifx turn == xiangqi.turn then *our_stack else *opp_stack;
     flags := ifx turn == xiangqi.turn then ours else opps;
-
     // consider x-rays
     // from.
+    set_bit(*bitboard, from);
     from_r := from % 9;
     from_c := from / 9;
-    if from_r != row then {
-      arr[0] ^= cast(u64)(1 << from_r);
-    } else if from_c != col {
-      arr[1] ^= cast(u64)(1 << from_c);
+
+    // make sure this is not a diagonal capture.
+
+    if from_r != row && from_c == col then {
+      arr[0] &= ~cast(u64)(1 << from_r);
+    } 
+
+    if from_c != col && from_r == row {
+      arr[1] &= ~cast(u64)(1 << from_c);
     }
 
     // get the next attacker.
-    from, flags= = get_attackers(xiangqi, stack_to_pop, flags, turn, to, arr);
+    from, flags= = get_attackers(xiangqi, stack_to_pop, flags, turn, to, arr, bitboard, flying_general);
     if turn == xiangqi.turn then {
       ours = flags;
     } else {
       opps = flags;
     }
-
+    
     if from == -1 then break;
-    //print("% % %\n", from, flags, ifx turn == 0 then "red" else "black");
+    piece_code = xiangqi.board[from] >> 2;
   }
 
-  for < i: d-1..1 {
-    gain[i-1]= -max(-gain[i-1], gain[i]);
+  for < i: d-2..0 {
+    gain[i] = -max(-gain[i], gain[i+1]);
   }
 
   return gain[0];
 }
 
+Bitboard128 :: struct {
+  board: [2] u64;
+}
 
+set_bit :: inline (bitboard: *Bitboard128, bit: int) {
+  index := bit / 64;
+  bit_index := bit % 64;
+  bitboard.board[index] |= cast(u64) (1 << bit_index);
+}
 
-
-
-
+is_set :: inline (bitboard: Bitboard128, bit: int) -> bool {
+  index := bit / 64;
+  bit_index := bit % 64;
+  return (bitboard.board[index] & cast(u64) (1 << bit_index)) != 0;
+}
 
 
 
