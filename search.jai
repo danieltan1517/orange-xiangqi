@@ -238,10 +238,34 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
   best_score := -MATE + ply;
   best_move  := NULL_MOVE;
   flag       := Flag.Alpha;
+  late_move_pruning := depth * 8;
+  late_quiet_see := -12 * depth * depth;
+  late_quiet_cap := -100 * depth;
+
   for mov: xiangqi {
     if !is_legal(xiangqi, att, mov) then {
       erase_move(*moves, it_index);
       continue;
+    }
+
+    if is_quiet(mov) && moves_made >= late_move_pruning then {
+      break;
+    }
+
+    if !incheck_position && depth < 4 then {
+      if is_quiet(mov) {
+        // quiet move.
+        if see(xiangqi, mov) < late_quiet_see {
+          erase_move(*moves, it_index);
+          continue;
+        }
+      } else {
+        // capture move.
+        if see(xiangqi, mov) < late_quiet_cap {
+          erase_move(*moves, it_index);
+          continue;
+        }
+      }
     }
 
     make_move(xiangqi, history, mov);
@@ -263,7 +287,11 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         R = 1;
       } else {
         // Late Move Reduction. ~30 elo.
-        R = ifx quiet_moves_made < 2 || depth < 3 then 1 else 3;
+        if quiet_moves_made < 2 || depth < 3 then {
+          R = 1;
+        } else {
+          R = 3;
+        }
       }
 
       score = -negamax(xiangqi, history, *child_pv, depth - R, -alpha-1, -alpha);
@@ -437,11 +465,34 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
   best_move  := NULL_MOVE;
   moves_made := 0;
   quiet_moves_made := 0;
+  late_move_pruning := depth * 8;
+  late_quiet_see := -12 * depth * depth;
+  late_quiet_cap := -100 * depth;
 
   for mov: xiangqi {
     if !is_legal(xiangqi, att, mov) then {
       erase_move(*moves, it_index);
       continue;
+    }
+
+    if is_quiet(mov) && moves_made >= late_move_pruning then {
+      break;
+    }
+
+    if !incheck_position && depth < 4 then {
+      if is_quiet(mov) {
+        // quiet move.
+        if see(xiangqi, mov) < late_quiet_see {
+          erase_move(*moves, it_index);
+          continue;
+        }
+      } else {
+        // capture move.
+        if see(xiangqi, mov) < late_quiet_cap {
+          erase_move(*moves, it_index);
+          continue;
+        }
+      }
     }
 
     make_move(xiangqi, history, mov);
@@ -453,7 +504,11 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       R = 1;
     } else {
       // Late Move Reduction. ~30 elo.
-      R = ifx quiet_moves_made < 2 || depth < 3 then 1 else 3;
+      if quiet_moves_made < 2 || depth < 3 then {
+        R = 1;
+      } else {
+        R = 3;
+      }
     }
 
     score = -negascout_sse(xiangqi, history, depth - R, -beta, -alpha);
@@ -1379,11 +1434,11 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
     // make sure this is not a diagonal capture.
 
     if from_r != row && from_c == col then {
-      arr[0] &= ~cast(u64)(1 << from_r);
+      arr[0] ^= cast(u64)(1 << from_r);
     } 
 
     if from_c != col && from_r == row {
-      arr[1] &= ~cast(u64)(1 << from_c);
+      arr[1] ^= cast(u64)(1 << from_c);
     }
 
     // get the next attacker.
