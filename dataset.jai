@@ -32,7 +32,7 @@ main :: () {
   print("eval,positions\n");
   for i: 0..1_000_000_000 {
     reset_temporary_storage();
-    clear_tt();
+    // clear_tt();
     found, line, rest := split_from_left(text, #char "\n");
     if found == false {
       break;
@@ -99,7 +99,7 @@ position_outbounds :: inline (evaluation: int) -> bool {
 
 MAX_SCORE :: 1000;
 
-Status :: enum {
+PositionStatus :: enum {
   QuietPosition;
   CriticalPosition;
   TacticalPosition;
@@ -177,7 +177,7 @@ rollout :: (fen: string, table: *Table(u32, void)) {
 // 310+ = one rook or more lost
 
 // main search evaluation function.
-search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> int, Status #must {
+search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> int, PositionStatus #must {
   time_stop_ms = searchtime_ms;
   search_should_stop = false;
   nodes = 0;
@@ -203,11 +203,11 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
     depth += 1;
   }
 
-  status: Status;
-  if abs(evaluation_score - score) > 60 {
-    status = Status.CriticalPosition;
+  status: PositionStatus;
+  if abs(evaluation_score - score) > 120 {
+    status = PositionStatus.CriticalPosition;
   } else {
-    status = Status.QuietPosition;
+    status = PositionStatus.QuietPosition;
   }
 
   return score, status;
@@ -253,7 +253,7 @@ wait_for_threads_finish :: (table: *Table(u32,void), work_remaining: int) -> bes
         table_add(table, hash, VOID);
         add_evaluation(fen, score);
       }
-      if status == .CriticalPosition || is_king_move(move) || is_capture(move) then {
+      if status == .CriticalPosition then {
         bestmove = move;
       }
     }
@@ -305,7 +305,7 @@ Xiangqi_Work :: struct {
   search_depth: int = 0;
   searchtime_ms: int = 0;
   score: int = 0;
-  status: Status;
+  status: PositionStatus;
 }
 
 #import "Basic";
