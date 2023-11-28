@@ -182,10 +182,10 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
 
   ttentry, tthit := tt_probe(xiangqi);
   tt_prune(tthit, ttentry, alpha, beta, depth, alpha+1 != beta);
+
   att := attackers(xiangqi);
   incheck_position := true;
   child_pv: PV;
-
   if incheck(xiangqi, att) then {
     mark_previous_move(xiangqi, .Check);
     incheck_position = true;
@@ -238,7 +238,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
   best_score := -MATE + ply;
   best_move  := NULL_MOVE;
   flag       := Flag.Alpha;
-  late_move_pruning := depth * 8;
+  late_move_pruning := depth * depth + 3;
   late_quiet_see := -12 * depth * depth;
   late_quiet_cap := -100 * depth;
 
@@ -252,17 +252,17 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
       break;
     }
 
-    if !incheck_position && depth < 4 then {
+    if !incheck_position && depth < 3 then {
       if is_quiet(mov) {
         // quiet move.
         if see(xiangqi, mov) < late_quiet_see {
-          erase_move(*moves, it_index);
+          //erase_move(*moves, it_index);
           continue;
         }
       } else {
         // capture move.
         if see(xiangqi, mov) < late_quiet_cap {
-          erase_move(*moves, it_index);
+          //erase_move(*moves, it_index);
           continue;
         }
       }
@@ -417,6 +417,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
 
   ttentry, tthit := tt_probe(xiangqi);
   tt_prune(tthit, ttentry, alpha, beta, depth, false);
+
   att := attackers(xiangqi);
   incheck_position := true;
   if incheck(xiangqi, att) then {
@@ -465,7 +466,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
   best_move  := NULL_MOVE;
   moves_made := 0;
   quiet_moves_made := 0;
-  late_move_pruning := depth * 8;
+  late_move_pruning := depth * depth + 3;
   late_quiet_see := -12 * depth * depth;
   late_quiet_cap := -100 * depth;
 
@@ -479,17 +480,17 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       break;
     }
 
-    if !incheck_position && depth < 4 then {
+    if !incheck_position && depth < 3 then {
       if is_quiet(mov) {
         // quiet move.
         if see(xiangqi, mov) < late_quiet_see {
-          erase_move(*moves, it_index);
+          //erase_move(*moves, it_index);
           continue;
         }
       } else {
         // capture move.
         if see(xiangqi, mov) < late_quiet_cap {
-          erase_move(*moves, it_index);
+          //erase_move(*moves, it_index);
           continue;
         }
       }
