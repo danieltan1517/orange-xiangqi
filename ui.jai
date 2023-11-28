@@ -1478,7 +1478,15 @@ gui_make_move :: (move: Move32, animate: bool) {
         status_string = get_ui_str().status_string[0];
         mark_previous_move_check(*xiangqi);
       } else {
-        mark_previous_move(*xiangqi, .Idle);
+        /*if is_chase(*xiangqi) then {
+          //print("=================\n");
+          //print("CHASE.\n%", xiangqi);
+          //print("=================\n");
+          mark_previous_move(*xiangqi, .Chase);
+        } else {
+          print("IDLE.\n%", xiangqi);
+          mark_previous_move(*xiangqi, .Idle);
+        }*/
       }
 
       if judge_ntimes(*xiangqi, 4) == {
@@ -1498,15 +1506,6 @@ gui_make_move :: (move: Move32, animate: bool) {
         status_string = get_ui_str().status_string[5];
         on_game_end(.Draw);
       case .Loss;
-        winner: GameEnd;
-        if xiangqi.turn == 0 {
-          status_string = get_ui_str().status_string[4];  
-          winner = .Black_Wins;
-        } else {
-          status_string = get_ui_str().status_string[3];  
-          winner = .Red_Wins;
-        }
-        on_game_end(winner);
       }
 
       if moves.count == 0 then {
