@@ -5,13 +5,13 @@
 // 
 #run load_model("orange11_6_23.nnue");
 
-DEPTH :: 4;
+DEPTH :: 7;
 MOVETIME :: 3_600_000;
-MAX_COMPUTATIONS :: 100_000_000;
+MAX_COMPUTATIONS :: 50_000_000;
 
 main :: () {
   init_xiangqi_tables();
-  init_tt(size_in_bytes = 16_000_000);
+  init_tt(size_in_bytes = 128_000_000);
   random_seed(0xcafe_babe_10_31_1517);
   set_threads(6);
   FILE_NAME :: "xiangqi_games.txt";
@@ -94,7 +94,7 @@ positions_computed := 0;
 
 position_outbounds :: inline (evaluation: int) -> bool {
   evaluation = abs(evaluation);
-  return evaluation == 300 || evaluation > MAX_SCORE;
+  return evaluation > MAX_SCORE;
 }
 
 MAX_SCORE :: 1000;
