@@ -1478,26 +1478,38 @@ gui_make_move :: (move: Move32, animate: bool) {
         status_string = get_ui_str().status_string[0];
         mark_previous_move_check(*xiangqi);
       } else {
+        mark_previous_move(*xiangqi, .Idle);
         /*if is_chase(*xiangqi) then {
           //print("=================\n");
           //print("CHASE.\n%", xiangqi);
           //print("=================\n");
           mark_previous_move(*xiangqi, .Chase);
         } else {
-          print("IDLE.\n%", xiangqi);
+          //print("IDLE.\n%", xiangqi);
           mark_previous_move(*xiangqi, .Idle);
         }*/
       }
 
-      if judge_ntimes(*xiangqi, 4) == {
+
+      judge_state, violation_level := judge_ntimes(*xiangqi, 4);
+
+      if judge_state == {
       case .Undecided;
       case .Win;
         winner: GameEnd;
         if xiangqi.turn == 0 {
-          status_string = get_ui_str().status_string[3];  
+          if violation_level == .PerpetualCheck {
+            status_string = get_ui_str().status_string[3];  
+          } else if violation_level == .PerpetualChase {
+            status_string = "Perpetual Chase. Red Wins";
+          }
           winner = .Red_Wins;
         } else {
-          status_string = get_ui_str().status_string[4];  
+          if violation_level == .PerpetualCheck {
+            status_string = get_ui_str().status_string[4];  
+          } else if violation_level == .PerpetualChase {
+            status_string = "Perpetual Chase. Black Wins";
+          }
           winner = .Black_Wins;
         }
         on_game_end(winner);
@@ -1530,7 +1542,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         on_game_end(.Draw);
       }
       move_list_scroll_value = 10000;
-
+      print("%\n", to_fenstring(*xiangqi));
       break;
     }
   }
@@ -2815,11 +2827,9 @@ to_move32 :: (xiangqi: *Xiangqi, str: string) -> Move32 {
 }
 
 incr_count30 :: (move: Move32, count30: s8) -> s8 #expand {
-
   if is_capture(move) || is_pawn_advance(move) {
     return 0;
   }
-  
   return count30 + 1;
 }
 

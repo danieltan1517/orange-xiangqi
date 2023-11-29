@@ -38,7 +38,6 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> bestmove
   pv: PV;
   history.phase_value = compute_phase(xiangqi);
   nnue_incremental_init(xiangqi, history);
-
   while depth <= search_depth {
     score = unwrap(negamax_root(xiangqi, history, *pv, depth, alpha, beta));
     time_taken := current_time_monotonic() - searchstarttime;
@@ -164,7 +163,6 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
 
 negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: int, beta: int) -> int {
   unwrap_time();
-
   // mate distance pruning.
   ply := history.ply;
   alpha = max(alpha, -MATE+ply);
@@ -183,12 +181,19 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
   ttentry, tthit := tt_probe(xiangqi);
   tt_prune(tthit, ttentry, alpha, beta, depth, alpha+1 != beta);
 
+  if !tthit && depth > 14 && alpha+1 != beta then {
+    depth -= 3;
+  }
+
   att := attackers(xiangqi);
   incheck_position := true;
   child_pv: PV;
+  improving: int = 1;
   if incheck(xiangqi, att) then {
     mark_previous_move(xiangqi, .Check);
+    history.evaluations[ply] = -MATE;
     incheck_position = true;
+    improving = 1;
   } else {
     incheck_position = false;
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
@@ -225,7 +230,13 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
       }
     }
 
-
+    // improving.
+    history.evaluations[ply] = cast(s16) evaluation;
+    if ply-2 < 0 || evaluation >= history.evaluations[ply-2] {
+      improving = 1;
+    } else {
+      improving = 0;
+    }
   }
 
   extension := search_extensions(tthit, ttentry, incheck_position, xiangqi, history, depth, alpha, beta);
@@ -248,7 +259,8 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
   best_score := -MATE + ply;
   best_move  := NULL_MOVE;
   flag       := Flag.Alpha;
-  late_move_pruning := depth * depth + 3;
+  late_move_pruning := ifx improving == 1 then (depth * depth + 3) else ((depth * depth + 3) >> 1);
+  //late_move_pruning := depth * depth + 3;
   late_quiet_see := -12 * depth * depth;
   late_quiet_cap := -100 * depth;
 
@@ -266,13 +278,11 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
       if is_quiet(mov) {
         // quiet move.
         if see(xiangqi, mov) < late_quiet_see {
-          //erase_move(*moves, it_index);
           continue;
         }
       } else {
         // capture move.
         if see(xiangqi, mov) < late_quiet_cap {
-          //erase_move(*moves, it_index);
           continue;
         }
       }
@@ -428,11 +438,19 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
   ttentry, tthit := tt_probe(xiangqi);
   tt_prune(tthit, ttentry, alpha, beta, depth, false);
 
+  if !tthit && depth > 14 && alpha+1 != beta then {
+    depth -= 3;
+  }
+
   att := attackers(xiangqi);
   incheck_position := true;
+  improving: int = 1;
+
   if incheck(xiangqi, att) then {
     mark_previous_move(xiangqi, .Check);
+    history.evaluations[ply] = -MATE;
     incheck_position = true;
+    improving = 1;
   } else {
     incheck_position = false;
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
@@ -468,6 +486,14 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
         return score;
       }
     }
+
+    // improving.
+    history.evaluations[ply] = cast(s16) evaluation;
+    if ply-2 < 0 || evaluation >= history.evaluations[ply-2] {
+      improving = 1;
+    } else {
+      improving = 0;
+    }
   }
 
   moves: Moves;
@@ -476,7 +502,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
   best_move  := NULL_MOVE;
   moves_made := 0;
   quiet_moves_made := 0;
-  late_move_pruning := depth * depth + 3;
+  late_move_pruning := ifx improving == 1 then (depth * depth + 3) else ((depth * depth + 3) >> 1);
   late_quiet_see := -12 * depth * depth;
   late_quiet_cap := -100 * depth;
 
@@ -494,13 +520,11 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       if is_quiet(mov) {
         // quiet move.
         if see(xiangqi, mov) < late_quiet_see {
-          //erase_move(*moves, it_index);
           continue;
         }
       } else {
         // capture move.
         if see(xiangqi, mov) < late_quiet_cap {
-          //erase_move(*moves, it_index);
           continue;
         }
       }
@@ -546,19 +570,23 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
 
 quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> eval: int {
   unwrap_time();
+
   att := attackers(xiangqi);
   incheck_position := incheck(xiangqi, att);
-
   ply := history.ply;
   best_score := ifx (incheck_position == true) then -MATE+ply else  evaluate(xiangqi, history);
-  if best_score >= beta then
-    return best_score;
- 
-  // quiescene delta pruning.
-  if !incheck_position && in_middlegame(history) && best_score + 700 <= alpha then {
-    return best_score;
+
+  if !incheck_position then {
+    if best_score >= beta then {
+      return best_score;
+    }
+
+    // quiescene delta pruning.
+    if in_middlegame(history) && best_score + 700 <= alpha then {
+      return best_score;
+    }
   }
- 
+
   futility_base := best_score;
   alpha = max(alpha, best_score);
   moves: Moves;
@@ -645,7 +673,7 @@ captures_only :: (xiangqi: *Xiangqi, body: Code, f: For_Flags) #expand {
     if stage == .Quiescene_End then {
       break;
     }
-    assert(!is_null(it));
+
     #insert body;
   }
 }
@@ -1057,6 +1085,7 @@ History :: struct {
   seldepth: int;
   phase_value: int;
   max_search_depth: int;
+  evaluations:  [128] s16;
   moves:       [128] Move32;
   accumulator: [128] Accumulator #align 64; 
   killer:  [128][2] Move32;
@@ -1075,7 +1104,7 @@ Entry :: struct {
   best_move: Move32;
   score: s32;
   depth: s16;
-  flag := Flag.Alpha;
+  flag: Flag = Flag.Alpha;
 }
 
 transpositions: [][4] Entry #align 64;

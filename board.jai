@@ -2170,7 +2170,7 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
 }
 
 // judge relative to the side playing the game.
-judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState {
+judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must {
   judge_one :: (hashes: Board_Hash, count: int, ntimes: int) -> bool, Violations {
     if count < 0 then {
       return false, .PerpetualIdle;
@@ -2218,20 +2218,20 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState {
   count := xiangqi.hashes.count - 1;
   success, opps := judge_one(xiangqi.hashes, count, ntimes);
   if success == false then {
-    return .Undecided;
+    return .Undecided, opps;
   }
 
   success=, ours := judge_one(xiangqi.hashes, count-1, ntimes);
   if success == false then {
-    return .Undecided;
+    return .Undecided, opps;
   }
 
   if ours == opps then {
-    return .Draw;
+    return .Draw, ours;
   } else if ours > opps then {
-    return .Loss;
+    return .Loss, ours;
   } else {
-    return .Win;
+    return .Win, opps;
   }
 }
 
@@ -2327,13 +2327,16 @@ ele_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, TABLE: [90] u8, DIR: [] i
 }
 
 is_attacked_by_knight :: (xiangqi: *Xiangqi, kni: int, diff: int, from: int, to: int, bitboard: Bitboard128) -> bool {
-  start := 0;
-  end := 3;
+  bits := cast(u64) KNIGHT_TABLE[kni];
   if diff > 0 {
-    start = 4;
-    end = 7;
-  } 
-  for i : start..end {
+    bits &= 0xFF;
+  } else {
+    bits &= 0xFF00;
+  }
+
+  while bits {
+    i := bit_scan_forward(bits);
+    bits &= bits - 1;
     if diff == KNI_DIR[i] then {
       index := kni + KNI_BLK[i];
       if xiangqi.board[index] == 0 || is_set(bitboard, index) then {

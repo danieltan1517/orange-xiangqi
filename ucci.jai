@@ -159,6 +159,7 @@ go_command :: (command: string, xiangqi: *Xiangqi) {
     if token == {
     case "depth";
       depth, parse_success = parse_int(*str);
+      depth = clamp(depth, 1, 100);
       if parse_success == false {
         print("info string error unable to parse depth\n");
         return;
