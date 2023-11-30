@@ -149,7 +149,7 @@ go_command :: (command: string, xiangqi: *Xiangqi) {
     return;
   }
 
-  depth: int = 100; // won't need anything greater than depth '100'.
+  depth: int = 40; // won't need anything greater than depth '40'.
   movetime_ms: int = 0x7FFF_FFFF;
   time: int = -1;
   increment: int = -1;
