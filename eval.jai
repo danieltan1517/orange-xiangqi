@@ -3,15 +3,16 @@
 
 // calculate relative to position.
 evaluate :: inline (xiangqi: *Xiangqi) -> int {
-  return nnue_evaluate(xiangqi);
+  phase := compute_phase(xiangqi);
+  return correction(xiangqi, phase, nnue_evaluate(xiangqi));
 }
 
 evaluate :: inline (xiangqi: *Xiangqi, history: *History) -> int {
-  return correction(xiangqi, history, nnue_evaluate_incr(xiangqi, history));
+  return correction(xiangqi, history.phase_value, nnue_evaluate_incr(xiangqi, history));
   //return nnue_evaluate_incr(xiangqi, history);
 }
 
-correction :: (xiangqi: *Xiangqi, history: *History, evaluation: int) -> int {
+correction :: (xiangqi: *Xiangqi, phase: int, evaluation: int) -> int {
 
   attacker_score :: (xiangqi: *Xiangqi, turn: int, phase: int) -> int {
     score: int = 0;
@@ -29,7 +30,6 @@ correction :: (xiangqi: *Xiangqi, history: *History, evaluation: int) -> int {
     return score;
   }
 
-  phase := history.phase_value;
   red_att := attacker_score(xiangqi, 0, phase);
   blk_att := attacker_score(xiangqi, 1, phase);
 
