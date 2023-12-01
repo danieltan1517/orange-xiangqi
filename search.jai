@@ -188,12 +188,9 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
   att := attackers(xiangqi);
   incheck_position := true;
   child_pv: PV;
-  improving: int = 1;
   if incheck(xiangqi, att) then {
     mark_previous_move(xiangqi, .Check);
-    history.evaluations[ply] = -MATE;
     incheck_position = true;
-    improving = 1;
   } else {
     incheck_position = false;
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
@@ -229,14 +226,6 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         return score;
       }
     }
-
-    // improving.
-    history.evaluations[ply] = cast(s16) evaluation;
-    if ply-2 < 0 || evaluation >= history.evaluations[ply-2] {
-      improving = 1;
-    } else {
-      improving = 0;
-    }
   }
 
   extension := search_extensions(tthit, ttentry, incheck_position, xiangqi, history, depth, alpha, beta);
@@ -259,8 +248,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
   best_score := -MATE + ply;
   best_move  := NULL_MOVE;
   flag       := Flag.Alpha;
-  late_move_pruning := ifx improving == 1 then (depth * depth + 3) else ((depth * depth + 3) >> 1);
-  //late_move_pruning := depth * depth + 3;
+  late_move_pruning := depth * depth + 3;
   late_quiet_see := -12 * depth * depth;
   late_quiet_cap := -100 * depth;
 
@@ -444,13 +432,9 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
 
   att := attackers(xiangqi);
   incheck_position := true;
-  improving: int = 1;
-
   if incheck(xiangqi, att) then {
     mark_previous_move(xiangqi, .Check);
-    history.evaluations[ply] = -MATE;
     incheck_position = true;
-    improving = 1;
   } else {
     incheck_position = false;
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
@@ -486,14 +470,6 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
         return score;
       }
     }
-
-    // improving.
-    history.evaluations[ply] = cast(s16) evaluation;
-    if ply-2 < 0 || evaluation >= history.evaluations[ply-2] {
-      improving = 1;
-    } else {
-      improving = 0;
-    }
   }
 
   moves: Moves;
@@ -502,7 +478,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
   best_move  := NULL_MOVE;
   moves_made := 0;
   quiet_moves_made := 0;
-  late_move_pruning := ifx improving == 1 then (depth * depth + 3) else ((depth * depth + 3) >> 1);
+  late_move_pruning := depth * depth + 3;
   late_quiet_see := -12 * depth * depth;
   late_quiet_cap := -100 * depth;
 
@@ -1085,7 +1061,6 @@ History :: struct {
   seldepth: int;
   phase_value: int;
   max_search_depth: int;
-  evaluations:  [128] s16;
   moves:       [128] Move32;
   accumulator: [128] Accumulator #align 64; 
   killer:  [128][2] Move32;
