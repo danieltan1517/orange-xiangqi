@@ -7,7 +7,50 @@ evaluate :: inline (xiangqi: *Xiangqi) -> int {
 }
 
 evaluate :: inline (xiangqi: *Xiangqi, history: *History) -> int {
-  return nnue_evaluate_incr(xiangqi, history);
+  return correction(xiangqi, history, nnue_evaluate_incr(xiangqi, history));
+  //return nnue_evaluate_incr(xiangqi, history);
+}
+
+correction :: (xiangqi: *Xiangqi, history: *History, evaluation: int) -> int {
+
+  attacker_score :: (xiangqi: *Xiangqi, turn: int, phase: int) -> int {
+    score: int = 0;
+    score += xiangqi.pieces[turn].kni.count * evaluation_phase_scale(270, 300, phase);
+    score += xiangqi.pieces[turn].rook.count * evaluation_phase_scale(600, 610, phase);
+    score += xiangqi.pieces[turn].cannon.count * evaluation_phase_scale(300, 270, phase);
+    score += xiangqi.pieces[turn].pawn.count * evaluation_phase_scale(10, 50, phase);
+    return score;
+  }
+
+  defender_score :: (xiangqi: *Xiangqi, turn: int, phase: int) -> int {
+    score: int = 0;
+    score += xiangqi.pieces[turn].adv.count * evaluation_phase_scale(110, 130, phase);
+    score += xiangqi.pieces[turn].ele.count * evaluation_phase_scale(110, 130, phase);
+    return score;
+  }
+
+  phase := history.phase_value;
+  red_att := attacker_score(xiangqi, 0, phase);
+  blk_att := attacker_score(xiangqi, 1, phase);
+
+  red_def := defender_score(xiangqi, 0, phase); 
+  blk_def := defender_score(xiangqi, 1, phase); 
+  
+  material_weights := red_att + red_def - blk_att - blk_def;
+  correction_weights := max(red_att - blk_def, 0) - max(blk_att - red_def, 0);
+
+  if xiangqi.turn == 1 {
+    material_weights = -material_weights;
+    correction_weights = -correction_weights;
+  }
+  difference := (material_weights - correction_weights);
+  return evaluation - difference;
+}
+
+evaluation_phase_scale :: (midgame: int, endgame: int, phase: int) -> int {
+  midgame = midgame * phase;
+  endgame = endgame * (16 - phase);
+  return (midgame + endgame) / 16;
 }
 
 compute_phase :: (x: *Xiangqi) -> int {
