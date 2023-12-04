@@ -43,3 +43,31 @@
 // 1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w - - 0 1
 // 3aka3/7R1/7c1/9/9/9/9/9/4A4/3AK1p2 b - - 0 1
 // 4kab2/4a4/8b/p1p5p/4c1n2/6R2/P1P1P1P1P/4BC3/8N/2B1KA1r1 w - - 0 1  ---> two to one chase.
+// 4k4/9/9/9/C8/9/pp5pp/4B4/9/r1BAKA2r w - - 0 1 ---> two chases allowed
+// Cc1ak4/4a1P2/9/2p6/1P7/6C2/9/B2p5/2p2p3/4K4 w - - 0 1  => black cannon pinned. red cannon perpetually chases black cannon
+
+// cannon and horse cannot perpetually chase a chariot on consecutive moves
+// 1rb1kabr1/4a1c2/1cn3n2/p1C1p1R1p/9/9/P1P1P1P1P/2N1C1N2/9/R1BAKAB2 w - - 0 1
+
+// it is permissible for red chariot to chase two pieces on alternative moves. illegel for black horse and cannon to make perpetual chase on red chariot.
+// 1rb1kabr1/4a1c2/1cn6/pRp1pR2p/7n1/2P2p3/P3P1P1P/C1N1C1N2/4A4/3AK1B2 w - - 0 1 
+
+// red chariot chase black cannon on every other move. black perpetually chase red chariot. black loses
+// r1b1kabr1/4a1c2/1cn6/p1p1pR2p/3NP2n1/9/P1P3p1P/1C2C4/4A4/RNBAK1B2 w - - 0 1
+
+// red cannon chasing by chaning the gun-mount. red loses.
+// 2bakab2/9/4c3n/p1prp3R/9/2P6/P3P1c1P/2N1BC2B/4A4/3AK4 w - - 0 1
+
+// legal king-pawn chases.
+// 4ka3/4a4/4b4/p7p/9/4C4/4P4/4B4/3K5/3Ac1B2 w - - 0 1
+// 3k2b1r/4a4/5a2b/3PP4/7P1/9/9/B4N2B/5K3/4p4 w - - 0 1
+// 4k1b1c/7P1/3a5/9/9/9/9/9/3K5/9 w - - 0 1
+// 4kab2/4a4/4b1n2/4p2P1/2p5P/9/9/7C1/4A4/4K4 w - - 0 1
+
+// exceptions to king-pawn chases.
+// 3a2b1r/4ak3/8p/7P1/9/9/9/B2NN3B/3K5/4p4 w - - 0 1 
+// 1c1ak4/N1PNa4/9/9/5P3/9/9/4Bp3/9/3p1K1p1 w - - 0 1
+// 1Pbak2r1/4a4/4b4/2p6/9/3R5/2P6/4p2p1/3CC2N1/5K3 w - - 0 1
+
+// red chariot chases two pieces.
+// 2rakab2/9/8b/2NPP1p2/9/2P1c1P2/7R1/2n1B1p2/4A4/3AK1B2 w - - 0 1

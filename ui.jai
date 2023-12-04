@@ -448,7 +448,7 @@ main :: () {
      
       if mov_anim_state == MovAnim.Play && moves_made_count then {
         ren_idx :: float.[0.0,1.0,3.0,2.0,4.0,5.0,6.0];
-        mov := moves_made[moves_made_count-1];
+        mov := xiangqi.hashes.info[moves_made_count-1].move;
         from, to := orient_piece(mov.from), orient_piece(mov.to);
         piece := mov.piece >> 2;
      
@@ -693,13 +693,13 @@ main :: () {
       numbering += 1;
       label(num_rect, tprint("%.", numbering), label_theme);
 
-      mov_red := moves_made[index];
+      mov_red := xiangqi.hashes.info[index].move;
       label(red_move_rect, to_notation(mov_red), label_theme);
       index += 1;
       if index >= moves_made_count then
         break;
 
-      mov_black := moves_made[index];
+      mov_black := xiangqi.hashes.info[index].move;
       index += 1;
 
       label(black_move_rect, to_notation(mov_black), label_theme);
@@ -1236,11 +1236,9 @@ sound_player : *Sound_Player;
 sound_quiet_move: *Mixer_Sound_Data;
 sound_capture_move: *Mixer_Sound_Data;
 
-moves_made: [1024] Move32;
 counter_history: [1024] s8;
 counter30: s8 = 0;
 moves_made_count: int = 0;
-
 
 // status label.
 status_string: string;
@@ -1405,12 +1403,12 @@ gui_undo_move :: () {
   }
 
   moves_made_count -= 1;
-  move := moves_made[moves_made_count];
+  move := xiangqi.hashes.info[moves_made_count].move;
   unmake_move(*xiangqi, move);
 
   while moves_made_count >= 0 && !human_turn() {
     moves_made_count -= 1;
-    move := moves_made[moves_made_count];
+    move := xiangqi.hashes.info[moves_made_count].move;
     unmake_move(*xiangqi, move);
   }
 
@@ -1423,7 +1421,7 @@ gui_undo_move :: () {
 
   if moves_made_count > 0 then {
     peek := moves_made_count - 1;
-    last_move := moves_made[peek];
+    last_move := xiangqi.hashes.info[peek].move;
     prev_from = last_move.from;
     prev_to   = last_move.to;
   } else {
@@ -1433,11 +1431,11 @@ gui_undo_move :: () {
 }
 
 gui_redo_move :: () {
-  mov := moves_made[moves_made_count];
+  mov := xiangqi.hashes.info[moves_made_count].move;
   if is_null(mov) then return;
-  next := moves_made[moves_made_count+1];
+  next := xiangqi.hashes.info[moves_made_count+1].move;
   gui_make_move(mov, true);
-  moves_made[moves_made_count] = next;
+  xiangqi.hashes.info[moves_made_count].move = next;
 }
 
 gui_make_move :: (move: Move32, animate: bool) {
@@ -1449,8 +1447,7 @@ gui_make_move :: (move: Move32, animate: bool) {
       make_move(*xiangqi, move);
 
       // add another move.
-      assert(moves_made_count < moves_made.count, "Exceed the maximum allowed moves!");
-      moves_made[moves_made_count] = move;
+      xiangqi.hashes.info[moves_made_count].move = move;
       counter_history[moves_made_count] = counter30;
       counter30 = incr_count30(move, counter30);
       moves_made_count += 1;
@@ -1477,17 +1474,20 @@ gui_make_move :: (move: Move32, animate: bool) {
       if incheck(*xiangqi, att) then {
         status_string = get_ui_str().status_string[0];
         mark_previous_move_check(*xiangqi);
-      } else {
-        mark_previous_move(*xiangqi, .Idle);
-        /*if is_chase(*xiangqi) then {
-          //print("=================\n");
-          //print("CHASE.\n%", xiangqi);
-          //print("=================\n");
+      } else if is_quiet(move) {
+        chase_success, chase_move := is_chase(*xiangqi);
+        if chase_success == true then {
           mark_previous_move(*xiangqi, .Chase);
+          set_previous_chase_move(*xiangqi, chase_move);
+          arrow: Arrow;
+          arrow.from = chase_move.from;
+          arrow.to = chase_move.to;
+          add_arrow(arrow);
+          print("CHASE: %\n%", chase_move, xiangqi);
         } else {
-          //print("IDLE.\n%", xiangqi);
           mark_previous_move(*xiangqi, .Idle);
-        }*/
+          set_previous_chase_move(*xiangqi, NULL_MOVE);
+        }
       }
 
 
@@ -1514,7 +1514,6 @@ gui_make_move :: (move: Move32, animate: bool) {
         }
         on_game_end(winner);
       case .Draw;
-        record_draw();
         status_string = get_ui_str().status_string[5];
         on_game_end(.Draw);
       case .Loss;
@@ -1532,7 +1531,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         on_game_end(winner);
       }
 
-      if moves_made_count >= moves_made.count || is_draw(*xiangqi) {
+      if moves_made_count >= xiangqi.hashes.info.count || is_draw(*xiangqi) {
         status_string = get_ui_str().status_string[6];
         on_game_end(.Draw);
       }
@@ -1585,7 +1584,6 @@ on_game_end :: (winner: GameEnd) {
       xiangqi_fen(*xiangqi, fen_string);
       moves_made_count = 0;
       reset(*moves);
-      memset(*moves_made, 0, size_of(type_of(moves_made)));
       legal_moves(*xiangqi, *moves);
       prev_from = 0xFF;
       prev_to   = 0xFF;
@@ -1602,7 +1600,6 @@ on_game_end :: (winner: GameEnd) {
       random_pick_board_position();
       moves_made_count = 0;
       reset(*moves);
-      memset(*moves_made, 0, size_of(type_of(moves_made)));
       legal_moves(*xiangqi, *moves);
       prev_from = 0xFF;
       prev_to   = 0xFF;
@@ -2046,7 +2043,7 @@ get_ucci_position :: () -> string {
   if moves_made_count > 0
     append(*builder, " moves");
   for index: 0..moves_made_count-1 {
-    move := moves_made[index];
+    move := xiangqi.hashes.info[index].move;
     print_to_builder(*builder, " %", move);
   }
   append(*builder, NEWLINE);
@@ -2319,7 +2316,6 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
       status_string = "";
       moves_made_count = 0;
       reset(*moves);
-      memset(*moves_made, 0, size_of(type_of(moves_made)));
       legal_moves(*xiangqi, *moves);
       prev_from = 0xFF;
       prev_to   = 0xFF;
@@ -2390,7 +2386,6 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
       random_pick_board_position();
       moves_made_count = 0;
       reset(*moves);
-      memset(*moves_made, 0, size_of(type_of(moves_made)));
       legal_moves(*xiangqi, *moves);
       prev_from = 0xFF;
       prev_to   = 0xFF;
@@ -2756,7 +2751,7 @@ create_pgn :: (builder: *String_Builder, winner: GameEnd) {
       print_to_builder(builder, "%1. ", (i>>1) + 1);
     }
 
-    print_to_builder(builder, "% ", moves_made[i]);
+    print_to_builder(builder, "% ", xiangqi.hashes.info[i].move);
     i += 1;
   }
 
@@ -2768,15 +2763,6 @@ create_pgn :: (builder: *String_Builder, winner: GameEnd) {
   if success {
     data := builder_to_string(builder, allocator=temp);
     file_write(*file, data);
-    file_close(*file);
-  }
-}
-
-record_draw :: () {
-  file, success := file_open("draws.txt", for_writing=true, keep_existing_content=true);
-  if success {
-    file_write(*file, to_fenstring(*xiangqi));
-    file_write(*file, "\n");
     file_close(*file);
   }
 }

@@ -580,7 +580,7 @@ is_legal_ksq :: (xiangqi: *Xiangqi, move: Move32, ksq: int, attflags: AttFlags) 
 }
 
 make_move :: (xiangqi: *Xiangqi, move: Move32) {
-  add_hash(*xiangqi.hashes, xiangqi.hash);
+  add_hash(*xiangqi.hashes, xiangqi.hash, move);
   turn := xiangqi.turn;
   piece := move.piece >> 2;
   from: int = move.from;
@@ -653,7 +653,7 @@ unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
 
 // make/unmake for null move pruning.
 make_null_move :: (xiangqi: *Xiangqi) {
-  add_hash(*xiangqi.hashes, xiangqi.hash);
+  add_hash(*xiangqi.hashes, xiangqi.hash, NULL_MOVE);
   xiangqi.hash ^= TURN_ZOBRIST;
   xiangqi.turn ^= 1;
 }
@@ -1804,46 +1804,6 @@ perft_divide :: (xiangqi: *Xiangqi, depth: int) -> int {
 
 }
 
-is_repeating :: (xiangqi: *Xiangqi) -> bool {
-  /*count := xiangqi.hashes.count - 1;
-  hashes: [] u32 = xiangqi.hashes.hashes;
-  hash := hashes[count];
-  count -= 2;
-  while count >= 0 {
-    if hashes[count] == hash then {
-      return true;
-    }
-    count -= 2;
-  }*/
-
-  return false;
-}
-
-is_repeating_ntimes :: (xiangqi: *Xiangqi, nrepeats: int) -> bool {
-
-  /*
-  // consecutive checks disallowed. however, check + chase + check allowed.
-  count := xiangqi.hashes.count - 1;
-  hashes: [] u32 = xiangqi.hashes.hashes;
-  hash := hashes[count];
-  count -= 2;
-  repeats := 1;
-  ntimes := nrepeats;
-  while count >= 0 && ntimes > 0 {
-    hash_to_compare := hashes[count];
-    if hash_to_compare == hash then {
-      repeats += 1;
-      if repeats == nrepeats then {
-        return true;
-      }
-    }
-    count -= 2;
-    ntimes -= 1;
-  }*/
-
-  return false;
-}
-
 perft :: (xiangqi: *Xiangqi, depth: int) -> int {
   if depth <= 0 then
     return 1;
@@ -2076,8 +2036,9 @@ pop_hash :: (board_hash: *Board_Hash) -> u32 {
   return board_hash.info[board_hash.count].hash;
 }
 
-add_hash :: (board_hash: *Board_Hash, hash: u32) {
+add_hash :: (board_hash: *Board_Hash, hash: u32, move: Move32) {
   board_hash.info[board_hash.count].hash = hash;
+  board_hash.info[board_hash.count].move = move;
   board_hash.count += 1;
 }
 
@@ -2091,14 +2052,21 @@ mark_previous_move :: inline (xiangqi: *Xiangqi, status: Status) {
   xiangqi.hashes.info[count].status = status;
 }
 
+set_previous_chase_move :: inline (xiangqi: *Xiangqi, chase_move: Move32) {
+  count := xiangqi.hashes.count - 1;
+  xiangqi.hashes.info[count].chase_move = chase_move;
+}
+
 Board_Hash :: struct {
   count: int;
-  info: [511] Info;
+  info: [1024] Info;
 }
 
 Info :: struct {
   hash: u32;
   status: Status;
+  move: Move32;
+  chase_move: Move32;
 }
 
 is_chase :: inline (move: Move32) -> bool {
@@ -2122,11 +2090,30 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
     count -= 2;
     status: Status = 0;
     repeating: bool = false;
+    single_chase: bool = true;
+    sq: int = -1;
     while count >= 0 {
       if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
         break;
       }
+
+      if sq != -1 && hashes.info[count+1].move.to == sq {
+        sq = hashes.info[count+1].move.from;
+      }
+
       status |= hashes.info[count].status;
+
+      if status == .Chase then {
+        if sq == -1 {
+          sq = hashes.info[count].move.to;
+        }
+
+        if hashes.info[count].move.to != sq then {
+          single_chase = false;
+        }
+      }
+
+
       if hash == hashes.info[count].hash then {
         repeating = true;
         break;
@@ -2142,7 +2129,7 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
       return true, .PerpetualCheck;
     }
     
-    if status == .Chase then {
+    if status == .Chase && single_chase == true then {
       return true, .PerpetualChase;
     }
 
@@ -2181,15 +2168,35 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
     }
 
     hash := hashes.info[count].hash;
-
     count -= 2;
     status: Status = 0;
     repeating: bool = false;
+    single_victim: bool = true;
+    sq: int = -1;
     while count >= 0 {
       if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
         break;
       }
+
+      if sq != -1 && hashes.info[count+1].move.to == sq {
+        //print("VICTIM MOVE\n");
+        sq = hashes.info[count+1].move.from;
+      }
+
       status |= hashes.info[count].status;
+
+      if status == .Chase then {
+        if sq == -1 {
+          sq = hashes.info[count].chase_move.to;
+          //print("CHASE: %, MOVE: %\n", hashes.info[count+1].chase_move, hashes.info[count+1].move);
+        }
+
+        else if sq != -1 && hashes.info[count].chase_move.to != sq then {
+          single_victim = false;
+        }
+      }
+
+
       if hash == hashes.info[count].hash then {
         repeating = true;
         ntimes -= 1;
@@ -2204,12 +2211,15 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
       return false, .PerpetualIdle;
     }
 
+    print("STATUS: %\n", status);
     if status == .Check then {
       return true, .PerpetualCheck;
     }
     
     if status == .Chase then {
-      return true, .PerpetualChase;
+      if single_victim == true {
+        return true, .PerpetualChase;
+      }
     }
 
     return true, .PerpetualIdle;
@@ -2226,6 +2236,7 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
     return .Undecided, opps;
   }
 
+  print("REPETITION: OURS: [%].    OPPS: [%]\n", ours, opps);
   if ours == opps then {
     return .Draw, ours;
   } else if ours > opps then {
@@ -2411,9 +2422,11 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
 
     if flags & .Pawn then {
       dir_see(xiangqi, stack, to, KP_TABLE[turn ^ 1], KING_DIR, 6, turn, bitboard);
+      print("STACK: %\n", stack.count);
       flags &= ~.Pawn;
       if !is_empty(stack) {
         sq := pop(stack);
+        print("PIECE: %\n", sq);
         return sq, flags;
       }
     }
@@ -2585,26 +2598,70 @@ is_set :: inline (bitboard: Bitboard128, bit: int) -> bool {
   return (bitboard.board[index] & cast(u64) (1 << bit_index)) != 0;
 }
 
-is_chase :: (xiangqi: *Xiangqi) -> bool {
+is_chase :: (xiangqi: *Xiangqi) -> bool, chase_move: Move32 #must {
+
+  mvv_lva :: (move: Move32) -> s32 {
+    victim := move.capture >> 2;
+    attack := move.piece   >> 2;
+    TABLE :: s32.[1000, 120, 120, 270, 600, 285, 30];
+    return TABLE[victim] - (TABLE[attack] / 10);
+  }
+
+  sort :: (moves: *Moves) {
+    i := 0;
+    while i < moves.count {
+      move := moves.array[i].move;
+      moves.array[i].score = mvv_lva(move);
+      i += 1;
+    }
+
+    for i: 0..moves.count-1 {
+      for j: i+1..moves.count-1 {
+        if moves.array[i].score < moves.array[j].score then {
+          move_swap(moves, i, j);
+        }
+      }
+    }
+  }
+
+  // is king-pawn move.
+  is_kp :: inline (move: Move32) -> bool {
+    piece_code := move.piece >> 2;
+    return piece_code == 0 || piece_code == 6;
+  }
+
   make_null_move(xiangqi);
   defer {
     unmake_null_move(xiangqi);
   }
+
+
   moves: Moves;
   gen_captures(xiangqi, *moves);
+  sort(*moves);
   att := attackers(xiangqi);
   for move : moves {
+
+    // prune out all king-pawn moves. if king or pawn is chasing, it should be classified as an 'idle' rather than a chase.
+    // since king-pawn is allowed to chased with other pieces, and king-pawn can chase alone
+    if is_kp(move) then {
+      continue;
+    }
+
     if !is_legal(xiangqi, att, move) then {
       continue;
     }
 
     // positive SEE = chase.
     if see(xiangqi, move) > 0 then {
-      return true;
+      return true, move;
     }
   }
-  return false;
+
+  return false, NULL_MOVE;
 }
+
+
 
 #import "Basic";
 #import "String";

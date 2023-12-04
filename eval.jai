@@ -37,12 +37,18 @@ correction :: (xiangqi: *Xiangqi, phase: int, evaluation: int) -> int {
   blk_def := defender_score(xiangqi, 1, phase); 
   
   material_weights := red_att + red_def - blk_att - blk_def;
+
   correction_weights := max(red_att - blk_def, 0) - max(blk_att - red_def, 0);
 
   if xiangqi.turn == 1 {
     material_weights = -material_weights;
     correction_weights = -correction_weights;
   }
+
+  if abs(evaluation - material_weights) > 90 {
+    return evaluation;
+  }
+
   difference := (material_weights - correction_weights);
   return evaluation - difference;
 }
