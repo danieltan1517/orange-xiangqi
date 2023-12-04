@@ -2603,8 +2603,8 @@ is_chase :: (xiangqi: *Xiangqi) -> bool, chase_move: Move32 #must {
   mvv_lva :: (move: Move32) -> s32 {
     victim := move.capture >> 2;
     attack := move.piece   >> 2;
-    TABLE :: s32.[1000, 120, 120, 270, 600, 285, 30];
-    return TABLE[victim] - (TABLE[attack] / 10);
+    TABLE :: s32.[1000, 120, 120, 270, 600, 350, 30];
+    return TABLE[victim] - (TABLE[attack] / 100);
   }
 
   sort :: (moves: *Moves) {
