@@ -2211,7 +2211,6 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
       return false, .PerpetualIdle;
     }
 
-    print("STATUS: %\n", status);
     if status == .Check then {
       return true, .PerpetualCheck;
     }
@@ -2422,11 +2421,9 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
 
     if flags & .Pawn then {
       dir_see(xiangqi, stack, to, KP_TABLE[turn ^ 1], KING_DIR, 6, turn, bitboard);
-      print("STACK: %\n", stack.count);
       flags &= ~.Pawn;
       if !is_empty(stack) {
         sq := pop(stack);
-        print("PIECE: %\n", sq);
         return sq, flags;
       }
     }
