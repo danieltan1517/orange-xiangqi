@@ -1479,11 +1479,10 @@ gui_make_move :: (move: Move32, animate: bool) {
         if chase_success == true then {
           mark_previous_move(*xiangqi, .Chase);
           set_previous_chase_move(*xiangqi, chase_move);
-          /*arrow: Arrow;
+          arrow: Arrow;
           arrow.from = chase_move.from;
           arrow.to = chase_move.to;
           add_arrow(arrow);
-          print("CHASE: %\n%", chase_move, xiangqi);*/
         } else {
           mark_previous_move(*xiangqi, .Idle);
           set_previous_chase_move(*xiangqi, NULL_MOVE);

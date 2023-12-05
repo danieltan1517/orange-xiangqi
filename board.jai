@@ -2419,8 +2419,9 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
       }
     }
 
+    SEE_DIR :: int.[9, -1, -9, 1];
     if flags & .Pawn then {
-      dir_see(xiangqi, stack, to, KP_TABLE[turn ^ 1], KING_DIR, 6, turn, bitboard);
+      dir_see(xiangqi, stack, to, KP_TABLE[turn], SEE_DIR, 6, turn, bitboard);
       flags &= ~.Pawn;
       if !is_empty(stack) {
         sq := pop(stack);
