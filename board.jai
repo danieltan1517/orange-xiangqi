@@ -2628,6 +2628,13 @@ is_chase :: (xiangqi: *Xiangqi) -> bool, chase_move: Move32 #must {
     return piece_code == 0 || piece_code == 6;
   }
 
+  pawn_not_passed :: (move: Move32, turn: int) -> bool {
+    piece_code := move.capture >> 2;
+    to         := move.to;
+    return piece_code == 6 && (KP_TABLE[turn][to] & 0b1010) == 0;
+  }
+
+  turn := xiangqi.turn;
   make_null_move(xiangqi);
   defer {
     unmake_null_move(xiangqi);
@@ -2643,6 +2650,10 @@ is_chase :: (xiangqi: *Xiangqi) -> bool, chase_move: Move32 #must {
     // prune out all king-pawn moves. if king or pawn is chasing, it should be classified as an 'idle' rather than a chase.
     // since king-pawn is allowed to chased with other pieces, and king-pawn can chase alone
     if is_kp(move) then {
+      continue;
+    }
+
+    if pawn_not_passed(move, turn) then {
       continue;
     }
 
