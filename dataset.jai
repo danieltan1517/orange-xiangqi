@@ -204,7 +204,7 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   }
 
   status: PositionStatus;
-  if abs(evaluation_score - score) > 170 {
+  if abs(evaluation_score - score) > 70 {
     status = PositionStatus.CriticalPosition;
   } else {
     status = PositionStatus.QuietPosition;
