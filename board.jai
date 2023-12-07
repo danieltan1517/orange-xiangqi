@@ -2440,6 +2440,8 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
         dir_see(xiangqi, stack, to, KP_TABLE[turn], KING_DIR, 0, turn, bitboard);
         continue;
       }
+
+      break;
     }
 
     if !is_empty(stack) {
