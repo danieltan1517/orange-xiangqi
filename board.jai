@@ -2396,83 +2396,64 @@ sliding_see :: (pieces: Array_u8, stack: *Stack, arr: [2] u64, to: int, count: i
 see :: (xiangqi: *Xiangqi, move: Move32) -> int {
 
   get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int, to: int, arr: [2] u64, bitboard: Bitboard128, flying_general: bool) -> int, SEE_Flags {
+    SEE_DIR :: int.[9, -1, -9, 1];
+    while is_empty(stack) && flags != 0 {
+
+      if flags & .Adv then {
+        dir_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ADV_DIR, 1, turn, bitboard);
+        flags &= ~.Adv;
+        continue;
+      } 
+
+      if flags & .Ele then {
+        ele_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, 2, turn, bitboard);
+        flags &= ~.Ele;
+        continue;
+      } 
+
+      if flags & .Pawn then {
+        dir_see(xiangqi, stack, to, KP_TABLE[turn], SEE_DIR, 6, turn, bitboard);
+        flags &= ~.Pawn;
+        continue;
+      } 
+
+      if flags & .Cannon then {
+        sliding_see(xiangqi.pieces[turn].cannon, stack, arr, to, 3, bitboard);
+        flags &= ~.Cannon;
+        continue;
+      } 
+
+      if flags & .Knight then {
+        kni_see(xiangqi, stack, to, turn, bitboard);
+        flags &= ~.Knight;
+        continue;
+      } 
+
+      if flags & .Rook then {
+        sliding_see(xiangqi.pieces[turn].rook, stack, arr, to, 2, bitboard);
+        flags &= ~.Rook;
+        continue;
+      } 
+
+      if flags & .King then {
+        flags &= ~.King;
+        dir_see(xiangqi, stack, to, KP_TABLE[turn], KING_DIR, 0, turn, bitboard);
+        continue;
+      }
+    }
+
     if !is_empty(stack) {
       sq := pop(stack);
       return sq, flags;
     }
 
-    if flags & .Adv then {
-      dir_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ADV_DIR, 1, turn, bitboard);
-      flags &= ~.Adv;
-      if !is_empty(stack) {
-        sq := pop(stack);
-        return sq, flags;
-      }
-    }
-
-    if flags & .Ele then {
-      ele_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, 2, turn, bitboard);
-      flags &= ~.Ele;
-      if !is_empty(stack) {
-        sq := pop(stack);
-        return sq, flags;
-      }
-    }
-
-    SEE_DIR :: int.[9, -1, -9, 1];
-    if flags & .Pawn then {
-      dir_see(xiangqi, stack, to, KP_TABLE[turn], SEE_DIR, 6, turn, bitboard);
-      flags &= ~.Pawn;
-      if !is_empty(stack) {
-        sq := pop(stack);
-        return sq, flags;
-      }
-    }
-
-    if flags & .Cannon then {
-      sliding_see(xiangqi.pieces[turn].cannon, stack, arr, to, 3, bitboard);
-      flags &= ~.Cannon;
-      if !is_empty(stack) {
-        sq := pop(stack);
-        return sq, flags;
-      }
-    }
- 
-    if flags & .Knight then {
-      kni_see(xiangqi, stack, to, turn, bitboard);
-      flags &= ~.Knight;
-      if !is_empty(stack) {
-        sq := pop(stack);
-        return sq, flags;
-      }
-    }
-
-    if flags & .Rook then {
-      sliding_see(xiangqi.pieces[turn].rook, stack, arr, to, 2, bitboard);
-      flags &= ~.Rook;
-      if !is_empty(stack) {
-        sq := pop(stack);
-        return sq, flags;
-      }
-    }
-
-    if flags & .King then {
-      flags &= ~.King;
-      dir_see(xiangqi, stack, to, KP_TABLE[turn], KING_DIR, 0, turn, bitboard);
-      if !is_empty(stack) {
-        sq := pop(stack);
-        return sq, flags;
-      }
-    }
-
     if flying_general == true then {
       sliding_see(xiangqi.pieces[turn].king, stack, arr, to, 2, bitboard);
-      while !is_empty(stack) {
+      if !is_empty(stack) {
         sq := pop(stack);
-        if is_set(bitboard, sq) {
-          continue;
+        if !is_set(bitboard, sq) then {
+          return sq, flags;
         }
-        return sq, flags;
       }
     }
 
