@@ -119,6 +119,11 @@ rollout :: (fen: string, table: *Table(u32, void)) {
     // reset work started to zero
     work_started = 0;
     for mov : moves {
+      r := random_get() % 100;
+      if r < 30 then {
+        continue;
+      }
+
       make_move(*xiangqi, mov);
       defer {
         unmake_move(*xiangqi, mov);
@@ -204,7 +209,7 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   }
 
   status: PositionStatus;
-  if abs(evaluation_score - score) > 70 {
+  if abs(evaluation_score - score) > 120 {
     status = PositionStatus.CriticalPosition;
   } else {
     status = PositionStatus.QuietPosition;
