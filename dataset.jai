@@ -3,7 +3,7 @@
 // a buggy implementation with infinite loop problems
 // every once in a while, but usable...
 // 
-#run load_model("orange12_4_23.nnue");
+#run load_model("orange12_6_23.nnue");
 
 DEPTH :: 7;
 MOVETIME :: 3_600_000;
@@ -112,7 +112,7 @@ rollout :: (fen: string, table: *Table(u32, void)) {
 
   work_started := 0;
 
-  for 0..5 {
+  for 0..2 {
     reset(*moves);
     legal_moves(*xiangqi, *moves);
 
@@ -204,7 +204,7 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   }
 
   status: PositionStatus;
-  if abs(evaluation_score - score) > 70 {
+  if abs(evaluation_score - score) > 170 {
     status = PositionStatus.CriticalPosition;
   } else {
     status = PositionStatus.QuietPosition;
