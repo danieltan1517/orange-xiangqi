@@ -1169,7 +1169,7 @@ judge_position :: (xiangqi: *Xiangqi) #expand {
   case .Win;
     `return MATE - `ply;
   case .Draw;
-    `return 0;
+    `return -300 + `ply;
   case .Loss;
     `return -MATE + `ply;
   }

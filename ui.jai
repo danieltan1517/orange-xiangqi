@@ -1475,7 +1475,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         status_string = get_ui_str().status_string[0];
         mark_previous_move_check(*xiangqi);
       } else if is_quiet(move) {
-        chase_success, chase_move := is_chase(*xiangqi);
+        /*chase_success, chase_move := is_chase(*xiangqi);
         if chase_success == true then {
           mark_previous_move(*xiangqi, .Chase);
           set_previous_chase_move(*xiangqi, chase_move);
@@ -1486,7 +1486,9 @@ gui_make_move :: (move: Move32, animate: bool) {
         } else {
           mark_previous_move(*xiangqi, .Idle);
           set_previous_chase_move(*xiangqi, NULL_MOVE);
-        }
+        }*/
+        mark_previous_move(*xiangqi, .Idle);
+        set_previous_chase_move(*xiangqi, NULL_MOVE);
       }
 
 
