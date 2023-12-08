@@ -518,13 +518,16 @@ incheck :: (xiangqi: *Xiangqi, attflags: AttFlags) -> bool {
 }
 
 is_attacked_by_knight :: (xiangqi: *Xiangqi, kni: int, diff: int, from: int, to: int) -> bool {
-  start := 0;
-  end := 3;
+  bits := cast(u64) KNIGHT_TABLE[kni];
   if diff > 0 {
-    start = 4;
-    end = 7;
-  } 
-  for i : start..end {
+    bits &= 0xF0;
+  } else {
+    bits &= 0x0F;
+  }
+
+  while bits {
+    i := bit_scan_forward(bits);
+    bits &= bits - 1;
     if diff == KNI_DIR[i] then {
       index := kni + KNI_BLK[i];
       if to == index {
