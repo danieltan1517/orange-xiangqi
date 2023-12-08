@@ -273,8 +273,7 @@ is_pseudolegal :: (using xiangqi: *Xiangqi, move: Move32) -> bool {
 
   is_rook_pseudolegal :: (xiangqi: *Xiangqi, from: int, to: int) -> bool {
     between, r := get_table_entry(from, to);
-    row := from % 9;
-    col := from / 9;
+    row, col := moddiv90(from);
     occ: u64;
     if r == 0 then {
       occ = xiangqi.rows[col] & 0x1FF;
@@ -288,8 +287,7 @@ is_pseudolegal :: (using xiangqi: *Xiangqi, move: Move32) -> bool {
 
   is_cannon_pseudolegal :: (xiangqi: *Xiangqi, from: int, to: int) -> bool {
     between, r := get_table_entry(from, to);
-    row := from % 9;
-    col := from / 9;
+    row, col := moddiv90(from);
     occ: u64;
     if r == 0 then {
       occ = xiangqi.rows[col] & 0x1FF;
@@ -371,8 +369,7 @@ is_legal :: (xiangqi: *Xiangqi, attackers: AttFlags, move: Move32) -> bool {
 }
 
 get_modified_row_cols :: (xiangqi: *Xiangqi, ksq: int, move: Move32) -> occ_row: u64, occ_col: u64, krow: int, kcol: int {
-  krow := ksq % 9;
-  kcol := ksq / 9;
+  krow, kcol := moddiv90(ksq);
   occ_row: u64 = xiangqi.rows[kcol];
   if kcol == move.from / 9 {
     occ_row &= ~(cast, no_check (u16) (1 << (move.from % 9)));
@@ -475,8 +472,7 @@ incheck :: (xiangqi: *Xiangqi, attflags: AttFlags) -> bool {
   }
 
   // kings can never face each other. so no need to check the king.
-  krow := ksq % 9;
-  kcol := ksq / 9;
+  krow, kcol := moddiv90(ksq);
   occ_row: u64 = xiangqi.rows[kcol];
   occ_col: u64 = xiangqi.cols[krow];
   arr: [2] u64 = .[occ_row, occ_col];
@@ -584,16 +580,14 @@ make_move :: (xiangqi: *Xiangqi, move: Move32) {
   piece := move.piece >> 2;
   from: int = move.from;
   {
-    r := from % 9;
-    c := from / 9;
+    r, c := moddiv90(from);
     xiangqi.board[from] = 0;
     xiangqi.rows[c] ^= (cast(u16) (1 << r));
     xiangqi.cols[r] ^= (cast(u16) (1 << c));
   }
   to: int = move.to;
   {
-    r := to % 9;
-    c := to / 9;
+    r, c := moddiv90(to);
     xiangqi.board[to] = move.piece;
     xiangqi.rows[c] |= cast(u16) (1 << r);
     xiangqi.cols[r] |= cast(u16) (1 << c);
@@ -620,15 +614,13 @@ unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
   xiangqi.hash = pop_hash(*xiangqi.hashes);
   to: int = move.to;
   capture := move.capture;
-  // to:
   xiangqi.board[to] = capture;
   if capture != 0 then {
     cap := capture >> 2;
     array := *xiangqi.pieces[xiangqi.turn].piece[cap];
     append(array, to);
   } else {
-    r := to % 9;
-    c := to / 9;
+    r, c := moddiv90(to);
     xiangqi.rows[c] ^= (cast(u16) (1 << r));
     xiangqi.cols[r] ^= (cast(u16) (1 << c));
   }
@@ -639,8 +631,7 @@ unmake_move :: (xiangqi: *Xiangqi, move: Move32) {
 
   // from:
   xiangqi.board[from] = piece;
-  r := from % 9;
-  c := from / 9;
+  r, c := moddiv90(from);
   xiangqi.rows[c] |= cast(u16) (1 << r);
   xiangqi.cols[r] |= cast(u16) (1 << c);
 
@@ -768,8 +759,7 @@ add_col_moves :: (xiangqi: *Xiangqi, moves: *Moves, cols_bits: u64, move: Move32
 }
 
 rook_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
-  row := sq % 9;
-  col := sq / 9;
+  row, col := moddiv90(sq);
   move: Move32;
   move.from = cast(u8) sq;
   move.piece = xiangqi.board[sq];
@@ -781,8 +771,7 @@ rook_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
 }
 
 rook_quiets :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
-  row := sq % 9;
-  col := sq / 9;
+  row, col := moddiv90(sq);
   move: Move32;
   move.from = cast(u8) sq;
   move.piece = xiangqi.board[sq];
@@ -794,8 +783,7 @@ rook_quiets :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
 }
 
 rook_captures :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
-  row := sq % 9;
-  col := sq / 9;
+  row, col := moddiv90(sq);
   move: Move32;
   move.from = cast(u8) sq;
   move.piece = xiangqi.board[sq];
@@ -821,8 +809,7 @@ xray_captures :: (row: int, occ: u64) -> u64 {
 }
 
 cannon_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
-  row := sq % 9;
-  col := sq / 9;
+  row, col := moddiv90(sq);
   move: Move32;
   move.from = cast(u8) sq;
   move.piece = xiangqi.board[sq];
@@ -833,8 +820,7 @@ cannon_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
 }
 
 cannon_captures :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
-  row := sq % 9;
-  col := sq / 9;
+  row, col := moddiv90(sq);
   move: Move32;
   move.from = cast(u8) sq;
   move.piece = xiangqi.board[sq];
@@ -2475,8 +2461,7 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
 
   ours: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
   opps: SEE_Flags = SEE_TABLE[SQUARES[turn ^ 1][to]] | SEE_Flags.Attacking;
-  row := to % 9;
-  col := to / 9;
+  row, col := moddiv90(to);
   occ_row: u64 = xiangqi.rows[col];
   occ_col: u64 = xiangqi.cols[row];
   arr: [2] u64 = .[occ_row, occ_col];
@@ -2530,9 +2515,7 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
     // consider x-rays
     // from.
     set_bit(*bitboard, from);
-    from_r := from % 9;
-    from_c := from / 9;
-
+    from_r, from_c := moddiv90(from);
     // make sure this is not a diagonal capture.
 
     if from_r != row && from_c == col then {
