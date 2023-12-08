@@ -44,6 +44,36 @@ KP_TABLE : [2][90] u8 : [90] u8.[
   ],
 ];
 
+SEE_PAWN_TABLE : [2][90] u8 : [90] u8.[
+  u8.[
+    0b0000, 0b0000, 0b0000, 0b1100, 0b1110, 0b0110, 0b0000, 0b0000, 0b0000, 
+    0b0000, 0b0000, 0b0000, 0b1101, 0b1111, 0b0111, 0b0000, 0b0000, 0b0000, 
+    0b0000, 0b0000, 0b0000, 0b1001, 0b1011, 0b0011, 0b0000, 0b0000, 0b0000, 
+    0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 
+    0b0001, 0b0000, 0b0001, 0b0000, 0b0001, 0b0000, 0b0001, 0b0000, 0b0001, 
+
+    0b1001, 0b1010, 0b1011, 0b1010, 0b1011, 0b1010, 0b1011, 0b1010, 0b0011, 
+    0b1001, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b0011, 
+    0b1001, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b0011, 
+    0b1001, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b0011, 
+    0b1001, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b1011, 0b0011, 
+  ],
+
+  u8.[
+    0b1100, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b0110, 
+    0b1100, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b0110, 
+    0b1100, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b0110, 
+    0b1100, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b1110, 0b0110, 
+    0b1100, 0b1010, 0b1110, 0b1010, 0b1110, 0b1010, 0b1110, 0b1010, 0b0110, 
+
+    0b0100, 0b0000, 0b0100, 0b0000, 0b0100, 0b0000, 0b0100, 0b0000, 0b0100, 
+    0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 
+    0b0000, 0b0000, 0b0000, 0b1100, 0b1110, 0b0110, 0b0000, 0b0000, 0b0000, 
+    0b0000, 0b0000, 0b0000, 0b1101, 0b1111, 0b0111, 0b0000, 0b0000, 0b0000, 
+    0b0000, 0b0000, 0b0000, 0b1001, 0b1011, 0b0011, 0b0000, 0b0000, 0b0000, 
+  ],
+];
+
 KNIGHT_TABLE : [90] u8 : u8.[
   0b10100000, 0b11100000, 0b11110000, 0b11110000, 0b11110000, 0b11110000, 0b11110000, 0b11010000, 0b01010000, 
   0b10101000, 0b11101000, 0b11111100, 0b11111100, 0b11111100, 0b11111100, 0b11111100, 0b11010100, 0b01010100, 
@@ -2324,9 +2354,9 @@ ele_see :: (xiangqi: *Xiangqi, stack: *Stack, to: int, TABLE: [90] u8, DIR: [] i
 is_attacked_by_knight :: (xiangqi: *Xiangqi, kni: int, diff: int, from: int, to: int, bitboard: Bitboard128) -> bool {
   bits := cast(u64) KNIGHT_TABLE[kni];
   if diff > 0 {
-    bits &= 0xFF;
+    bits &= 0xF0;
   } else {
-    bits &= 0xFF00;
+    bits &= 0x0F;
   }
 
   while bits {
@@ -2376,76 +2406,114 @@ sliding_see :: (pieces: Array_u8, stack: *Stack, arr: [2] u64, to: int, count: i
   }
 }
 
+get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int, to: int, arr: [2] u64, bitboard: Bitboard128, flying_general: bool) -> int, SEE_Flags {
+  while is_empty(stack) && flags != 0 {
+
+    if flags & .Adv then {
+      dir_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ADV_DIR, 1, turn, bitboard);
+      flags &= ~.Adv;
+      continue;
+    } 
+
+    if flags & .Ele then {
+      ele_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, 2, turn, bitboard);
+      flags &= ~.Ele;
+      continue;
+    } 
+
+    if flags & .Pawn then {
+      dir_see(xiangqi, stack, to, SEE_PAWN_TABLE[turn], KING_DIR, 6, turn, bitboard);
+      flags &= ~.Pawn;
+      continue;
+    } 
+
+    if flags & .Cannon then {
+      sliding_see(xiangqi.pieces[turn].cannon, stack, arr, to, 3, bitboard);
+      flags &= ~.Cannon;
+      continue;
+    } 
+
+    if flags & .Knight then {
+      kni_see(xiangqi, stack, to, turn, bitboard);
+      flags &= ~.Knight;
+      continue;
+    } 
+
+    if flags & .Rook then {
+      sliding_see(xiangqi.pieces[turn].rook, stack, arr, to, 2, bitboard);
+      flags &= ~.Rook;
+      continue;
+    } 
+
+    if flags & .King then {
+      flags &= ~.King;
+      dir_see(xiangqi, stack, to, KP_TABLE[turn], KING_DIR, 0, turn, bitboard);
+      continue;
+    }
+
+    break;
+  }
+
+  if !is_empty(stack) {
+    sq := pop(stack);
+    return sq, flags;
+  }
+
+  if flying_general == true then {
+    sliding_see(xiangqi.pieces[turn].king, stack, arr, to, 2, bitboard);
+    if !is_empty(stack) {
+      sq := pop(stack);
+      if !is_set(bitboard, sq) then {
+        return sq, flags;
+      }
+    }
+  }
+
+  return -1, flags;
+}
+
+// this function assumes the piece is NOT a king.
+// todo: very limited in terms of what it can do...
+is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
+  // values for SEE algorithm.
+  VALUES :: int.[50000, 200, 200, 400, 800, 400, 200];
+
+  // SQUARES
+  from: int = move.from;
+  to: int = move.to;
+
+  if VALUES[xiangqi.board[to] >> 2] > VALUES[xiangqi.board[from] >> 2] then {
+    return false;
+  }
+  
+  turn: int = xiangqi.turn ^ 1;
+  opps_flags: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
+  bitboard: Bitboard128;
+
+  set_bit(*bitboard, from);
+  row, col := moddiv90(to);
+  from_r, from_c := moddiv90(from);
+  occ_row: u64 = xiangqi.rows[col];
+  occ_col: u64 = xiangqi.cols[row];
+  arr: [2] u64 = .[occ_row, occ_col];
+  stack: Stack;
+
+  // make sure this is not a diagonal capture.
+  if from_r != row && from_c == col then {
+    arr[0] ^= cast(u64)(1 << from_r);
+  } 
+
+  if from_c != col && from_r == row {
+    arr[1] ^= cast(u64)(1 << from_c);
+  }
+  from, opps_flags = get_attackers(xiangqi, *stack, opps_flags, turn, to, arr, bitboard, false);
+  return from != -1;
+}
+
+
 // static exchange evaluation. SEE.
 // todo: maybe this function should handle pins also.
 see :: (xiangqi: *Xiangqi, move: Move32) -> int {
-
-  get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int, to: int, arr: [2] u64, bitboard: Bitboard128, flying_general: bool) -> int, SEE_Flags {
-    SEE_DIR :: int.[9, -1, -9, 1];
-    while is_empty(stack) && flags != 0 {
-
-      if flags & .Adv then {
-        dir_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ADV_DIR, 1, turn, bitboard);
-        flags &= ~.Adv;
-        continue;
-      } 
-
-      if flags & .Ele then {
-        ele_see(xiangqi, stack, to, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, 2, turn, bitboard);
-        flags &= ~.Ele;
-        continue;
-      } 
-
-      if flags & .Pawn then {
-        dir_see(xiangqi, stack, to, KP_TABLE[turn], SEE_DIR, 6, turn, bitboard);
-        flags &= ~.Pawn;
-        continue;
-      } 
-
-      if flags & .Cannon then {
-        sliding_see(xiangqi.pieces[turn].cannon, stack, arr, to, 3, bitboard);
-        flags &= ~.Cannon;
-        continue;
-      } 
-
-      if flags & .Knight then {
-        kni_see(xiangqi, stack, to, turn, bitboard);
-        flags &= ~.Knight;
-        continue;
-      } 
-
-      if flags & .Rook then {
-        sliding_see(xiangqi.pieces[turn].rook, stack, arr, to, 2, bitboard);
-        flags &= ~.Rook;
-        continue;
-      } 
-
-      if flags & .King then {
-        flags &= ~.King;
-        dir_see(xiangqi, stack, to, KP_TABLE[turn], KING_DIR, 0, turn, bitboard);
-        continue;
-      }
-
-      break;
-    }
-
-    if !is_empty(stack) {
-      sq := pop(stack);
-      return sq, flags;
-    }
-
-    if flying_general == true then {
-      sliding_see(xiangqi.pieces[turn].king, stack, arr, to, 2, bitboard);
-      if !is_empty(stack) {
-        sq := pop(stack);
-        if !is_set(bitboard, sq) then {
-          return sq, flags;
-        }
-      }
-    }
-
-    return -1, flags;
-  }
 
   // values for SEE algorithm.
   VALUES :: int.[50000, 200, 200, 400, 800, 450, 200];
@@ -2472,7 +2540,11 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
   flying_general := false;
 
   piece_code := xiangqi.board[from] >> 2;
+  if piece_code == 0 then {
+    ours = 0;
+  }
   bitboard: Bitboard128;
+  set_bit(*bitboard, from);
 
   gain: [16] int;
 
@@ -2487,7 +2559,6 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
   while true {
     d += 1;
     turn ^= 1;
-
     gain[d] = VALUES[piece_code] - gain[d-1];
     // prune.
     if max(-gain[d-1], gain[d]) < 0 then {
@@ -2605,7 +2676,6 @@ is_chase :: (xiangqi: *Xiangqi) -> bool, chase_move: Move32 #must {
     unmake_null_move(xiangqi);
   }
 
-
   moves: Moves;
   gen_captures(xiangqi, *moves);
   sort(*moves);
@@ -2627,7 +2697,7 @@ is_chase :: (xiangqi: *Xiangqi) -> bool, chase_move: Move32 #must {
     }
 
     // positive SEE = chase.
-    if see(xiangqi, move) > 0 then {
+    if !is_protected(xiangqi, move) then {
       return true, move;
     }
   }

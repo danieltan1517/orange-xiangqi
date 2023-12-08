@@ -1,8 +1,5 @@
 // automated testing for SEE
 
-/*
-*/
-
 #import "Math";
 #load "board.jai";
 
@@ -26,6 +23,7 @@ main :: () {
       print("-----------------------------\n");
       print("Error. Expected %. Got %\n", expected, see_score);
       print("%\n", xiangqi);
+      print("FEN: %\n", to_fenstring(*xiangqi));
       print("-----------------------------\n");
     } else {
       success += 1;
@@ -68,10 +66,16 @@ main :: () {
   see_test("9/1H1ka2H1/5a3/3P5/2e6/c8/1p7/8E/9/2EAKA3 w", "d6d7", -200);
   see_test("2eakc3/3Ra2R1/h3e4/p3C3p/2p1P4/9/P5r1P/5A3/3K4c/5r3 w", "h8e8", -400);
   see_test("2ea1k3/4a4/4e4/3R4p/p1P3p2/3h1C2P/9/c1hr2H2/1c2K4/2E2AE2 b", "d2e2", -800);
-  see_test("3akae2/9/4e4/p8/9/9/3R5/4rA3/r3A4/3RK4 w", "d2d9", 200);
+  see_test("3akae2/9/4e4/p8/9/9/3R5/4rA3/r3A4/3RK4 w", "d3d9", 200);
   see_test("1Ccak1e2/3RaR3/5c3/p3r4/2e3p2/2P6/P3r4/4E3H/9/3AKAE2 w", "f8e8", -600);
   see_test("3aka3/4r4/4R4/p7p/2p3p2/4C4/P3R1P2/4E4/4A4/4KAE2 w", "e4e8", 400);
   see_test("9/3ka2H1/4h4/5C3/5C3/9/9/9/4A4/4K4 w", "h8f9", -400);
   see_test("9/3ka2H1/4ha3/5C3/5C3/9/9/9/4A4/4K4 w", "h8f9", -200);
-
+  see_test("rnba1abnr/3k5/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/NC5C1/4A4/R1B1KABNR w", "e0d0", -50000);
+  see_test("r1Na1a3/3k1n3/2n1b4/p1p1p1p1p/4c4/6P2/P1P2R2P/1CcC5/9/2BAKAB2 b", "d8d7", -50000);
+  see_test("C1nNk4/9/9/9/9/9/n1p6/B3C4/3pA4/4K4 w", "e0d0", -50000);
+  see_test("4k4/9/4b4/9/7P1/6P2/9/9/6R2/4K4 w - - 0 1", "g4g5", 0);
+  see_test("4k4/9/4b4/9/7P1/6P2/9/9/6R2/4K4 w - - 0 1", "h5g5", 0);
+  see_test("4k4/6n2/4b4/9/7P1/6P2/9/9/6R2/4K4 b - - 0 1", "g8h6", -400);
+  see_test("4k4/9/9/4p4/9/9/9/9/3pA4/2pAK4 b - - 0 1", "c0d0", 0);
 }
