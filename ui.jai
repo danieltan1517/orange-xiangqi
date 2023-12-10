@@ -1438,6 +1438,23 @@ gui_redo_move :: () {
   xiangqi.hashes.info[moves_made_count].move = next;
 }
 
+chase_moves: Chase_Moves;
+count_chases := 0;
+
+draw_chases :: () {
+  for move : chase_moves.array {
+    if is_null(move) then {
+      continue;
+    }
+
+    print("%\n", move);
+    arrow: Arrow;
+    arrow.from = move.from;
+    arrow.to = move.to;
+    add_arrow(arrow);
+  }
+}
+
 gui_make_move :: (move: Move32, animate: bool) {
   for m: moves {
     if m == move then {
@@ -1475,7 +1492,11 @@ gui_make_move :: (move: Move32, animate: bool) {
         status_string = get_ui_str().status_string[0];
         mark_previous_move_check(*xiangqi);
       } else if is_quiet(move) {
-        chase_success, chase_move := is_chase(*xiangqi);
+        count_chases = compute_chase_moves(*xiangqi, move, *chase_moves);
+        mark_previous_move(*xiangqi, .Idle);
+        set_previous_chase_move(*xiangqi, NULL_MOVE);
+
+        /*chase_success, chase_move := is_chase(*xiangqi);
         if chase_success == true then {
           mark_previous_move(*xiangqi, .Chase);
           set_previous_chase_move(*xiangqi, chase_move);
@@ -1490,7 +1511,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         } else {
           mark_previous_move(*xiangqi, .Idle);
           set_previous_chase_move(*xiangqi, NULL_MOVE);
-        }
+        }*/
       }
 
       judge_state, violation_level := judge_ntimes(*xiangqi, 4);
@@ -1544,6 +1565,7 @@ gui_make_move :: (move: Move32, animate: bool) {
       }
       move_list_scroll_value = 10000;
       print("%\n", to_fenstring(*xiangqi));
+      draw_chases();
       break;
     }
   }
