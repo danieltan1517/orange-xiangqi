@@ -10,6 +10,7 @@ MOVETIME :: 3_600_000;
 MAX_COMPUTATIONS :: 50_000_000;
 
 main :: () {
+  print("info string NNUE Model: %\n", get_nnuename());
   init_xiangqi_tables();
   init_tt(size_in_bytes = 128_000_000);
   random_seed(0xcafe_babe_10_31_1517);
