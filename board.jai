@@ -2430,15 +2430,15 @@ get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int,
       continue;
     } 
 
-    if flags & .Cannon then {
-      sliding_see(xiangqi.pieces[turn].cannon, stack, arr, to, 3, bitboard);
-      flags &= ~.Cannon;
-      continue;
-    } 
-
     if flags & .Knight then {
       kni_see(xiangqi, stack, to, turn, bitboard);
       flags &= ~.Knight;
+      continue;
+    } 
+
+    if flags & .Cannon then {
+      sliding_see(xiangqi.pieces[turn].cannon, stack, arr, to, 3, bitboard);
+      flags &= ~.Cannon;
       continue;
     } 
 
@@ -2477,9 +2477,11 @@ get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int,
 
 // this function assumes the piece is NOT a king.
 // todo: very limited in terms of what it can do...
+// this function determines whether a piece is protected or not.
+// this function does NOT determine whether a particular piece exchange is bad or not. this is mainly for chasing rules.
 is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   // values for SEE algorithm.
-  VALUES :: int.[50000, 200, 200, 400, 800, 400, 200];
+  VALUES :: int.[0, 200, 200, 400, 800, 400, 200];
 
   // SQUARES
   from: int = move.from;
@@ -2490,27 +2492,52 @@ is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   }
   
   turn: int = xiangqi.turn ^ 1;
-  opps_flags: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
   bitboard: Bitboard128;
-
-  set_bit(*bitboard, from);
+  success := false;
   row, col := moddiv90(to);
-  from_r, from_c := moddiv90(from);
   occ_row: u64 = xiangqi.rows[col];
   occ_col: u64 = xiangqi.cols[row];
   arr: [2] u64 = .[occ_row, occ_col];
-  stack: Stack;
+  arr[0] |= cast(u64)(1 << row);
+  arr[1] |= cast(u64)(1 << col);
+  flying_general := false;
+  while true {
+    opps_flags: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
+    set_bit(*bitboard, from);
+    row, col := moddiv90(to);
+    from_r, from_c := moddiv90(from);
+    stack: Stack;
+ 
+    // make sure this is not a diagonal capture.
+    if from_r != row && from_c == col then {
+      arr[0] ^= cast(u64)(1 << from_r);
+    } 
+ 
+    if from_c != col && from_r == row {
+      arr[1] ^= cast(u64)(1 << from_c);
+    }
 
-  // make sure this is not a diagonal capture.
-  if from_r != row && from_c == col then {
-    arr[0] ^= cast(u64)(1 << from_r);
-  } 
+    from, opps_flags = get_attackers(xiangqi, *stack, opps_flags, turn, to, arr, bitboard, flying_general);
+    if from == -1 {
+      return success;
+    } 
+    
+    if success == true then {
+      return false;
+    }
 
-  if from_c != col && from_r == row {
-    arr[1] ^= cast(u64)(1 << from_c);
+    success = !success;
+    piece_code := xiangqi.board[from] >> 2;
+    if piece_code != 0 then {
+      return success;
+    } else {
+      flying_general = true;
+    }
+
+    turn ^= 1;
   }
-  from, opps_flags = get_attackers(xiangqi, *stack, opps_flags, turn, to, arr, bitboard, false);
-  return from != -1;
+
+  return false;
 }
 
 
