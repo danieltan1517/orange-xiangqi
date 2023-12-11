@@ -201,7 +201,7 @@ SEE_TABLE : [90] SEE_Flags: SEE_Flags.[
 
 attackers :: (xiangqi: *Xiangqi) -> AttFlags #must {
 
-  is_attacked_by_knight :: (xiangqi: *Xiangqi, diff: int) -> bool {
+  is_attacked_by_knight :: (diff: int) -> bool {
     diff += 19;
     return ((1 << diff) & 0b101_000001_0001_0000_0000_0000_01_0001_00000_101) != 0;
   }
@@ -224,7 +224,7 @@ attackers :: (xiangqi: *Xiangqi) -> AttFlags #must {
       continue;
     }
 
-    if is_attacked_by_knight(xiangqi, diff) then {
+    if is_attacked_by_knight(diff) then {
       attflags |= .Knight;
     }
   }
@@ -791,11 +791,10 @@ add_col_moves :: (xiangqi: *Xiangqi, moves: *Moves, cols_bits: u64, move: Move32
   }
 }
 
-add_chase_row :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, rows_bits: u64, from: u8, col: int) -> int {
+add_chase_row :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, rows_bits: u64, from: u8, col: int, count: int) -> int {
   mov: Move32;
   mov.from = from;
   mov.piece = xiangqi.board[from];
-  count := 0;
   while rows_bits {
     i := bit_scan_forward(rows_bits);
     rows_bits &= rows_bits - 1;
@@ -808,7 +807,7 @@ add_chase_row :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, rows_bits: u64, 
   return count;
 }
 
-add_chase_col :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, cols_bits: u64, from: u8, row: int) -> int {
+add_chase_col :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, cols_bits: u64, from: u8, row: int, count: int) -> int {
   mov: Move32;
   mov.from = from;
   mov.piece = xiangqi.board[from];
@@ -870,6 +869,13 @@ xray_captures :: (row: int, occ: u64) -> u64 {
   blockers: u64 = occ & attacks;
   occ ^= blockers;
   return (ROOK_MAGICS[row][occ] & occ);
+}
+
+xray_traverse :: (row: int, occ: u64) -> u64 {
+  attacks: u64  = ROOK_MAGICS[row][occ];
+  blockers: u64 = occ & attacks;
+  occ ^= blockers;
+  return ROOK_MAGICS[row][occ];
 }
 
 cannon_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
@@ -1072,13 +1078,12 @@ blocked_capture_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90
   }
 }
 
-blocked_chase_moves :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, ksq: int, TABLE: [90] u8, DIR: [] int, BLOCKS: [] int) -> int {
+blocked_chase_moves :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, ksq: int, TABLE: [90] u8, DIR: [] int, BLOCKS: [] int, count: int) -> int {
   move: Move32;
   move.from = cast(u8) ksq;
   move.piece = xiangqi.board[ksq];
 
   bits := cast(u64) TABLE[ksq];
-  count := 0;
   while bits {
     i := bit_scan_forward(bits);
     bits &= bits - 1;
@@ -2708,16 +2713,12 @@ compute_chase_moves :: (xiangqi: *Xiangqi, previous_move: Move32, chase_moves: *
   memset(chase_moves, 0, size_of(Move32) * 4);
   from  := previous_move.from;
   to    := previous_move.to;
-
-
   from_row, from_col := moddiv90(from);
   to_row, to_col     := moddiv90(to);
-
-  rows_bits: u64 = ROOK_MAGICS[to_row][xiangqi.rows[to_col]];
-  cols_bits: u64 = ROOK_MAGICS[to_col][xiangqi.cols[to_row]];
   turn  := xiangqi.turn ^ 1;
   count := 0;
 
+  is_cannon := false;
   // kings and pawns cannot chase.
   if xiangqi.board[to] >> 2 == {
 
@@ -2729,39 +2730,117 @@ compute_chase_moves :: (xiangqi: *Xiangqi, previous_move: Move32, chase_moves: *
 
   // elephant
   case 2;
-    count += blocked_chase_moves(xiangqi, chase_moves, to, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR);
+    count += blocked_chase_moves(xiangqi, chase_moves, to, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, 0);
 
   // knight
   case 3;
-    count += blocked_chase_moves(xiangqi, chase_moves, to, KNIGHT_TABLE, KNI_DIR, KNI_BLK);
+    count += blocked_chase_moves(xiangqi, chase_moves, to, KNIGHT_TABLE, KNI_DIR, KNI_BLK, 0);
 
   // rook
   case 4;
     if from_col == to_col {
        // only search for the columns.
-       count += add_chase_col(xiangqi, chase_moves, cols_bits & xiangqi.cols[to_row], to, to_row);
+       cols_bits: u64 = ROOK_MAGICS[to_col][xiangqi.cols[to_row]];
+       count += add_chase_col(xiangqi, chase_moves, cols_bits & xiangqi.cols[to_row], to, to_row, 0);
     } else {
        // only search for the rows.
-       count += add_chase_row(xiangqi, chase_moves, rows_bits & xiangqi.rows[to_col], to, to_col);
+       rows_bits: u64 = ROOK_MAGICS[to_row][xiangqi.rows[to_col]];
+       count += add_chase_row(xiangqi, chase_moves, rows_bits & xiangqi.rows[to_col], to, to_col, 0);
     }
 
   // cannon
   case 5;
+    is_cannon = true;
     if from_col == to_col {
        // only search for the columns.
        occ := xray_captures(to_col, xiangqi.cols[to_row]);
-       count += add_chase_col(xiangqi, chase_moves, occ, to, to_row);
+       count += add_chase_col(xiangqi, chase_moves, occ, to, to_row, 0);
     } else {
        // only search for the rows.
        occ := xray_captures(to_row, xiangqi.rows[to_col]);
-       count += add_chase_row(xiangqi, chase_moves, occ, to, to_col);
+       count += add_chase_row(xiangqi, chase_moves, occ, to, to_col, 0);
     }
 
   // soldier
   case 6;
   }
 
-  // todo: perform discovered attack.
+  for rook : xiangqi.pieces[turn].rook {
+    if rook == to continue;
+    rook_row, rook_col := moddiv90(rook);
+    if from_col == rook_col {
+      rows_bits: u64 = ROOK_MAGICS[rook_row][xiangqi.rows[rook_col]];
+      rows_bits &= ROOK_MAGICS[from_row][xiangqi.rows[from_col]];
+      rows_bits &= xiangqi.rows[rook_col];
+      count = add_chase_row(xiangqi, chase_moves, rows_bits, rook, rook_col, count);
+    } else if from_row == rook_row {
+      cols_bits: u64 = ROOK_MAGICS[rook_col][xiangqi.cols[rook_row]];
+      cols_bits &= ROOK_MAGICS[from_col][xiangqi.cols[from_row]];
+      cols_bits &= xiangqi.cols[rook_row];
+      count = add_chase_col(xiangqi, chase_moves, cols_bits, rook, rook_row, count);
+    }
+  }
+
+  // todo: cannons need to be fixed!
+  for cannon : xiangqi.pieces[turn].cannon {
+    if cannon == to continue;
+    cannon_row, cannon_col := moddiv90(cannon);
+    if to_col == cannon_col {
+      rows_bits: u64 = xray_captures(cannon_row, xiangqi.rows[cannon_col]);
+      rows_bits &= ROOK_MAGICS[to_row][xiangqi.rows[to_col]];
+      count = add_chase_row(xiangqi, chase_moves, rows_bits, cannon, cannon_col, count);
+    } else if to_row == cannon_row {
+      cols_bits: u64 = xray_captures(cannon_col, xiangqi.cols[cannon_row]);
+      cols_bits &= ROOK_MAGICS[to_col][xiangqi.cols[to_row]];
+      cols_bits &= xray_captures(to_col, xiangqi.cols[to_row]);
+      count = add_chase_col(xiangqi, chase_moves, cols_bits, cannon, cannon_row, count);
+    } else if from_col == cannon_col {
+      rows_bits: u64 = xray_captures(cannon_row, xiangqi.rows[cannon_col]);
+      rows_bits &= xray_traverse(from_row, xiangqi.rows[from_col]);
+      count = add_chase_row(xiangqi, chase_moves, rows_bits, cannon, cannon_col, count);
+    } else if from_row == cannon_row {
+      cols_bits: u64 = xray_captures(cannon_col, xiangqi.cols[cannon_row]);
+      cols_bits &= xray_traverse(from_col, xiangqi.cols[from_row]);
+      count = add_chase_col(xiangqi, chase_moves, cols_bits, cannon, cannon_row, count);
+    }
+  }
+
+  is_knight_freed :: (diff: int) -> bool {
+    diff += 9;
+    return ((1 << diff) & 0b1000_000_101_000_000010) != 0;
+  }
+
+  is_ele_freed :: (diff: int) -> bool {
+    diff += 10;
+    return ((1 << diff) & 0b101_000_000_000_000_000_101) != 0;
+  }
+
+
+  // todo: doesn't properly deal with discoveries
+  for kni : xiangqi.pieces[turn].kni {
+    if kni == to continue;
+    abs_diff, diff := index_abs_diff(from, kni);
+    if abs_diff > 9 then {
+      continue;
+    }
+
+    if is_knight_freed(diff) {
+      count += blocked_chase_moves(xiangqi, chase_moves, kni, KNIGHT_TABLE, KNI_DIR, KNI_BLK, count);
+    }
+  }
+
+  // todo: doesn't properly deal with discoveries
+  for ele : xiangqi.pieces[turn].ele {
+    if ele == to continue;
+    abs_diff, diff := index_abs_diff(from, ele);
+    if abs_diff > 10 then {
+      continue;
+    }
+
+    if is_ele_freed(diff) {
+      count += blocked_chase_moves(xiangqi, chase_moves, ele, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, count);
+    }
+  }
 
   turn ^= 1;
   make_null_move(xiangqi);
