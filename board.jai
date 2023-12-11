@@ -811,7 +811,6 @@ add_chase_col :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, cols_bits: u64, 
   mov: Move32;
   mov.from = from;
   mov.piece = xiangqi.board[from];
-  count := 0;
   while cols_bits {
     i := bit_scan_forward(cols_bits);
     cols_bits &= cols_bits - 1;
@@ -1329,7 +1328,8 @@ append_chase_move :: (moves: *Chase_Moves, move: Move32, count: int) -> int #mus
   capture: int = move.capture;
   piece: int = move.piece;
   if ((capture ^ piece) & 0x3) == 0x2 then {
-    moves.array[count].move = move;
+    print("CHASE[%]: % added\n", count, move);
+    moves.array[count] = move;
     return 1;
   }
 
@@ -2741,10 +2741,14 @@ compute_chase_moves :: (xiangqi: *Xiangqi, previous_move: Move32, chase_moves: *
     if from_col == to_col {
        // only search for the columns.
        cols_bits: u64 = ROOK_MAGICS[to_col][xiangqi.cols[to_row]];
+       //print("COLS: %\n", formatInt(cols_bits,2));
+       //print("COLS: %\n", formatInt(xiangqi.cols[to_row],2));
        count += add_chase_col(xiangqi, chase_moves, cols_bits & xiangqi.cols[to_row], to, to_row, 0);
+       //print("COUNT: %\n", count);
     } else {
        // only search for the rows.
        rows_bits: u64 = ROOK_MAGICS[to_row][xiangqi.rows[to_col]];
+       print("ROWS: %\n", formatInt(rows_bits,2));
        count += add_chase_row(xiangqi, chase_moves, rows_bits & xiangqi.rows[to_col], to, to_col, 0);
     }
 
@@ -2807,7 +2811,7 @@ compute_chase_moves :: (xiangqi: *Xiangqi, previous_move: Move32, chase_moves: *
 
   is_knight_freed :: (diff: int) -> bool {
     diff += 9;
-    return ((1 << diff) & 0b1000_000_101_000_000010) != 0;
+    return ((1 << diff) & 0b010_000_000_101_000_000_01) != 0;
   }
 
   is_ele_freed :: (diff: int) -> bool {
@@ -2823,9 +2827,10 @@ compute_chase_moves :: (xiangqi: *Xiangqi, previous_move: Move32, chase_moves: *
     if abs_diff > 9 then {
       continue;
     }
-
+    print("kni %\n", kni);
     if is_knight_freed(diff) {
-      count += blocked_chase_moves(xiangqi, chase_moves, kni, KNIGHT_TABLE, KNI_DIR, KNI_BLK, count);
+      count = blocked_chase_moves(xiangqi, chase_moves, kni, KNIGHT_TABLE, KNI_DIR, KNI_BLK, count);
+      print("COUNT: %\n", count);
     }
   }
 
@@ -2838,7 +2843,7 @@ compute_chase_moves :: (xiangqi: *Xiangqi, previous_move: Move32, chase_moves: *
     }
 
     if is_ele_freed(diff) {
-      count += blocked_chase_moves(xiangqi, chase_moves, ele, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, count);
+      count = blocked_chase_moves(xiangqi, chase_moves, ele, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, count);
     }
   }
 
