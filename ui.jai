@@ -1514,7 +1514,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         }*/
       }
 
-      judge_state, violation_level := judge_ntimes(*xiangqi, 4);
+      /*judge_state, violation_level := judge_ntimes(*xiangqi, 4);
 
       if judge_state == {
       case .Undecided;
@@ -1540,7 +1540,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         status_string = get_ui_str().status_string[5];
         on_game_end(.Draw);
       case .Loss;
-      }
+      }*/
 
       if moves.count == 0 then {
         winner: GameEnd;
