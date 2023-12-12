@@ -2197,8 +2197,67 @@ is_chase :: inline (move: Move32) -> bool {
 
 // judge relative to the side playing the game.
 judge :: (xiangqi: *Xiangqi) -> GameState {
+  judge_one :: (hashes: Board_Hash, count: int) -> bool, Violations {
+    if count < 0 then {
+      return false, .PerpetualIdle;
+    }
+    
+    if hashes.info[count].status == .Cancel then {
+      return false, .PerpetualIdle;
+    }
+
+    hash := hashes.info[count].hash;
+    count -= 2;
+    status: Status = 0;
+    repeating: bool = false;
+    single_victim: bool = true;
+    sq: int = -1;
+    while count >= 0 {
+      if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
+        break;
+      }
+
+      if sq != -1 && hashes.info[count+1].move.to == sq {
+        sq = hashes.info[count+1].move.from;
+      }
+
+      status |= hashes.info[count].status;
+
+      if status == .Chase then {
+        if sq == -1 {
+          sq = hashes.info[count].chase_move.to;
+        }
+
+        else if sq != -1 && hashes.info[count].chase_move.to != sq then {
+          single_victim = false;
+        }
+      }
+
+      if hash == hashes.info[count].hash then {
+        repeating = true;
+        break;
+      }
+      count -= 2;
+    }
+
+    if repeating == false then {
+      return false, .PerpetualIdle;
+    }
+
+    if status == .Check then {
+      return true, .PerpetualCheck;
+    }
+    
+    if status == .Chase then {
+      if single_victim == true {
+        return true, .PerpetualChase;
+      }
+    }
+
+    return true, .PerpetualIdle;
+  }
   
-  /*count := xiangqi.hashes.count - 1;
+  count := xiangqi.hashes.count - 1;
   success, opps := judge_one(xiangqi.hashes, count);
   if success == false then {
     return .Undecided;
@@ -2210,13 +2269,12 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
   }
 
   if ours == opps then {
+    return .Draw;
   } else if ours > opps then {
     return .Loss;
   } else {
     return .Win;
-  }*/
-
-  return .Draw;
+  }
 }
 
 // judge relative to the side playing the game.
