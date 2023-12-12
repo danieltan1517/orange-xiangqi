@@ -1492,7 +1492,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         status_string = get_ui_str().status_string[0];
         mark_previous_move_check(*xiangqi);
       } else if is_quiet(move) {
-        //count_chases = compute_chase_moves(*xiangqi, move, *chase_moves);
+        count_chases = compute_chase_moves(*xiangqi, move, *chase_moves);
         mark_previous_move(*xiangqi, .Idle);
         set_previous_chase_move(*xiangqi, NULL_MOVE);
       }

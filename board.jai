@@ -2851,12 +2851,15 @@ compute_chase_moves :: (xiangqi: *Xiangqi, previous_move: Move32, chase_moves: *
       rows_bits: u64 = xray_captures(cannon_row, xiangqi.rows[cannon_col]);
       rows_bits &= ROOK_MAGICS[to_row][xiangqi.rows[to_col]];
       count = add_chase_row(xiangqi, chase_moves, rows_bits, cannon, cannon_col, count);
+      print("ROWS: %| count = %\n", formatInt(rows_bits,2), count);
     } else if to_row == cannon_row {
       cols_bits: u64 = xray_captures(cannon_col, xiangqi.cols[cannon_row]);
       cols_bits &= ROOK_MAGICS[to_col][xiangqi.cols[to_row]];
-      cols_bits &= xray_captures(to_col, xiangqi.cols[to_row]);
       count = add_chase_col(xiangqi, chase_moves, cols_bits, cannon, cannon_row, count);
-    } else if from_col == cannon_col {
+      print("COLS: %| count = %\n", formatInt(cols_bits,2), count);
+    } 
+
+    if from_col == cannon_col {
       rows_bits: u64 = xray_captures(cannon_row, xiangqi.rows[cannon_col]);
       rows_bits &= xray_traverse(from_row, xiangqi.rows[from_col]);
       count = add_chase_row(xiangqi, chase_moves, rows_bits, cannon, cannon_col, count);
@@ -2885,10 +2888,8 @@ compute_chase_moves :: (xiangqi: *Xiangqi, previous_move: Move32, chase_moves: *
     if abs_diff > 9 then {
       continue;
     }
-    print("kni %\n", kni);
     if is_knight_freed(diff) {
       count = blocked_chase_moves(xiangqi, chase_moves, kni, KNIGHT_TABLE, KNI_DIR, KNI_BLK, count);
-      print("COUNT: %\n", count);
     }
   }
 

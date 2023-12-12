@@ -37,7 +37,7 @@
 // 2b1ka3/4a4/4b4/p2rp4/4n4/4R4/Pr2P2p1/4BC3/4A4/R3KAB2 w - - 0 1
 
 // perpetual chase
-// 2ca1k3/4a4/b3b4/2P5P/6p2/1c7/9/B7N/2nR5/2BAK4 w - - 0 1
+// 2ca1k3/4a4/b3b4/2P5P/6p2/1c7/9/B7N/2nR5/2BAK4 w - - 0 1 <- gun mount cannon.
 // 2bakab2/9/4c3n/p1prp3R/9/2P6/P3P1c1A/2N1BC2B/4A4/3AK4 w - - 0 1
 // 4kab2/4a4/4b4/3rC2R1/9/9/4n4/4B4/4A4/4KAB1c w - - 0 1
 // 1cbak4/R3a4/4b4/7P1/9/2P6/3pp4/8r/9/3AKA3 w - - 0 1
@@ -84,4 +84,8 @@
 
 // red perpetual chases rook. red loses.
 // 2bak4/RC2arN2/4b1n2/2p5p/6p2/2P6/4p1P1c/4B4/4A4/4KAB2 b
+
+// horse pins chariot...
+// 1Cbak4/R3arN2/4b1n2/2p5p/6p2/2P6/4p1P1c/4B4/4A4/4KAB2 w - - 0 1
+
 
