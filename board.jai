@@ -1169,6 +1169,30 @@ gen_captures :: (xiangqi: *Xiangqi, moves: *Moves) {
   }
 }
 
+gen_chases :: (xiangqi: *Xiangqi, moves: *Moves) {
+  turn := xiangqi.turn;
+  pieces := *xiangqi.pieces[turn];
+  for kni : pieces.kni {
+    kni_capture_moves(xiangqi, moves, kni);
+  }
+
+  for rook : pieces.rook {
+    rook_captures(xiangqi, moves, rook);
+  }
+
+  for can : pieces.cannon {
+    cannon_captures(xiangqi, moves, can);
+  }
+
+  for adv : pieces.adv {
+    advisor_capture_moves(xiangqi, moves, adv);
+  }
+
+  for ele : pieces.ele {
+    ele_capture_moves(xiangqi, moves, ele);
+  }
+}
+
 // a version of movegen but for quiet moves that evade check. used for quiescene search during check.
 gen_evasions :: (xiangqi: *Xiangqi, moves: *Moves) {
   turn := xiangqi.turn;
@@ -2764,17 +2788,11 @@ get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> success: bool, count: in
   }
 
   moves: Moves;
-  gen_captures(xiangqi, *moves);
+  gen_chases(xiangqi, *moves);
   sort(*moves);
   att := attackers(xiangqi);
   count := 0;
   for move : moves {
-
-    // prune out all king-pawn moves. if king or pawn is chasing, it should be classified as an 'idle' rather than a chase.
-    // since king-pawn is allowed to chased with other pieces, and king-pawn can chase alone
-    if is_kp(move) then {
-      continue;
-    }
 
     if pawn_not_passed(move, turn) then {
       continue;
@@ -2814,13 +2832,13 @@ get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_cou
     }
 
     if is_pseudolegal(xiangqi, chase_move) && is_legal(xiangqi, att, chase_move) && !is_protected(xiangqi, chase_move) {
-      print("PRUNE: %\n", chase_move);
       continue;
     }
 
     victims[victim_count] = chase_move.to;
     victim_count += 1;
   }
+
   return victim_count;
 }
 

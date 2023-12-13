@@ -1501,7 +1501,6 @@ gui_make_move :: (move: Move32, animate: bool) {
       } else if is_quiet(move) {
         success, chase_count= := get_chases(*xiangqi, chases);
         mark_previous_move(*xiangqi, .Idle);
-        //set_previous_chase_move(*xiangqi, u8.[0,0,0,0,0,0], 0);
       } else if is_capture(move) {
         chase_count = 0;
       }
