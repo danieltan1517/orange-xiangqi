@@ -1662,6 +1662,7 @@ to_fenstring :: (xiangqi: *Xiangqi) -> string {
 
 reset_hashes :: (xiangqi: *Xiangqi) {
   xiangqi.hashes.count = 0;
+  //print("HASHES: %\n", xiangqi.hashes.count);
 }
 
 init_rows_and_cols :: (xiangqi: *Xiangqi) {
@@ -2091,6 +2092,7 @@ add_hash :: (board_hash: *Board_Hash, hash: u32, move: Move32) {
   board_hash.info[board_hash.count].hash = hash;
   board_hash.info[board_hash.count].move = move;
   board_hash.count += 1;
+  //print("BOARD_HASH_COUNT: %\n", board_hash.count);
 }
 
 mark_previous_move_check :: inline (xiangqi: *Xiangqi) {
@@ -2100,13 +2102,14 @@ mark_previous_move_check :: inline (xiangqi: *Xiangqi) {
 
 mark_previous_move :: inline (xiangqi: *Xiangqi, status: Status) {
   count := xiangqi.hashes.count - 1;
-  assert(count >= 0 && count < xiangqi.hashes.info.count, "array out of bounds.");
   xiangqi.hashes.info[count].status = status;
 }
 
 set_previous_chase_move :: inline (xiangqi: *Xiangqi, chased: [6] u8, chased_count: s8) {
   count := xiangqi.hashes.count - 1;
-  xiangqi.hashes.info[count].chased = chased;
+  for i: 0..5 {
+    xiangqi.hashes.info[count].chased[i] = chased[i];
+  }
   xiangqi.hashes.info[count].chased_count = chased_count;
 }
 
@@ -2780,7 +2783,7 @@ clear_evasions :: inline (victims: [] u8) {
   }
 } 
 
-get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> success: bool, count: int {
+get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> count: int {
   turn := xiangqi.turn;
   make_null_move(xiangqi);
   defer {
@@ -2809,7 +2812,7 @@ get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> success: bool, count: in
     }
   }
 
-  return count > 0, count;
+  return count;
 }
 
 get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_count: int, victims: [] u8) -> int {
