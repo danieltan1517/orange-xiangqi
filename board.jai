@@ -791,38 +791,6 @@ add_col_moves :: (xiangqi: *Xiangqi, moves: *Moves, cols_bits: u64, move: Move32
   }
 }
 
-add_chase_row :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, rows_bits: u64, from: u8, col: int, count: int) -> int {
-  mov: Move32;
-  mov.from = from;
-  mov.piece = xiangqi.board[from];
-  while rows_bits {
-    i := bit_scan_forward(rows_bits);
-    rows_bits &= rows_bits - 1;
-    to := row_col_to_index(i, col);
-    capture := xiangqi.board[to];
-    mov.to = cast(u8) to;
-    mov.capture = capture;
-    count += append_chase_move(chase_moves, mov, count);
-  }
-  return count;
-}
-
-add_chase_col :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, cols_bits: u64, from: u8, row: int, count: int) -> int {
-  mov: Move32;
-  mov.from = from;
-  mov.piece = xiangqi.board[from];
-  while cols_bits {
-    i := bit_scan_forward(cols_bits);
-    cols_bits &= cols_bits - 1;
-    to := row_col_to_index(row, i);
-    capture := xiangqi.board[to];
-    mov.to = cast(u8) to;
-    mov.capture = capture;
-    count += append_chase_move(chase_moves, mov, count);
-  }
-  return count;
-}
-
 rook_moves :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
   row, col := moddiv90(sq);
   move: Move32;
@@ -1009,24 +977,6 @@ dir_capture_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90] u8
   }
 }
 
-dir_chase_moves :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, ksq: int, TABLE: [90] u8, DIR: [] int) -> int {
-  move: Move32;
-  move.from = cast(u8) ksq;
-  move.piece = xiangqi.board[ksq];
-  bits := cast(u64) TABLE[ksq];
-  count := 0;
-  while bits {
-    i := bit_scan_forward(bits);
-    bits &= bits - 1;
-    to := ksq + DIR[i];
-    capture := xiangqi.board[to];
-    move.to = cast(u8) to;
-    move.capture = capture;
-    count += append_chase_move(chase_moves, move, count);
-  }
-  return count;
-}
-
 blocked_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90] u8, DIR: [] int, BLOCKS: [] int) {
   move: Move32;
   move.from = cast(u8) ksq;
@@ -1075,33 +1025,6 @@ blocked_capture_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90
     move.capture = capture;
     append_capture_move(moves, move);
   }
-}
-
-blocked_chase_moves :: (xiangqi: *Xiangqi, chase_moves: *Chase_Moves, ksq: int, TABLE: [90] u8, DIR: [] int, BLOCKS: [] int, count: int) -> int {
-  move: Move32;
-  move.from = cast(u8) ksq;
-  move.piece = xiangqi.board[ksq];
-
-  bits := cast(u64) TABLE[ksq];
-  while bits {
-    i := bit_scan_forward(bits);
-    bits &= bits - 1;
-    to := ksq + DIR[i];
-
-    blocking := ksq + BLOCKS[i];
-
-    // piece blocking movement.
-    if xiangqi.board[blocking] != 0 {
-      continue; 
-    }
-
-    capture := xiangqi.board[to];
-    move.to = cast(u8) to;
-    move.capture = capture;
-    count += append_chase_move(chase_moves, move, count);
-  }
-
-  return count;
 }
 
 blocked_quiet_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90] u8, DIR: [] int, BLOCKS: [] int) {
@@ -1180,10 +1103,6 @@ move_swap :: inline (moves: *Moves, a: int, b: int) {
 
 erase_move :: inline (moves: *Moves, index: int) {
   moves.array[index].move = NULL_MOVE;
-}
-
-erase_move :: inline (moves: *Chase_Moves, index: int) {
-  moves.array[index] = NULL_MOVE;
 }
 
 copy_pv :: (pv: *PV, child_pv: PV, mov: Move32) {
@@ -1286,8 +1205,8 @@ gen_blocks :: (xiangqi: *Xiangqi, moves: *Moves) {
 }
 
 reset :: (moves: *Moves) {
-  moves.count = 0;
   memset(*moves.array[0], 0, size_of(type_of(moves.array)));
+  moves.count = 0;
 }
 
 for_expansion :: (moves: *Moves, body: Code, f: For_Flags) #expand {
@@ -1323,19 +1242,6 @@ append_capture_move :: (moves: *Moves, move: Move32) {
     moves.count += 1;
   }
 }
-
-append_chase_move :: (moves: *Chase_Moves, move: Move32, count: int) -> int #must {
-  capture: int = move.capture;
-  piece: int = move.piece;
-  if ((capture ^ piece) & 0x3) == 0x2 then {
-    print("CHASE[%]: % added\n", count, move);
-    moves.array[count] = move;
-    return 1;
-  }
-
-  return 0;
-}
-
 
 bit_scan_forward :: (value: u64) -> int #expand {
   #if CPU == .X64 {
@@ -2170,12 +2076,14 @@ mark_previous_move_check :: inline (xiangqi: *Xiangqi) {
 
 mark_previous_move :: inline (xiangqi: *Xiangqi, status: Status) {
   count := xiangqi.hashes.count - 1;
+  assert(count >= 0 && count < xiangqi.hashes.info.count, "array out of bounds.");
   xiangqi.hashes.info[count].status = status;
 }
 
-set_previous_chase_move :: inline (xiangqi: *Xiangqi, chase_move: Move32) {
+set_previous_chase_move :: inline (xiangqi: *Xiangqi, chased: [6] u8, chased_count: s8) {
   count := xiangqi.hashes.count - 1;
-  xiangqi.hashes.info[count].chase_move = chase_move;
+  xiangqi.hashes.info[count].chased = chased;
+  xiangqi.hashes.info[count].chased_count = chased_count;
 }
 
 Board_Hash :: struct {
@@ -2185,9 +2093,10 @@ Board_Hash :: struct {
 
 Info :: struct {
   hash: u32;
-  status: Status;
   move: Move32;
-  chase_move: Move32;
+  status: Status;
+  chased_count: s8;
+  chased: [6] u8;
 }
 
 is_chase :: inline (move: Move32) -> bool {
@@ -2211,25 +2120,35 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
     status: Status = 0;
     repeating: bool = false;
     single_victim: bool = true;
-    sq: int = -1;
+    chased: [6] u8;
+    chased_count := 0;
+    initialized := false;
+
+    update_subset :: (chased: [] u8, chased_count: int, info: Info) {
+      for c : chased {
+        if c == info.move.from {
+          chased[it_index] = info.move.to;
+        }
+      }
+    }
+
     while count >= 0 {
       if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
         break;
       }
-
-      if sq != -1 && hashes.info[count+1].move.to == sq {
-        sq = hashes.info[count+1].move.from;
+    
+      if initialized == true then {
+        update_subset(chased, chased_count, hashes.info[count+1]);
       }
 
       status |= hashes.info[count].status;
-
       if status == .Chase then {
-        if sq == -1 {
-          sq = hashes.info[count].chase_move.to;
-        }
-
-        else if sq != -1 && hashes.info[count].chase_move.to != sq then {
-          single_victim = false;
+        if initialized == false {
+          chased = hashes.info[count].chased;
+          chased_count = hashes.info[count].chased_count;
+          initialized = true;
+        } else {
+          chased, chased_count = union_chases(chased, chased_count, hashes.info[count]);
         }
       }
 
@@ -2249,7 +2168,7 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
     }
     
     if status == .Chase then {
-      if single_victim == true {
+      if chased_count > 0 then {
         return true, .PerpetualChase;
       }
     }
@@ -2293,25 +2212,35 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
     status: Status = 0;
     repeating: bool = false;
     single_victim: bool = true;
-    sq: int = -1;
+    chased: [6] u8;
+    chased_count := 0;
+    initialized := false;
+
+    update_subset :: (chased: [] u8, chased_count: int, info: Info) {
+      for c : chased {
+        if c == info.move.from {
+          chased[it_index] = info.move.to;
+        }
+      }
+    }
+
     while count >= 0 {
       if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
         break;
       }
-
-      if sq != -1 && hashes.info[count+1].move.to == sq {
-        sq = hashes.info[count+1].move.from;
+    
+      if initialized == true then {
+        update_subset(chased, chased_count, hashes.info[count+1]);
       }
 
       status |= hashes.info[count].status;
-
       if status == .Chase then {
-        if sq == -1 {
-          sq = hashes.info[count].chase_move.to;
-        }
-
-        else if sq != -1 && hashes.info[count].chase_move.to != sq then {
-          single_victim = false;
+        if initialized == false {
+          chased = hashes.info[count].chased;
+          chased_count = hashes.info[count].chased_count;
+          initialized = true;
+        } else {
+          chased, chased_count = union_chases(chased, chased_count, hashes.info[count]);
         }
       }
 
@@ -2334,7 +2263,7 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
     }
     
     if status == .Chase then {
-      if single_victim == true {
+      if chased_count > 0 then {
         return true, .PerpetualChase;
       }
     }
@@ -2353,7 +2282,6 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
     return .Undecided, opps;
   }
 
-  print("REPETITION: OURS: [%].    OPPS: [%]\n", ours, opps);
   if ours == opps then {
     return .Draw, ours;
   } else if ours > opps then {
@@ -2361,6 +2289,28 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
   } else {
     return .Win, opps;
   }
+}
+
+union_chases :: (chased: [] u8, chased_count: int, info: Info) -> [6] u8, count: int {
+  union_chase_array: [6] u8;
+  count := 0;
+  for *chase: union_chase_array {
+    chase.* = 0xFF;
+  }
+
+  for i: 0..chased_count-1 {
+    chased_index_i := chased[i];
+    for j: 0..info.chased_count-1 {
+      chased_index_j := info.chased[j];
+      if chased_index_i == chased_index_j then {
+        union_chase_array[count] = chased_index_i;
+        count += 1;
+        break;
+      }
+    }
+  }
+
+  return union_chase_array, count;
 }
 
 Violations :: enum {
@@ -2376,7 +2326,7 @@ GameState :: enum {
   Loss;
 }
 
-Status :: enum_flags s32 {
+Status :: enum_flags s8 {
   Idle;
   Cancel;
   Chase;
@@ -2762,190 +2712,6 @@ is_set :: inline (bitboard: Bitboard128, bit: int) -> bool {
   return (bitboard.board[index] & cast(u64) (1 << bit_index)) != 0;
 }
 
-
-Chase_Moves :: struct {
-  array: [8] Move32;
-}
-
-compute_chase_moves :: (xiangqi: *Xiangqi, previous_move: Move32, chase_moves: *Chase_Moves) -> count: int {
-  memset(chase_moves, 0, size_of(Move32) * 4);
-  from  := previous_move.from;
-  to    := previous_move.to;
-  from_row, from_col := moddiv90(from);
-  to_row, to_col     := moddiv90(to);
-  turn  := xiangqi.turn ^ 1;
-  count := 0;
-
-  is_cannon := false;
-  // kings and pawns cannot chase.
-  if xiangqi.board[to] >> 2 == {
-
-  // king
-  case 0;
-  // advisor
-  case 1;
-    count += dir_chase_moves(xiangqi, chase_moves, to, DEFENSE_SQ_TABLE, ADV_DIR);
-
-  // elephant
-  case 2;
-    count += blocked_chase_moves(xiangqi, chase_moves, to, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, 0);
-
-  // knight
-  case 3;
-    count += blocked_chase_moves(xiangqi, chase_moves, to, KNIGHT_TABLE, KNI_DIR, KNI_BLK, 0);
-
-  // rook
-  case 4;
-    if from_col == to_col {
-       // only search for the columns.
-       cols_bits: u64 = ROOK_MAGICS[to_col][xiangqi.cols[to_row]];
-       //print("COLS: %\n", formatInt(cols_bits,2));
-       //print("COLS: %\n", formatInt(xiangqi.cols[to_row],2));
-       count += add_chase_col(xiangqi, chase_moves, cols_bits & xiangqi.cols[to_row], to, to_row, 0);
-       //print("COUNT: %\n", count);
-    } else {
-       // only search for the rows.
-       rows_bits: u64 = ROOK_MAGICS[to_row][xiangqi.rows[to_col]];
-       print("ROWS: %\n", formatInt(rows_bits,2));
-       count += add_chase_row(xiangqi, chase_moves, rows_bits & xiangqi.rows[to_col], to, to_col, 0);
-    }
-
-  // cannon
-  case 5;
-    is_cannon = true;
-    if from_col == to_col {
-       // only search for the columns.
-       occ := xray_captures(to_col, xiangqi.cols[to_row]);
-       count += add_chase_col(xiangqi, chase_moves, occ, to, to_row, 0);
-    } else {
-       // only search for the rows.
-       occ := xray_captures(to_row, xiangqi.rows[to_col]);
-       count += add_chase_row(xiangqi, chase_moves, occ, to, to_col, 0);
-    }
-
-  // soldier
-  case 6;
-  }
-
-  for rook : xiangqi.pieces[turn].rook {
-    if rook == to continue;
-    rook_row, rook_col := moddiv90(rook);
-    if from_col == rook_col {
-      rows_bits: u64 = ROOK_MAGICS[rook_row][xiangqi.rows[rook_col]];
-      rows_bits &= ROOK_MAGICS[from_row][xiangqi.rows[from_col]];
-      rows_bits &= xiangqi.rows[rook_col];
-      count = add_chase_row(xiangqi, chase_moves, rows_bits, rook, rook_col, count);
-    } else if from_row == rook_row {
-      cols_bits: u64 = ROOK_MAGICS[rook_col][xiangqi.cols[rook_row]];
-      cols_bits &= ROOK_MAGICS[from_col][xiangqi.cols[from_row]];
-      cols_bits &= xiangqi.cols[rook_row];
-      count = add_chase_col(xiangqi, chase_moves, cols_bits, rook, rook_row, count);
-    }
-  }
-
-  // todo: cannons need to be fixed!
-  for cannon : xiangqi.pieces[turn].cannon {
-    if cannon == to continue;
-    cannon_row, cannon_col := moddiv90(cannon);
-    if to_col == cannon_col {
-      rows_bits: u64 = xray_captures(cannon_row, xiangqi.rows[cannon_col]);
-      rows_bits &= ROOK_MAGICS[to_row][xiangqi.rows[to_col]];
-      count = add_chase_row(xiangqi, chase_moves, rows_bits, cannon, cannon_col, count);
-      print("ROWS: %| count = %\n", formatInt(rows_bits,2), count);
-    } else if to_row == cannon_row {
-      cols_bits: u64 = xray_captures(cannon_col, xiangqi.cols[cannon_row]);
-      cols_bits &= ROOK_MAGICS[to_col][xiangqi.cols[to_row]];
-      count = add_chase_col(xiangqi, chase_moves, cols_bits, cannon, cannon_row, count);
-      print("COLS: %| count = %\n", formatInt(cols_bits,2), count);
-    } 
-
-    if from_col == cannon_col {
-      rows_bits: u64 = xray_captures(cannon_row, xiangqi.rows[cannon_col]);
-      rows_bits &= xray_traverse(from_row, xiangqi.rows[from_col]);
-      count = add_chase_row(xiangqi, chase_moves, rows_bits, cannon, cannon_col, count);
-    } else if from_row == cannon_row {
-      cols_bits: u64 = xray_captures(cannon_col, xiangqi.cols[cannon_row]);
-      cols_bits &= xray_traverse(from_col, xiangqi.cols[from_row]);
-      count = add_chase_col(xiangqi, chase_moves, cols_bits, cannon, cannon_row, count);
-    }
-  }
-
-  is_knight_freed :: (diff: int) -> bool {
-    diff += 9;
-    return ((1 << diff) & 0b010_000_000_101_000_000_01) != 0;
-  }
-
-  is_ele_freed :: (diff: int) -> bool {
-    diff += 10;
-    return ((1 << diff) & 0b101_000_000_000_000_000_101) != 0;
-  }
-
-
-  // todo: doesn't properly deal with discoveries
-  for kni : xiangqi.pieces[turn].kni {
-    if kni == to continue;
-    abs_diff, diff := index_abs_diff(from, kni);
-    if abs_diff > 9 then {
-      continue;
-    }
-    if is_knight_freed(diff) {
-      count = blocked_chase_moves(xiangqi, chase_moves, kni, KNIGHT_TABLE, KNI_DIR, KNI_BLK, count);
-    }
-  }
-
-  // todo: doesn't properly deal with discoveries
-  for ele : xiangqi.pieces[turn].ele {
-    if ele == to continue;
-    abs_diff, diff := index_abs_diff(from, ele);
-    if abs_diff > 10 then {
-      continue;
-    }
-
-    if is_ele_freed(diff) {
-      count = blocked_chase_moves(xiangqi, chase_moves, ele, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR, count);
-    }
-  }
-
-  turn ^= 1;
-  make_null_move(xiangqi);
-  defer {
-    unmake_null_move(xiangqi);
-  }
-  att := attackers(xiangqi);
-  for move : chase_moves.array {
-    if is_null(move) then {
-      break;
-    }
-
-    if is_kp(move) then {
-      erase_move(chase_moves, it_index);
-      count -= 1;
-      continue;
-    }
-
-    if pawn_not_passed(move, turn) then {
-      erase_move(chase_moves, it_index);
-      count -= 1;
-      continue;
-    }
-
-    if !is_legal(xiangqi, att, move) then {
-      erase_move(chase_moves, it_index);
-      count -= 1;
-      continue;
-    }
-
-    // positive SEE = chase.
-    if is_protected(xiangqi, move) then {
-      erase_move(chase_moves, it_index);
-      count -= 1;
-      continue;
-    }
-  }
-
-  return count;
-}
-
 #scope_file
 mvv_lva :: (move: Move32) -> s32 {
   victim := move.capture >> 2;
@@ -2982,10 +2748,15 @@ pawn_not_passed :: (move: Move32, turn: int) -> bool {
   to         := move.to;
   return piece_code == 6 && (KP_TABLE[turn][to] & 0b1010) == 0;
 }
+
 #scope_export
+clear_evasions :: inline (victims: [] u8) {
+  for *vic: victims {
+    vic.* = 0xFF;
+  }
+} 
 
-is_chase :: (xiangqi: *Xiangqi) -> bool, chase_move: Move32 #must {
-
+get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> success: bool, count: int {
   turn := xiangqi.turn;
   make_null_move(xiangqi);
   defer {
@@ -2996,6 +2767,7 @@ is_chase :: (xiangqi: *Xiangqi) -> bool, chase_move: Move32 #must {
   gen_captures(xiangqi, *moves);
   sort(*moves);
   att := attackers(xiangqi);
+  count := 0;
   for move : moves {
 
     // prune out all king-pawn moves. if king or pawn is chasing, it should be classified as an 'idle' rather than a chase.
@@ -3014,11 +2786,42 @@ is_chase :: (xiangqi: *Xiangqi) -> bool, chase_move: Move32 #must {
 
     // positive SEE = chase.
     if !is_protected(xiangqi, move) then {
-      return true, move;
+      chases[count] = move;
+      count += 1;
     }
   }
 
-  return false, NULL_MOVE;
+  return count > 0, count;
+}
+
+get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_count: int, victims: [] u8) -> int {
+  make_move(xiangqi, move);
+  defer {
+    unmake_move(xiangqi, move);
+  }
+
+  for *vic: victims {
+    vic.* = 0xFF;
+  }
+
+  att := attackers(xiangqi);
+  victim_count := 0;
+  for i: 0..chase_count-1 {
+    chase_move := chase_moves[i];
+    to := chase_move.to;
+    if chase_move.to == move.from then {
+      chase_move.to = move.to;
+    }
+
+    if is_pseudolegal(xiangqi, chase_move) && is_legal(xiangqi, att, chase_move) && !is_protected(xiangqi, chase_move) {
+      print("PRUNE: %\n", chase_move);
+      continue;
+    }
+
+    victims[victim_count] = chase_move.to;
+    victim_count += 1;
+  }
+  return victim_count;
 }
 
 moddiv90 :: inline (sq: int) -> int, int {

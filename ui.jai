@@ -1288,6 +1288,7 @@ random_pick_board_position :: () {
   r := random_get() % xiangqi_openings.count;
   fen := xiangqi_openings[r]; 
   xiangqi_fen(*xiangqi, fen);
+  clear_evasions(victims);
   fen_string = copy_string(fen);
 }
 
@@ -1438,16 +1439,9 @@ gui_redo_move :: () {
   xiangqi.hashes.info[moves_made_count].move = next;
 }
 
-chase_moves: Chase_Moves;
-count_chases := 0;
-
 draw_chases :: () {
-  for move : chase_moves.array {
-    if is_null(move) then {
-      continue;
-    }
-
-    print("%\n", move);
+  for i : 0..chase_count-1 {
+    move := chases[i];
     arrow: Arrow;
     arrow.from = move.from;
     arrow.to = move.to;
@@ -1455,14 +1449,26 @@ draw_chases :: () {
   }
 }
 
+chases: [8] Move32;
+chase_count := 0;
+victims: [6] u8;
+
 gui_make_move :: (move: Move32, animate: bool) {
   for m: moves {
     if m == move then {
       clock_move_incr();
       prev_from = move.from;
       prev_to   = move.to;
-      make_move(*xiangqi, move);
 
+      victim_count := get_evade(*xiangqi, move, chases, chase_count, victims);
+      print("VIC: %, %\n", victims, victim_count); 
+      if victim_count > 0 then { 
+        print("CHASE\n");
+        mark_previous_move(*xiangqi, .Chase);
+        set_previous_chase_move(*xiangqi, victims, cast(s8) victim_count);
+      } 
+
+      make_move(*xiangqi, move);
       // add another move.
       xiangqi.hashes.info[moves_made_count].move = move;
       counter_history[moves_made_count] = counter30;
@@ -1489,12 +1495,16 @@ gui_make_move :: (move: Move32, animate: bool) {
 
       att := attackers(*xiangqi);
       if incheck(*xiangqi, att) then {
+        chase_count = 0;
         status_string = get_ui_str().status_string[0];
         mark_previous_move_check(*xiangqi);
       } else if is_quiet(move) {
-        count_chases = compute_chase_moves(*xiangqi, move, *chase_moves);
+        success, chase_count= := get_chases(*xiangqi, chases);
+        print("MOVES_MADE: %\n", moves_made_count);
         mark_previous_move(*xiangqi, .Idle);
-        set_previous_chase_move(*xiangqi, NULL_MOVE);
+        //set_previous_chase_move(*xiangqi, u8.[0,0,0,0,0,0], 0);
+      } else if is_capture(move) {
+        chase_count = 0;
       }
 
       judge_state, violation_level := judge_ntimes(*xiangqi, 4);
@@ -1547,7 +1557,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         on_game_end(.Draw);
       }
       move_list_scroll_value = 10000;
-      print("%\n", to_fenstring(*xiangqi));
+      //print("%\n", to_fenstring(*xiangqi));
       draw_chases();
       break;
     }
@@ -1589,6 +1599,7 @@ on_game_end :: (winner: GameEnd) {
     status_string = "";
     if engine_test_state == .SWITCH_SIDES {
       xiangqi_fen(*xiangqi, fen_string);
+      clear_evasions(victims);
       moves_made_count = 0;
       reset(*moves);
       legal_moves(*xiangqi, *moves);
@@ -2308,6 +2319,7 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
         }
         fen_string = "";
       } else {
+        clear_evasions(victims);
         if xiangqi_fen(*xiangqi, str) {
           fen_string = copy_string(str);
         } else {

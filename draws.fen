@@ -50,7 +50,7 @@
 // cannon and horse cannot perpetually chase a chariot on consecutive moves
 // 1rb1kabr1/4a1c2/1cn3n2/p1C1p1R1p/9/9/P1P1P1P1P/2N1C1N2/9/R1BAKAB2 w - - 0 1
 
-// it is permissible for red chariot to chase two pieces on alternative moves. illegel for black horse and cannon to make perpetual chase on red chariot.
+// it is permissible for red chariot to chase two pieces on alternative moves. illegal for black horse and cannon to make perpetual chase on red chariot.
 // 1rb1kabr1/4a1c2/1cn6/pRp1pR2p/7n1/2P2p3/P3P1P1P/C1N1C1N2/4A4/3AK1B2 w - - 0 1 
 
 // red chariot chase black cannon on every other move. black perpetually chase red chariot. black loses
