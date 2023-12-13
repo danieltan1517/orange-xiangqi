@@ -2785,9 +2785,24 @@ clear_evasions :: inline (victims: [] u8) {
 
 get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> count: int {
   turn := xiangqi.turn;
-  make_null_move(xiangqi);
+  opp_att := attackers(xiangqi);
+  xiangqi.turn ^= 1;
   defer {
-    unmake_null_move(xiangqi);
+    xiangqi.turn ^= 1;
+  }
+
+  is_exchange_move :: (xiangqi: *Xiangqi, opp_att: AttFlags, move: Move32) -> bool {
+    piece := move.piece >> 2;
+    capture := move.capture >> 2;
+    if piece != capture then {
+      return false;
+    } 
+
+    exchange := get_exchange_move(move);
+    xiangqi.turn ^= 1;
+    success := is_pseudolegal(xiangqi, exchange) && is_legal(xiangqi, opp_att, exchange);
+    xiangqi.turn ^= 1;
+    return success;
   }
 
   moves: Moves;
@@ -2805,6 +2820,11 @@ get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> count: int {
       continue;
     }
 
+    if is_exchange_move(xiangqi, opp_att, move) then {
+      print("OFFER: %\n", move);
+      continue;
+    }
+
     // positive SEE = chase.
     if !is_protected(xiangqi, move) then {
       chases[count] = move;
@@ -2813,6 +2833,13 @@ get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> count: int {
   }
 
   return count;
+}
+
+get_exchange_move :: (move: Move32) -> Move32 {
+  exchange: Move32 = move;
+  exchange.from, exchange.to = exchange.to, exchange.from;
+  exchange.piece, exchange.capture = exchange.capture, exchange.piece;
+  return exchange;
 }
 
 get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_count: int, victims: [] u8) -> int {

@@ -1556,7 +1556,7 @@ gui_make_move :: (move: Move32, animate: bool) {
       }
       move_list_scroll_value = 10000;
       print("%\n", to_fenstring(*xiangqi));
-      //draw_chases();
+      draw_chases();
       break;
     }
   }
