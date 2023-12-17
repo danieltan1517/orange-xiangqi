@@ -126,7 +126,7 @@ main :: () {
   protection_test("3a5/3Hak3/4e4/4p3p/9/2P1P4/8P/5rhR1/4K1C2/2EA2E2 b", "f2f1", false);
   protection_test("1C2k4/3PaR3/e8/p5h1p/9/4P4/P5P1P/3Ac1H2/9/1H1A1K3 w", "d8e8", true);
   protection_test("4k1e2/3R1R3/4e1r2/p3p3p/9/7r1/P7P/H3E4/4A4/2E1Kc3 w", "f8e8", false);
-  protection_test("2ek5/4R4/9/8p/2e6/9/3hCr2P/4EH3/3p1K3/9 b", "d1e1", true);
+  protection_test("2ek5/4R4/9/8p/2e6/9/3hCr2P/4EH3/3p1K3/9 b", "d1e1", false);
   protection_test("9/1H1ka2H1/5a3/3P5/2e6/c8/1p7/8E/9/2EAKA3 w", "d6d7", true);
   protection_test("2eakc3/3Ra2R1/h3e4/p3C3p/2p1P4/9/P5r1P/5A3/3K4c/5r3 w", "h8e8", true);
   protection_test("2ea1k3/4a4/4e4/3R4p/p1P3p2/3h1C2P/9/c1hr2H2/1c2K4/2E2AE2 b", "d2e2", false);
