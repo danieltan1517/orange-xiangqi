@@ -2272,9 +2272,9 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
       }
 
       if hash == hashes.info[count].hash then {
-        repeating = true;
         ntimes -= 1;
         if ntimes >= 0 then {
+          repeating = true;
           break;
         }
       }
@@ -2284,11 +2284,11 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
     if repeating == false then {
       return false, .PerpetualIdle;
     }
-
     if status == .Check then {
       return true, .PerpetualCheck;
     }
     
+    print("CHASED. %. %\n", chased_count, chased);
     if status == .Chase then {
       if chased_count > 0 then {
         return true, .PerpetualChase;
@@ -2308,7 +2308,7 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
   if success == false then {
     return .Undecided, opps;
   }
-
+  print("OURS: %. OPPS: %.\n", ours, opps);
   if ours == opps then {
     return .Draw, ours;
   } else if ours > opps then {
@@ -2556,6 +2556,7 @@ get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int,
 // todo: very limited in terms of what it can do...
 // this function determines whether a piece is protected or not.
 // this function does NOT determine whether a particular piece exchange is bad or not. this is mainly for chasing rules.
+// is_protected cannot be called while a position is incheck.
 is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   // values for SEE algorithm.
   VALUES :: int.[0, 200, 200, 400, 800, 400, 200];
@@ -2567,8 +2568,13 @@ is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   if VALUES[xiangqi.board[to] >> 2] > VALUES[xiangqi.board[from] >> 2] then {
     return false;
   }
-  
-  turn: int = xiangqi.turn ^ 1;
+
+  make_move(xiangqi, move);
+  defer {
+    unmake_move(xiangqi, move);
+  }
+
+  turn: int = xiangqi.turn;
   bitboard: Bitboard128;
   success := false;
   row, col := moddiv90(to);
@@ -2594,10 +2600,20 @@ is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
       arr[1] ^= cast(u64)(1 << from_c);
     }
 
-    from, opps_flags = get_attackers(xiangqi, *stack, opps_flags, turn, to, arr, bitboard, flying_general);
-    if from == -1 {
-      return success;
-    } 
+    att := attackers(xiangqi);
+    while true {
+      from, opps_flags = get_attackers(xiangqi, *stack, opps_flags, turn, to, arr, bitboard, flying_general);
+      if from == -1 {
+        return success;
+      } 
+
+      move := Move32.{from=cast(u8)from, to=cast(u8)to, capture=xiangqi.board[to], piece=xiangqi.board[from]};
+      if flying_general == false && !is_legal(xiangqi, att, move) {
+        continue;
+      }
+
+      break;
+    }
     
     if success == true then {
       return false;

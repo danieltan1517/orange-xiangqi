@@ -87,3 +87,30 @@
 
 // horse pins chariot...
 // 1Cbak4/R3arN2/4b1n2/2p5p/6p2/2P6/4p1P1c/4B4/4A4/4KAB2 w - - 0 1
+
+// red cannons attack two black chariots on alternative moves.
+// 2bak4/4a4/4b3n/p3p4/4n3p/4R4/Pr2P4/4BC1C1/3rA4/R3KAB2 w - - 0 1
+
+// red cannon makes perpetual chase on black chariot.
+//4kab2/4a4/4b4/c3C1p1R/8P/2B6/9/3AB1p2/1rr1A4/4K4 w - - 0 1
+
+// perpetual block is a draw.
+// 4k4/3P2P1P/9/9/6b1c/5p1C1/9/9/4A4/3AK1p2 w - - 0 1
+
+// perpetual offer.
+// 2bak4/4a4/4b4/9/2p2r3/r8/1R7/4B4/9/1R2K1B2 w - - 0 1
+
+// both players are not violating the rules. game is draw.
+// 2bk5/3c5/4bN3/1R2p4/9/9/3r5/3R1p3/3K5/9 w - - 0 1
+
+// red pawn making perpetual offer. game is draw.
+// 1r1ak4/4aP3/b1P1b4/4C4/9/3R5/9/9/4p4/3K5 w - - 0 1
+
+// perpetual offer using the red chariot
+// 2bak3r/4a4/4b4/p3C1R2/9/P8/5R3/9/4r4/5K3 w - - 0 1
+
+// red chases horse. black does alternative check & idle
+// 3akr3/n3a4/4b4/9/P1b6/9/1n7/4B4/3RA4/2BAK4 w - - 0 1
+
+// horse cannot make perpetual chase on the black chariot. black's alternate chase and idle sequence is permissible. red loses.
+// 4ka3/1CP1a4/4b4/2p6/1cb1r4/4CN3/4Pp2P/4B4/4A4/2BAK4 w - - 0 1
