@@ -2577,23 +2577,11 @@ is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   occ_row: u64 = xiangqi.rows[col];
   occ_col: u64 = xiangqi.cols[row];
   arr: [2] u64 = .[occ_row, occ_col];
-  arr[0] |= cast(u64)(1 << row);
-  arr[1] |= cast(u64)(1 << col);
-  opps_flags: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
-  set_bit(*bitboard, from);
-  from_r, from_c := moddiv90(from);
   stack: Stack;
- 
-  // make sure this is not a diagonal capture.
-  if from_r != row && from_c == col then {
-    arr[0] ^= cast(u64)(1 << from_r);
-  } 
- 
-  if from_c != col && from_r == row {
-    arr[1] ^= cast(u64)(1 << from_c);
-  }
 
   att := attackers(xiangqi);
+  opps_flags: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
+  set_bit(*bitboard, from);
   while true {
     from, opps_flags = get_attackers(xiangqi, *stack, opps_flags, turn, to, arr, bitboard, false);
     set_bit(*bitboard, from);
