@@ -84,6 +84,7 @@
 
 // red perpetual chases rook. red loses.
 // 2bak4/RC2arN2/4b1n2/2p5p/6p2/2P6/4p1P1c/4B4/4A4/4KAB2 b
+// 2baka3/C4rN2/4b1n2/1Rp5p/6p2/2P6/4c1P1c/4B3C/4A4/4KAB2 w - - 0 1
 
 // horse pins chariot...
 // 1Cbak4/R3arN2/4b1n2/2p5p/6p2/2P6/4p1P1c/4B4/4A4/4KAB2 w - - 0 1
@@ -116,7 +117,20 @@
 // 4ka3/1CP1a4/4b4/2p6/1cb1r4/4CN3/4Pp2P/4B4/4A4/2BAK4 w - - 0 1
 
 // chariot chases false-rooted cannon. red loses
+// FAKE ROOTS:
 // 3ak1b2/4a4/4b4/9/2c6/2R6/9/4C4/4A4/2BAK1B2 b - - 0 1
+// 2baka3/9/4b4/9/6c2/3R5/4c4/4C4/4N4/3AKA3 w - - 0 1
+// 1r2knb1C/4a4/5ac1b/7R1/p8/9/9/9/4A4/3AK4 w - - 0 1
+// 3aka3/r4rN2/6P2/p3P3p/9/6R2/P4c2P/4B4/4A4/3AK1B2 w - - 0 1
+// 4ka3/1r3cN2/5aP2/p3P3p/9/6R2/P4c2P/4B4/4A4/3AK1B2 w - - 0 1
+// 4ka3/2r2cN2/5aP2/p3P3p/9/6R2/P4c2P/9/4A4/2BAK1B2 w - - 0 1
 
 // red chases cannon. red loses.
 // 2bak1r2/4a4/1C2b4/9/6p2/9/9/9/7R1/c1BAK4 w - - 0 1
+// 
+
+
+// non-perpetual chase. draw.
+// 3k2b2/4P4/4b4/9/8p/6Bc1/6P1P/3AB4/4pp3/1p1K3R1 w - - 0 1
+
+

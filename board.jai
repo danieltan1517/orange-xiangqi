@@ -2565,6 +2565,11 @@ is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
     return false;
   }
 
+  row, col := moddiv90(to);
+  occ_row: u64 = xiangqi.rows[col];
+  occ_col: u64 = xiangqi.cols[row];
+  arr: [2] u64 = .[occ_row, occ_col];
+
   make_move(xiangqi, move);
   defer {
     unmake_move(xiangqi, move);
@@ -2572,11 +2577,6 @@ is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
 
   turn: int = xiangqi.turn;
   bitboard: Bitboard128;
-  success := false;
-  row, col := moddiv90(to);
-  occ_row: u64 = xiangqi.rows[col];
-  occ_col: u64 = xiangqi.cols[row];
-  arr: [2] u64 = .[occ_row, occ_col];
   stack: Stack;
 
   att := attackers(xiangqi);
