@@ -28,7 +28,6 @@ main :: () {
   }
 
   protection_test :: (fen: string, token: string, expected: bool) #expand {
-    print("-----------------------------\n");
     xiangqi_fen(*xiangqi, fen);
     move := to_move32(*xiangqi, token);
     value := is_protected(*xiangqi, move);
@@ -42,7 +41,6 @@ main :: () {
     } else {
       success += 1;
     }
-    print("-----------------------------\n");
   }
 
   print("SEE Tests.\n");

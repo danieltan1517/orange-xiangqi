@@ -2163,10 +2163,6 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
       if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
         break;
       }
-    
-      if initialized == true then {
-        update_subset(chased, chased_count, hashes.info[count+1]);
-      }
 
       status |= hashes.info[count].status;
       if status == .Chase then {
@@ -2175,6 +2171,7 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
           chased_count = hashes.info[count].chased_count;
           initialized = true;
         } else {
+          update_subset(chased, chased_count, hashes.info[count+1]);
           chased, chased_count = union_chases(chased, chased_count, hashes.info[count]);
         }
       }
@@ -2183,6 +2180,7 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
         repeating = true;
         break;
       }
+
       count -= 2;
     }
 
@@ -2255,10 +2253,6 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
       if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
         break;
       }
-    
-      if initialized == true then {
-        update_subset(chased, chased_count, hashes.info[count+1]);
-      }
 
       status |= hashes.info[count].status;
       if status == .Chase then {
@@ -2267,13 +2261,14 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
           chased_count = hashes.info[count].chased_count;
           initialized = true;
         } else {
+          update_subset(chased, chased_count, hashes.info[count+1]);
           chased, chased_count = union_chases(chased, chased_count, hashes.info[count]);
         }
       }
 
       if hash == hashes.info[count].hash then {
         ntimes -= 1;
-        if ntimes >= 0 then {
+        if ntimes < 0 then {
           repeating = true;
           break;
         }
@@ -2284,11 +2279,11 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
     if repeating == false then {
       return false, .PerpetualIdle;
     }
+
     if status == .Check then {
       return true, .PerpetualCheck;
     }
     
-    print("CHASED. %. %\n", chased_count, chased);
     if status == .Chase then {
       if chased_count > 0 then {
         return true, .PerpetualChase;
@@ -2308,7 +2303,7 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
   if success == false then {
     return .Undecided, opps;
   }
-  print("OURS: %. OPPS: %.\n", ours, opps);
+
   if ours == opps then {
     return .Draw, ours;
   } else if ours > opps then {
@@ -2557,6 +2552,7 @@ get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int,
 // this function determines whether a piece is protected or not.
 // this function does NOT determine whether a particular piece exchange is bad or not. this is mainly for chasing rules.
 // is_protected cannot be called while a position is incheck.
+// is_protected should only deal with LEGAL moves only. does not consider pseudo-legal moves.
 is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   // values for SEE algorithm.
   VALUES :: int.[0, 200, 200, 400, 800, 400, 200];
@@ -2583,51 +2579,38 @@ is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   arr: [2] u64 = .[occ_row, occ_col];
   arr[0] |= cast(u64)(1 << row);
   arr[1] |= cast(u64)(1 << col);
-  flying_general := false;
+  opps_flags: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
+  set_bit(*bitboard, from);
+  from_r, from_c := moddiv90(from);
+  stack: Stack;
+ 
+  // make sure this is not a diagonal capture.
+  if from_r != row && from_c == col then {
+    arr[0] ^= cast(u64)(1 << from_r);
+  } 
+ 
+  if from_c != col && from_r == row {
+    arr[1] ^= cast(u64)(1 << from_c);
+  }
+
+  att := attackers(xiangqi);
   while true {
-    opps_flags: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
+    from, opps_flags = get_attackers(xiangqi, *stack, opps_flags, turn, to, arr, bitboard, false);
     set_bit(*bitboard, from);
-    row, col := moddiv90(to);
-    from_r, from_c := moddiv90(from);
-    stack: Stack;
- 
-    // make sure this is not a diagonal capture.
-    if from_r != row && from_c == col then {
-      arr[0] ^= cast(u64)(1 << from_r);
-    } 
- 
-    if from_c != col && from_r == row {
-      arr[1] ^= cast(u64)(1 << from_c);
-    }
-
-    att := attackers(xiangqi);
-    while true {
-      from, opps_flags = get_attackers(xiangqi, *stack, opps_flags, turn, to, arr, bitboard, flying_general);
-      if from == -1 {
-        return success;
-      } 
-
-      move := Move32.{from=cast(u8)from, to=cast(u8)to, capture=xiangqi.board[to], piece=xiangqi.board[from]};
-      if flying_general == false && !is_legal(xiangqi, att, move) {
-        continue;
-      }
-
-      break;
-    }
-    
-    if success == true then {
+    if from == -1 {
       return false;
-    }
+    } 
 
-    success = !success;
-    piece_code := xiangqi.board[from] >> 2;
-    if piece_code != 0 then {
-      return success;
-    } else {
-      flying_general = true;
-    }
+    move := Move32.{
+      from=cast(u8)from, 
+      to=cast(u8)to, 
+      capture=xiangqi.board[to], 
+      piece=xiangqi.board[from]
+    };
 
-    turn ^= 1;
+    if is_legal(xiangqi, att, move) {
+      return true;
+    }
   }
 
   return false;
