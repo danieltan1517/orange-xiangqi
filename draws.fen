@@ -82,9 +82,10 @@
 // red perpetual chase on black horse. red loses.
 // 5ab2/4k2P1/5an1b/p1p3p2/8p/2P4N1/6P1P/B8/5p2c/3KC4 w - - 0 1
 
-// red perpetual chases rook. red loses.
+// red perpetual chases rook. red loses. <- CRITICAL POSITIONS.
 // 2bak4/RC2arN2/4b1n2/2p5p/6p2/2P6/4p1P1c/4B4/4A4/4KAB2 b
 // 2baka3/C4rN2/4b1n2/1Rp5p/6p2/2P6/4c1P1c/4B3C/4A4/4KAB2 w - - 0 1
+// 3aka3/C4rN2/4b1n2/N7p/2p3p2/8P/2P3P2/9/4A4/4KA3 w - - 0 1
 
 // horse pins chariot...
 // 1Cbak4/R3arN2/4b1n2/2p5p/6p2/2P6/4p1P1c/4B4/4A4/4KAB2 w - - 0 1

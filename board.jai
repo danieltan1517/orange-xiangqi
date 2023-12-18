@@ -2268,7 +2268,7 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
 
       if hash == hashes.info[count].hash then {
         ntimes -= 1;
-        if ntimes < 0 then {
+        if ntimes <= 0 then {
           repeating = true;
           break;
         }

@@ -1461,9 +1461,7 @@ gui_make_move :: (move: Move32, animate: bool) {
       prev_to   = move.to;
 
       victim_count := get_evade(*xiangqi, move, chases, chase_count, victims);
-      print("VIC: %, %\n", victims, victim_count); 
       if moves_made_count > 0 && victim_count > 0 then { 
-        print("CHASE\n");
         mark_previous_move(*xiangqi, .Chase);
         set_previous_chase_move(*xiangqi, victims, cast(s8) victim_count);
       } 
@@ -1555,8 +1553,6 @@ gui_make_move :: (move: Move32, animate: bool) {
         on_game_end(.Draw);
       }
       move_list_scroll_value = 10000;
-      print("%\n", to_fenstring(*xiangqi));
-      draw_chases();
       break;
     }
   }
