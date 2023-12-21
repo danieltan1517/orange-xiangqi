@@ -1513,14 +1513,14 @@ gui_make_move :: (move: Move32, animate: bool) {
           if violation_level == .PerpetualCheck {
             status_string = get_ui_str().status_string[3];  
           } else if violation_level == .PerpetualChase {
-            status_string = "Perpetual Chase. Red Wins";
+            status_string = get_ui_str().status_string[8];  
           }
           winner = .Red_Wins;
         } else {
           if violation_level == .PerpetualCheck {
             status_string = get_ui_str().status_string[4];  
           } else if violation_level == .PerpetualChase {
-            status_string = "Perpetual Chase. Black Wins";
+            status_string = get_ui_str().status_string[9];  
           }
           winner = .Black_Wins;
         }
@@ -2522,7 +2522,9 @@ UI_String :: struct {
     "Perpetual Check. Black Wins",
     "Threefold Repetition. No Rule Violation. Draw.",
     "Draw by Insufficient Material",
-    "Draw by 60 Move Rule"
+    "Draw by 60 Move Rule",
+    "Perpetual Chase. Red Wins",
+    "Perpetual Chase. Black Wins",
   ];
   time: string = "Time";
   time_ctrl: [] string = string.["None", "Clock", "Time Per Move", "Depth"];
@@ -2570,7 +2572,9 @@ Chinese_UI := UI_String.{
     "违规长将. 黑方胜",
     "三次重复局面. 无违规. 和棋.",
     "和棋. 双方无足够子力",
-    "和棋. 60步规则"
+    "和棋. 60步规则",
+    "违规长捉. 红方胜",
+    "违规长捉. 黑方胜",
   ],
   "时间",
   string.["无", "限时", "限制每步搜索时间", "限制搜索深度"],
