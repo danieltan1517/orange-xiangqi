@@ -1452,7 +1452,6 @@ gui_make_move :: (move: Move32, animate: bool) {
       make_move(*xiangqi, move);
       victim_count := get_evade(*xiangqi, move, chases, chase_count, victims);
       if moves_made_count > 0 && victim_count > 0 then { 
-        mark_chasemove(*xiangqi);
         set_previous_chase_move(*xiangqi, victims, cast(s8) victim_count);
       } 
 

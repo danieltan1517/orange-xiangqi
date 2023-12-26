@@ -150,7 +150,52 @@ main :: () {
   print("------------------------\n");
 
 
+  repetition_test :: (fen: string, actual_state: GameState, moves: ..string) #expand {
+    xiangqi_fen(*xiangqi, fen);
+    chases: [8] Move32;
+    chase_count := 0;
+    victims: [6] u8;
+    moves_made_count := 0;
+    for move_string: moves {
+      move := to_move32(*xiangqi, move_string);
+      make_move(*xiangqi, move);
+      victim_count := get_evade(*xiangqi, move, chases, chase_count, victims);
+      if moves_made_count > 0 && victim_count > 0 then { 
+        set_previous_chase_move(*xiangqi, victims, cast(s8) victim_count);
+      } 
 
+      att := attackers(*xiangqi);
+      if incheck(*xiangqi, att) then {
+        chase_count = 0;
+        mark_previous_move_check(*xiangqi);
+      } else if is_capture(move) || is_pawn_advance(move) {
+        mark_previous_move(*xiangqi, .Cancel);
+        chase_count = 0;
+      } else if is_quiet(move) {
+        chase_count = get_chases(*xiangqi, chases);
+        mark_previous_move(*xiangqi, .Idle);
+      } 
+      moves_made_count += 1;
+    }
+    judge_state, violation_level := judge_ntimes(*xiangqi, 0);
+    if judge_state != actual_state {
+      print("-----------------------------\n");
+      print("Error. Expected %. Got %\n", actual_state, judge_state);
+      print("%\n", xiangqi);
+      print("MOVES: %\n", moves);
+      print("-----------------------------\n");
+    } else {
+      success += 1;
+    }
+    total += 1;
+  }
 
+  success = 0;
+  total = 0;
+  print("Xiangqi Repetition Tests.\n");
+  print("------------------------\n");
+  repetition_test("4ka3/4a4/4b4/p7p/9/4C4/4P4/4B4/3K5/3Ac1B2 w - - 0 1", .Undecided);
+  print("% out of % tests successful\n", success, total);
+  print("------------------------\n");
 
 }
