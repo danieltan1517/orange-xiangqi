@@ -2105,8 +2105,13 @@ mark_previous_move :: inline (xiangqi: *Xiangqi, status: Status) {
   xiangqi.hashes.info[count].status = status;
 }
 
+mark_chasemove :: inline (xiangqi: *Xiangqi) {
+  count := xiangqi.hashes.count - 2;
+  xiangqi.hashes.info[count].status = .Chase;
+}
+
 set_previous_chase_move :: inline (xiangqi: *Xiangqi, chased: [6] u8, chased_count: s8) {
-  count := xiangqi.hashes.count - 1;
+  count := xiangqi.hashes.count - 2;
   for i: 0..5 {
     xiangqi.hashes.info[count].chased[i] = chased[i];
   }
@@ -2172,7 +2177,7 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
           initialized = true;
         } else {
           update_subset(chased, chased_count, hashes.info[count+1]);
-          chased, chased_count = union_chases(chased, chased_count, hashes.info[count]);
+          chased, chased_count = intersect_chases(chased, chased_count, hashes.info[count]);
         }
       }
 
@@ -2262,7 +2267,7 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
           initialized = true;
         } else {
           update_subset(chased, chased_count, hashes.info[count+1]);
-          chased, chased_count = union_chases(chased, chased_count, hashes.info[count]);
+          chased, chased_count = intersect_chases(chased, chased_count, hashes.info[count]);
         }
       }
 
@@ -2313,10 +2318,10 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
   }
 }
 
-union_chases :: (chased: [] u8, chased_count: int, info: Info) -> [6] u8, count: int {
-  union_chase_array: [6] u8;
+intersect_chases :: (chased: [] u8, chased_count: int, info: Info) -> [6] u8, count: int {
+  intersect_chase_array: [6] u8;
   count := 0;
-  for *chase: union_chase_array {
+  for *chase: intersect_chase_array {
     chase.* = 0xFF;
   }
 
@@ -2325,14 +2330,14 @@ union_chases :: (chased: [] u8, chased_count: int, info: Info) -> [6] u8, count:
     for j: 0..info.chased_count-1 {
       chased_index_j := info.chased[j];
       if chased_index_i == chased_index_j then {
-        union_chase_array[count] = chased_index_i;
+        intersect_chase_array[count] = chased_index_i;
         count += 1;
         break;
       }
     }
   }
 
-  return union_chase_array, count;
+  return intersect_chase_array, count;
 }
 
 Violations :: enum {
@@ -2830,10 +2835,10 @@ get_exchange_move :: (move: Move32) -> Move32 {
 }
 
 get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_count: int, victims: [] u8) -> int {
-  make_move(xiangqi, move);
+  /*make_move(xiangqi, move);
   defer {
     unmake_move(xiangqi, move);
-  }
+  }*/
 
   for *vic: victims {
     vic.* = 0xFF;

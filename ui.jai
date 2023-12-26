@@ -1439,16 +1439,6 @@ gui_redo_move :: () {
   xiangqi.hashes.info[moves_made_count].move = next;
 }
 
-draw_chases :: () {
-  for i : 0..chase_count-1 {
-    move := chases[i];
-    arrow: Arrow;
-    arrow.from = move.from;
-    arrow.to = move.to;
-    add_arrow(arrow);
-  }
-}
-
 chases: [8] Move32;
 chase_count := 0;
 victims: [6] u8;
@@ -1459,14 +1449,13 @@ gui_make_move :: (move: Move32, animate: bool) {
       clock_move_incr();
       prev_from = move.from;
       prev_to   = move.to;
-
+      make_move(*xiangqi, move);
       victim_count := get_evade(*xiangqi, move, chases, chase_count, victims);
       if moves_made_count > 0 && victim_count > 0 then { 
-        mark_previous_move(*xiangqi, .Chase);
+        mark_chasemove(*xiangqi);
         set_previous_chase_move(*xiangqi, victims, cast(s8) victim_count);
       } 
 
-      make_move(*xiangqi, move);
       // add another move.
       xiangqi.hashes.info[moves_made_count].move = move;
       counter_history[moves_made_count] = counter30;
@@ -1496,14 +1485,15 @@ gui_make_move :: (move: Move32, animate: bool) {
         chase_count = 0;
         status_string = get_ui_str().status_string[0];
         mark_previous_move_check(*xiangqi);
+      } else if is_capture(move) || is_pawn_advance(move) {
+        mark_previous_move(*xiangqi, .Cancel);
+        chase_count = 0;
       } else if is_quiet(move) {
         chase_count = get_chases(*xiangqi, chases);
         mark_previous_move(*xiangqi, .Idle);
-      } else if is_capture(move) {
-        chase_count = 0;
-      }
+      } 
 
-      judge_state, violation_level := judge_ntimes(*xiangqi, 1);
+      judge_state, violation_level := judge_ntimes(*xiangqi, 0);
 
       if judge_state == {
       case .Undecided;
