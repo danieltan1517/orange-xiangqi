@@ -1181,11 +1181,6 @@ show_pv_line :: (using pv_line: *PV_Info) -> string {
     print_to_builder(*builder, "depth % | ", depth);
   }
 
-  // engines show huge amount of nodes, so don't feel like display all the nodes...
-  /*if nodes != -1 {
-    print_to_builder(*builder, "nodes % | ", nodes);
-  }*/
-
   if time != -1 {
     if time < 1000 {
       print_to_builder(*builder, "% ms | ", time);
@@ -2013,7 +2008,7 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
     str := get_ucci_position();
     timeManager := ifx xiangqi.turn == 0 r_time_manager else b_time_manager;
     write_to_process(process, to_u8_array(str));
-    sleep_milliseconds(10); // TODO: bad hack...
+    sleep_milliseconds(2); // TODO: bad hack...
 
     gostr := ucci_go_command(engine, timeManager);
     write_to_process(process, to_u8_array(gostr));

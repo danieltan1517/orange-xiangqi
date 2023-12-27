@@ -311,6 +311,9 @@ main :: () {
   // non-perpetual chase.
   repetition_test("3k2b2/4P4/4b4/9/8p/6Bc1/6P1P/3AB4/4pp3/1p1K3R1 w", .Draw, "h0h1", "h4h3", "h1h0", "h3h4", "h0h1", "h4h3");
   repetition_test("3k2b2/4P4/4b4/9/8p/6Bc1/6P1P/3AB4/4pp3/1p1K3R1 w", .Draw, "h0h1", "h4h3", "h1h0", "h3h4", "h0h1", "h4h3", "h1h0");
+
+  // mutual perpetual chase.
+  repetition_test("3akab2/c2R1R2c/4b4/9/9/9/9/4B4/4K4/2B6 w", .Draw, "d8d6", "d9e8", "d6d8", "e8d9", "f8f6", "f9e8", "f6f8", "e8f9", "d8d6", "d9e8");
   print("% out of % tests successful\n", success, total);
   print("------------------------\n");
 
