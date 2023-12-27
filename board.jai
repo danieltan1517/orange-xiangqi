@@ -2092,7 +2092,6 @@ add_hash :: (board_hash: *Board_Hash, hash: u32, move: Move32) {
   board_hash.info[board_hash.count].hash = hash;
   board_hash.info[board_hash.count].move = move;
   board_hash.count += 1;
-  //print("BOARD_HASH_COUNT: %\n", board_hash.count);
 }
 
 mark_previous_move_check :: inline (xiangqi: *Xiangqi) {
@@ -2136,92 +2135,9 @@ is_chase :: inline (move: Move32) -> bool {
 
 // judge relative to the side playing the game.
 judge :: (xiangqi: *Xiangqi) -> GameState {
-  judge_one :: (hashes: Board_Hash, count: int) -> bool, Violations {
-    if count < 0 then {
-      return false, .PerpetualIdle;
-    }
-    
-    if hashes.info[count].status == .Cancel then {
-      return false, .PerpetualIdle;
-    }
-
-    hash := hashes.info[count].hash;
-    count -= 2;
-    status: Status = 0;
-    repeating: bool = false;
-    single_victim: bool = true;
-    chased: [6] u8;
-    chased_count := 0;
-    initialized := false;
-
-    update_subset :: (chased: [] u8, chased_count: int, info: Info) {
-      for c : chased {
-        if c == info.move.from {
-          chased[it_index] = info.move.to;
-        }
-      }
-    }
-
-    while count >= 0 {
-      if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
-        break;
-      }
-
-      status |= hashes.info[count].status;
-      if status == .Chase then {
-        if initialized == false {
-          chased = hashes.info[count].chased;
-          chased_count = hashes.info[count].chased_count;
-          initialized = true;
-        } else {
-          update_subset(chased, chased_count, hashes.info[count+1]);
-          chased, chased_count = intersect_chases(chased, chased_count, hashes.info[count]);
-        }
-      }
-
-      if hash == hashes.info[count].hash then {
-        repeating = true;
-        break;
-      }
-
-      count -= 2;
-    }
-
-    if repeating == false then {
-      return false, .PerpetualIdle;
-    }
-
-    if status == .Check then {
-      return true, .PerpetualCheck;
-    }
-    
-    if status == .Chase then {
-      if chased_count > 0 then {
-        return true, .PerpetualChase;
-      }
-    }
-
-    return true, .PerpetualIdle;
-  }
-  
-  count := xiangqi.hashes.count - 1;
-  success, opps := judge_one(xiangqi.hashes, count);
-  if success == false then {
-    return .Undecided;
-  }
-
-  success=, ours := judge_one(xiangqi.hashes, count-1);
-  if success == false then {
-    return .Undecided;
-  }
-
-  if ours == opps then {
-    return .Draw;
-  } else if ours > opps then {
-    return .Loss;
-  } else {
-    return .Win;
-  }
+  // todo: fix later...
+  state, _ := judge_ntimes(xiangqi, 0);
+  return state;
 }
 
 // judge relative to the side playing the game.
@@ -2246,8 +2162,8 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
 
     update_subset :: (chased: [] u8, chased_count: int, info: Info) {
       for c : chased {
-        if c == info.move.from {
-          chased[it_index] = info.move.to;
+        if c == info.move.to {
+          chased[it_index] = info.move.from;
         }
       }
     }
@@ -2832,11 +2748,6 @@ get_exchange_move :: (move: Move32) -> Move32 {
 }
 
 get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_count: int, victims: [] u8) -> int {
-  /*make_move(xiangqi, move);
-  defer {
-    unmake_move(xiangqi, move);
-  }*/
-
   for *vic: victims {
     vic.* = 0xFF;
   }
@@ -2854,7 +2765,7 @@ get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_cou
       continue;
     }
 
-    victims[victim_count] = chase_move.to;
+    victims[victim_count] = to;
     victim_count += 1;
   }
 
