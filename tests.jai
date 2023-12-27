@@ -212,8 +212,7 @@ main :: () {
   repetition_test("5c3/8R/4k2P1/3P5/5P3/6P2/5pN2/5A3/4CK3/6rn1 w", .Win, "f5e5", "f3e3", "e5f5", "e3f3", "f5e5", "f3e3", "e5f5", "e3f3", "f5e5");
   repetition_test("5c3/8R/4k2P1/3P5/5P3/6P2/5pN2/5A3/4CK3/6rn1 w", .Loss, "f5e5", "f3e3", "e5f5", "e3f3", "f5e5", "f3e3");
   
-  // alternate check and kill.
-  // some perpetual chasing.
+  // perpetual kill.
   repetition_test("3ak1b2/4a4/4b4/r3C2R1/p8/9/P8/4p4/4p4/5K3 w", .Draw, "h6g6", "g9i7", "g6h6", "i7g9", "h6g6", "g9i7");
   repetition_test("2b2k3/9/4b2P1/3N5/1R6p/6P2/5p2r/8n/4p4/5K3 w", .Draw, "d6c8", "f9f8", "c8d6", "f8f9", "d6c8", "f9f8", "c8d6");
   repetition_test("3aka3/4n4/4b4/4C4/p3p3p/9/2c6/2C6/4K4/9 w", .Draw, "c2g2", "c3g3", "g2c2", "g3c3", "c2g2", "c3g3");
@@ -221,6 +220,9 @@ main :: () {
   repetition_test("5k3/2CPP4/9/9/9/9/9/B3p4/r8/4K4 w", .Draw, "e8f8", "f9e9", "e0f0", "e2f2", "f8e8", "e9f9", "f0e0", "f2e2", "e8f8", "f9e9");
   repetition_test("2bak4/4a4/4b4/8p/5R3/8P/n8/1r2C4/9/1cBAKAB2 w", .Draw, "f5h5", "e9f9", "h5f5", "f9e9", "f5h5", "e9f9", "h5f5", "f9e9", "f5h5");
   repetition_test("2ba1k3/4a4/b8/7R1/9/9/1r2p4/9/4A4/2B1KAB1c w", .Draw, "h6h9", "f9f8", "h9h0", "i0i1", "h0h8", "f8f9", "h8h1", "i1i0", "h1h9", "f9f8", "h9h0");
+
+  // alternate check and kill.
+  // some perpetual chasing.
   repetition_test("2ba1k3/4a4/b8/7R1/9/9/1r2p4/9/4A4/2B1KAB1c w", .Win, "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0", "i6h6", "h0i0", "h6i6");
   repetition_test("2ba1k3/4a4/b8/7R1/9/9/1r2p4/9/4A4/2B1KAB1c w", .Loss, "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0");
   repetition_test("2bakab2/3r5/2n1c2c1/p1R1p1p2/7np/2P2CP2/P2rP3P/2N1C1N2/4A4/2B1KAB1R w", .Win, "f4f3", "d3d7", "f3f7", "d7d3", "f7f3", "d3d7", "f3f7");
