@@ -1537,6 +1537,8 @@ gui_make_move :: (move: Move32, animate: bool) {
         on_game_end(.Draw);
       }
 
+      str := get_ucci_position();
+      print("UCCI: %\n", str);
       if counter30 >= 120 {
         status_string = get_ui_str().status_string[7];
         on_game_end(.Draw);

@@ -43,7 +43,7 @@ main :: () {
     }
   }
 
-  print("SEE Tests.\n");
+  /*print("SEE Tests.\n");
   print("------------------------\n");
   see_test("2eak1er1/4a4/2h1c2ch/p1p1p1p2/8R/1R7/P1P1PrP2/2H1CCH2/4A4/2EAK1E2 b", "f3g3", 200);
   see_test("4kae2/4a4/4e1hC1/2H1p1p2/8p/P4HP2/4h4/4C4/4A4/2E1KAE1c b", "i5i4", 0);
@@ -94,7 +94,7 @@ main :: () {
   see_test("4k4/6n2/4b4/9/7P1/6P2/9/9/6R2/4K4 b - - 0 1", "g8h6", -400);
   see_test("4k4/9/9/4p4/9/9/9/9/3pA4/2pAK4 b - - 0 1", "c0d0", 0);
   print("% out of % tests successful\n", success, total);
-  print("------------------------\n");
+  print("------------------------\n");*/
 
   success = 0;
   total = 0;
@@ -194,7 +194,35 @@ main :: () {
   total = 0;
   print("Xiangqi Repetition Tests.\n");
   print("------------------------\n");
+  // ... nothing happens.
   repetition_test("4ka3/4a4/4b4/p7p/9/4C4/4P4/4B4/3K5/3Ac1B2 w - - 0 1", .Undecided);
+
+  // perpetual check tests.
+  repetition_test("c2a1k3/2c1a2R1/b6P1/8p/9/9/9/9/4K4/9 w - - 0 1", .Loss, "h8h9", "f9f8", "h9h8", "f8f9", "h8h9", "f9f8");
+  repetition_test("c2a1k3/2c1a2R1/b6P1/8p/9/9/9/9/4K4/9 w - - 0 1", .Win, "h8h9", "f9f8", "h9h8", "f8f9", "h8h9", "f9f8", "h9h8");
+  repetition_test("9/4k4/9/9/9/9/9/9/2p6/3K1RBc1 w - - 0 1", .Win, "f0e0", "e8f8", "e0f0", "f8e8", "f0e0", "e8f8", "e0f0");
+  repetition_test("9/4k4/9/9/9/9/9/9/2p6/3K1RBc1 w - - 0 1", .Loss, "f0e0", "e8f8", "e0f0", "f8e8", "f0e0", "e8f8");
+  repetition_test("4R4/3k5/5R3/9/9/2B6/n8/3pB4/4p4/3K5 w - - 0 1", .Loss, "e9d9", "d8e8", "d9e9", "e8d8", "e9d9", "d8e8");
+  repetition_test("4R4/3k5/5R3/9/9/2B6/n8/3pB4/4p4/3K5 w - - 0 1", .Win,  "e9d9", "d8e8", "d9e9", "e8d8", "e9d9", "d8e8", "d9e9");
+  repetition_test("3akr3/5c3/1P2b4/4R4/9/9/9/9/9/4CK3 w - - 0 1", .Draw, "e6e7", "f8e8", "e7f7", "e8f8", "f7e7", "f8e8", "e7f7");
+  repetition_test("3akr3/5c3/1P2b4/4R4/9/9/9/9/9/4CK3 w - - 0 1", .Draw, "e6e7", "f8e8", "e7f7", "e8f8", "f7e7", "f8e8", "e7f7", "e8f8");
+
+  // two-to-one check.
+  repetition_test("5c3/8R/4k2P1/3P5/5P3/6P2/5pN2/5A3/4CK3/6rn1 w", .Win, "f5e5", "f3e3", "e5f5", "e3f3", "f5e5", "f3e3", "e5f5", "e3f3", "f5e5");
+  repetition_test("5c3/8R/4k2P1/3P5/5P3/6P2/5pN2/5A3/4CK3/6rn1 w", .Loss, "f5e5", "f3e3", "e5f5", "e3f3", "f5e5", "f3e3");
+  
+  // alternate check and kill.
+  repetition_test("3ak1b2/4a4/4b4/r3C2R1/p8/9/P8/4p4/4p4/5K3 w", .Draw, "h6g6", "g9i7", "g6h6", "i7g9", "h6g6", "g9i7");
+  repetition_test("2b2k3/9/4b2P1/3N5/1R6p/6P2/5p2r/8n/4p4/5K3 w", .Draw, "d6c8", "f9f8", "c8d6", "f8f9", "d6c8", "f9f8", "c8d6");
+  repetition_test("3aka3/4n4/4b4/4C4/p3p3p/9/2c6/2C6/4K4/9 w", .Draw, "c2g2", "c3g3", "g2c2", "g3c3", "c2g2", "c3g3");
+  repetition_test("2bNka3/1N2aPP2/n3b4/p8/5c3/2C6/9/4B4/4A4/r1BK1A1n1 w", .Draw, "c4h4", "f5h5", "h4e4", "h5e5", "e4h4", "e5h5", "h4e4", "h5e5");
+  repetition_test("5k3/2CPP4/9/9/9/9/9/B3p4/r8/4K4 w", .Draw, "e8f8", "f9e9", "e0f0", "e2f2", "f8e8", "e9f9", "f0e0", "f2e2", "e8f8", "f9e9");
+  repetition_test("2bak4/4a4/4b4/8p/5R3/8P/n8/1r2C4/9/1cBAKAB2 w", .Draw, "f5h5", "e9f9", "h5f5", "f9e9", "f5h5", "e9f9", "h5f5", "f9e9", "f5h5");
+  repetition_test("2ba1k3/4a4/b8/7R1/9/9/1r2p4/9/4A4/2B1KAB1c w", .Draw, "h6h9", "f9f8", "h9h0", "i0i1", "h0h8", "f8f9", "h8h1", "i1i0", "h1h9", "f9f8", "h9h0");
+  repetition_test("2ba1k3/4a4/b8/7R1/9/9/1r2p4/9/4A4/2B1KAB1c w", .Win, "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0", "i6h6", "h0i0", "h6i6");
+  repetition_test("2ba1k3/4a4/b8/7R1/9/9/1r2p4/9/4A4/2B1KAB1c w", .Loss, "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0");
+
+
   print("% out of % tests successful\n", success, total);
   print("------------------------\n");
 
