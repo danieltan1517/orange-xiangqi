@@ -539,8 +539,11 @@ main :: () {
   repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Win, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9", "a8b8");
   repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Loss, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9");
   repetition_test("2b1k1r2/9/4b4/9/9/2P3P2/1R7/2n1B4/4A4/4KABC1 w", .Win, "b3c3", "c2b0", "c3b3", "b0c2", "b3c3", "c2b0", "c3b3");
-
   repetition_test("2bak4/4a4/4b4/9/2p2r3/r8/1R7/4B4/9/1R2K1B2 w", .Draw, "b3b4", "a4a3", "b4b3", "a3a4", "b3b4", "a4a3");
+
+  // 2023 Xiangqi Champion -- black chases chariot. red wins.
+  repetition_test("2bakab2/6c2/2C3c2/p1N1p3p/1R1P5/5r3/P2CP1n1P/4B1p2/4A4/4KAB2 w", .Win, "b5b8", "f9e8", "c7c8", "e8f9", "c8c7", "f9e8", "c7c8", "e8f9", "c8c7", "f9e8");
+  repetition_test("2bakab2/6c2/2C3c2/p1N1p3p/1R1P5/5r3/P2CP1n1P/4B1p2/4A4/4KAB2 w", .Loss, "b5b8", "f9e8", "c7c8", "e8f9", "c8c7", "f9e8", "c7c8", "e8f9", "c8c7");
 
   print("% out of % tests successful\n", success, total);
   print("------------------------\n");
