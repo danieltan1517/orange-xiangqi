@@ -192,6 +192,7 @@ main :: () {
     total += 1;
   }
 
+  time := current_time_monotonic();
   success = 0;
   total = 0;
   print("Xiangqi Repetition Tests.\n");
@@ -242,7 +243,12 @@ main :: () {
   repetition_test("2bakab2/3r5/2n1c2c1/p1R1p1p2/7np/2P2CP2/P2rP3P/2N1C1N2/4A4/2B1KAB1R w", .Loss, "f4f3", "d3d7", "f3f7", "d7d3", "f7f3", "d3d7", "f3f7", "d7d3");
   repetition_test("2bak4/4a4/4b4/2p5p/6p2/2Pp5/4P4/2N4C1/2CrA4/3AK4 w - - 0 1", .Win, "h2h1", "d1d3", "h1h3", "d3d1", "h3h1", "d1d3", "h1h3");
   repetition_test("2bak4/4a4/4b4/8p/2p3p2/9/N2rP4/6NC1/C3A4/4K1B2 w - - 0 1", .Win, "h2h3", "d3d1", "h3h1", "d1d3", "h1h3", "d3d1", "h3h1");
+
+  // ERROR
   repetition_test("2c1kab2/4a4/4b4/9/9/9/P1p5P/2r1N1cC1/4A4/3ACK3 w - - 0 1", .Win, "e2d4", "g2g1", "d4e2", "g1g2", "e2d4", "g2g1", "d4e2");
+
+
+
   repetition_test("1r2kab2/4a4/4b4/p1p1p3p/5R3/2P2N3/PC2P3P/4Cr3/1R3c3/2B1KA3 w", .Win, "b3b2", "f2f3", "b2b3", "f3f2", "b3b2", "f2f3", "b2b3");
   repetition_test("4kab2/4a4/4b4/c3C1p1R/8P/2B6/9/3AB1p2/1pr1A4/4K4 w", .Win, "e6c6", "c1d1", "c6d6", "d1c1", "d6c6", "c1d1", "c6d6");
   repetition_test("2bak3r/4a4/4b1n2/P2rp3p/2p1c1p2/4R4/N3P3R/4BC1C1/N3A4/4KAB2 w", .Win, "f2f6", "d6d4", "f6f4", "d4d6", "f4f6", "d6d4", "f6f4");
@@ -538,5 +544,7 @@ main :: () {
 
   print("% out of % tests successful\n", success, total);
   print("------------------------\n");
+  time = current_time_monotonic() - time;
+  print("Chasing Time taken: % nanoseconds\n", to_nanoseconds(time));
 
 }

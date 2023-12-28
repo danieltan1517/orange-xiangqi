@@ -2161,9 +2161,9 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
     initialized := false;
 
     update_subset :: (chased: [] u8, chased_count: int, info: Info) {
-      for c : chased {
-        if c == info.move.to {
-          chased[it_index] = info.move.from;
+      for i: 0..chased_count-1 {
+        if chased[i] == info.move.to {
+          chased[i] = info.move.from;
         }
       }
     }
@@ -2646,18 +2646,23 @@ is_set :: inline (bitboard: Bitboard128, bit: int) -> bool {
 }
 
 #scope_file
-mvv_lva :: (move: Move32) -> s32 {
+chase_ordering :: (move: Move32) -> s32 {
   victim := move.capture >> 2;
   attack := move.piece   >> 2;
-  TABLE :: s32.[1000, 120, 120, 270, 600, 350, 30];
-  return TABLE[victim] - (TABLE[attack] / 100);
+
+  if victim == attack then {
+    return 0;
+  }
+
+  //TABLE :: s32.[1000, 120, 120, 270, 600, 285, 30];
+  return 100; //TABLE[victim] - (TABLE[attack] / 100);
 }
 
 sort :: (moves: *Moves) {
   i := 0;
   while i < moves.count {
     move := moves.array[i].move;
-    moves.array[i].score = mvv_lva(move);
+    moves.array[i].score = chase_ordering(move);
     i += 1;
   }
 
@@ -2668,12 +2673,6 @@ sort :: (moves: *Moves) {
       }
     }
   }
-}
-
-// is king-pawn move.
-is_kp :: inline (move: Move32) -> bool {
-  piece_code := move.piece >> 2;
-  return piece_code == 0 || piece_code == 6;
 }
 
 pawn_not_passed :: (move: Move32, turn: int) -> bool {
@@ -2691,13 +2690,12 @@ clear_evasions :: inline (victims: [] u8) {
 
 get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> count: int {
   turn := xiangqi.turn;
-  opp_att := attackers(xiangqi);
   xiangqi.turn ^= 1;
   defer {
     xiangqi.turn ^= 1;
   }
 
-  is_exchange_move :: (xiangqi: *Xiangqi, opp_att: AttFlags, move: Move32) -> bool {
+  is_exchange_move :: (xiangqi: *Xiangqi, move: Move32) -> bool {
     piece := move.piece >> 2;
     capture := move.capture >> 2;
     if piece != capture then {
@@ -2706,27 +2704,23 @@ get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> count: int {
 
     exchange := get_exchange_move(move);
     xiangqi.turn ^= 1;
-    success := is_pseudolegal(xiangqi, exchange) && is_legal(xiangqi, opp_att, exchange);
+    opp_att := attackers(xiangqi);
+    success := (piece != H || is_pseudolegal(xiangqi, exchange)) && is_legal(xiangqi, opp_att, exchange);
     xiangqi.turn ^= 1;
     return success;
   }
 
   moves: Moves;
   gen_chases(xiangqi, *moves);
-  sort(*moves);
+  //sort(*moves);
   att := attackers(xiangqi);
   count := 0;
   for move : moves {
-
     if pawn_not_passed(move, turn) then {
       continue;
     }
 
-    if !is_legal(xiangqi, att, move) then {
-      continue;
-    }
-
-    if is_exchange_move(xiangqi, opp_att, move) then {
+    if !is_legal(xiangqi, att, move) || is_exchange_move(xiangqi, move) then {
       continue;
     }
 
