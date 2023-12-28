@@ -678,9 +678,9 @@ repetition_test_suite :: () {
   repetition_test("2bakab2/6c2/2C3c2/p1N1p3p/1R1P5/5r3/P2CP1n1P/4B1p2/4A4/4KAB2 w", .Win, "b5b8", "f9e8", "c7c8", "e8f9", "c8c7", "f9e8", "c7c8", "e8f9", "c8c7", "f9e8");
   repetition_test("2bakab2/6c2/2C3c2/p1N1p3p/1R1P5/5r3/P2CP1n1P/4B1p2/4A4/4KAB2 w", .Loss, "b5b8", "f9e8", "c7c8", "e8f9", "c8c7", "f9e8", "c7c8", "e8f9", "c8c7");
 
+  time = current_time_monotonic() - time;
   print("% out of % tests successful\n", success, total);
   print("------------------------\n");
-  time = current_time_monotonic() - time;
   print("Chasing Time taken: % nanoseconds\n", to_nanoseconds(time));
 }
 
