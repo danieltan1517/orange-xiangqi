@@ -297,75 +297,194 @@ main :: () {
   // diagram 38.
   repetition_test("2bakar2/9/2c6/8R/p3p1p2/9/P1P1P1P1P/B1N6/1r2A4/2B1KA3 w", .Win, "i6c6", "c7h7", "c6h6", "h7c7", "h6c6", "c7h7", "c6h6");
 
+  // diagrams 39-41. critical positions
+  // red chasing black rook. black rook pinned by horse. 
+  repetition_test("2bak4/RC2arN2/4b1n2/2p5p/6p2/2P6/4p1P1c/4B4/4A4/4KAB2 b", .Win, "e8f9", "b8b9", "f9e8", "b9b8", "e8f9", "b8b9");
+  repetition_test("2baka3/C4rN2/4b1n2/1Rp5p/6p2/2P6/4c1P1c/4B3C/4A4/4KAB2 w", .Win, "b6b8", "f9e8", "b8b6", "e8f9", "b6b8", "f9e8", "b8b6");
+  repetition_test("2baka3/C4rN2/4b1n2/1Rp5p/6p2/2P6/4c1P1c/4B3C/4A4/4KAB2 w", .Loss, "b6b8", "f9e8", "b8b6", "e8f9", "b6b8", "f9e8");
+  repetition_test("3aka3/C4rN2/4b1n2/N7p/2p3p2/8P/2P3P2/9/4A4/4KA3 w", .Win, "a6b8", "f9e8", "b8a6", "e8f9", "a6b8", "f9e8", "b8a6");
+  repetition_test("3aka3/C4rN2/4b1n2/N7p/2p3p2/8P/2P3P2/9/4A4/4KA3 w", .Loss, "a6b8", "f9e8", "b8a6", "e8f9", "a6b8", "f9e8");
 
-  repetition_test("2ca1k3/4a4/b3b4/2P5P/6p2/1c7/9/B7N/2nR5/2BAK4 w", .Win, "c6b6", "e7c5", "b6c6", "c5e7", "c6b6", "e7c5", "b6c6");
-  repetition_test("2bakab2/9/4c3n/p1prp3R/9/2P6/P3P1c1A/2N1BC2B/4A4/3AK4 w", .Win, "f2g2", "g3f3", "i2g4", "f3g3", "g4i2", "g3f3", "i2g4");
-  repetition_test("4kab2/4a4/4b4/3rC2R1/9/9/4n4/4B4/4A4/4KAB1c w", .Win, "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0", "i6h6");
-  repetition_test("1cbak4/R3a4/4b4/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Win, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8");
-  repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Win, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9", "a8b8");
-  repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Loss, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9");
+  // diagram 42. 
+  repetition_test("1rb1kabr1/4a1c2/1cn3n2/p1C1p1R1p/9/9/P1P1P1P1P/2N1C1N2/9/R1BAKAB2 w", .Win, "g6f6", "g7h5", "f6g6", "h5g7", "g6f6", "g7h5");
 
+  // diagram 43.
+  repetition_test("1rb1kabr1/4a1c2/1cn6/pRp1pR2p/7n1/2P2p3/P3P1P1P/C1N1C1N2/4A4/3AK1B2 w", .Win, "f6g6", "h5g7", "g6f6", "g7h5", "f6g6", "h5g7");
+
+  // diagram 44.
+  repetition_test("r1b1kabr1/4a1c2/1cn6/p1p1pR2p/3NP2n1/9/P1P3p1P/1C2C4/4A4/RNBAK1B2 w", .Win, "f6g6", "h5g7", "g6f6", "g7h5", "f6g6", "h5g7");
+
+  // diagram 45.
+  // two-to-one chase.
+  repetition_test("4ka3/1CP1a4/4b4/2p6/1cb1r4/4CN3/4Pp2P/4B4/4A4/2BAK4 w", .Win, "f4g6", "e5e6", "g6f4", "e6e5", "f4g6", "e5e6", "g6f4");
+  repetition_test("4ka3/1CP1a4/4b4/2p6/1cb1r4/4CN3/4Pp2P/4B4/4A4/2BAK4 w", .Loss, "f4g6", "e5e6", "g6f4", "e6e5", "f4g6", "e5e6");
+
+  // diagram 46.
+  // two-to-one chase.
+  repetition_test("3ak1br1/4a4/4b4/p8/6p2/9/P7P/n7B/4A4/2R1KA3 w", .Win, "c0c2", "a2b0", "c2c1", "b0a2", "c1c2", "a2b0", "c2c1", "b0a2");
+  repetition_test("3ak1br1/4a4/4b4/p8/6p2/9/P7P/n7B/4A4/2R1KA3 w", .Loss, "c0c2", "a2b0", "c2c1", "b0a2", "c1c2", "a2b0", "c2c1");
+
+  // diagram 47.
   // two-to-one chase.
   repetition_test("4kab2/4a4/8b/p1p5p/4c1n2/6R2/P1P1P1P1P/4BC3/8N/2B1KA1r1 w", .Win, "i1g2", "h0g0", "g2i1", "g0h0", "i1g2", "h0g0", "g2i1");
 
+  // diagram 48.
+  // mutual perpetual chase.
+  repetition_test("3akc3/4a4/9/9/3n5/1R7/9/9/4A4/4KAB2 w", .Draw, "b4b5", "d5c3", "b5c5", "c3e4", "c5c4", "e4d6", "c4d4", "d6f5", "d4d5", "f5e3", "d5e5", "e3c4", "e5e4", "c4d6", "e4d4", "d6f5", "d4d5");
 
+  // diagram 49.
+  // chariot chases horse
+  repetition_test("4ka3/4a4/3Pb4/2p1r3p/2b6/2R6/1n7/4B4/4A4/4KAB2 w", .Win, "c4c3", "b3a1", "c3c1", "a1b3", "c1c3", "b3a1", "c3c1");
+  repetition_test("4ka3/4a4/3Pb4/2p1r3p/2b6/2R6/1n7/4B4/4A4/4KAB2 w", .Loss, "c4c3", "b3a1", "c3c1", "a1b3", "c1c3", "b3a1", "c3c1", "a1b3");
+
+  // diagram 50.
+  // red chases horse. black does alternative check & idle
+  repetition_test("3akr3/n3a4/4b4/9/P1b6/9/1n7/4B4/3RA4/2BAK4 w", .Win, "d1d3", "b3c1", "d3d1", "c1b3", "d1d3", "b3c1", "d3d1");
+  repetition_test("3akr3/n3a4/4b4/9/P1b6/9/1n7/4B4/3RA4/2BAK4 w", .Loss, "d1d3", "b3c1", "d3d1", "c1b3", "d1d3", "b3c1");
+
+  // PERPETUAL OFFER.
+  // 51. red perpetual offer.
+  repetition_test("2bak3r/4a4/4b4/p3C1R2/9/P8/5R3/9/4r4/5K3 w", .Draw, "g6i6", "i9g9", "i6g6", "g9i9", "g6i6", "i9g9");
+
+  // 52. offer chariot.
+  repetition_test("2b1ka3/4a4/4b4/p3r3p/9/1R7/P7P/2p1CpC2/4A1n2/2BK1AB1c w", .Draw, "b4b6", "e6e3", "b6b3", "e3e6", "b3b6", "e6e3", "b6b3");
+  repetition_test("2b1ka3/4a4/4b4/p3r3p/9/1R7/P7P/2p1CpC2/4A1n2/2BK1AB1c w", .Draw, "b4b6", "e6e3", "b6b3", "e3e6", "b3b6", "e6e3", "b6b3", "e3e6");
+
+  // 53. cannon chasing pinned cannon. not an offer.
   repetition_test("Cc1ak4/4a1P2/9/2p6/1P7/6C2/9/B2p5/2p2p3/4K4 w", .Win, "g4b4", "b9c9", "b4c4", "c9b9", "c4b4", "b9c9", "b4c4");
-  repetition_test("1rb1kabr1/4a1c2/1cn3n2/p1C1p1R1p/9/9/P1P1P1P1P/2N1C1N2/9/R1BAKAB2 w", .Win, "g6f6", "g7h5", "f6g6", "h5g7", "g6f6", "g7h5");
-  repetition_test("1rb1kabr1/4a1c2/1cn6/pRp1pR2p/7n1/2P2p3/P3P1P1P/C1N1C1N2/4A4/3AK1B2 w", .Win, "f6g6", "h5g7", "g6f6", "g7h5", "f6g6", "h5g7");
-  repetition_test("r1b1kabr1/4a1c2/1cn6/p1p1pR2p/3NP2n1/9/P1P3p1P/1C2C4/4A4/RNBAK1B2 w", .Win, "f6g6", "h5g7", "g6f6", "g7h5", "f6g6", "h5g7");
+
+  // 54. cannon chasing pinned cannon
+  // red attacks protected piece on one piece and chases on another. draw.
+  repetition_test("3k1a1cC/4a4/4b4/9/6PP1/2C6/2p1p4/4B4/4A4/4KAB2 w", .Draw, "c4h4", "h9g9", "h4g4", "g9h9", "g4h4", "h9g9", "h4g4");
+
+  // 55. red horsechase on impaired horse
+  repetition_test("5ab2/4k2P1/5an1b/p1p3p2/8p/2P4N1/6P1P/B8/5p2c/3KC4 w", .Win, "h4f5", "g7i6", "f5h4", "i6g7", "h4f5", "g7i6", "f5h4");
+
+  // 56. gunmount unprotected piece.
+  repetition_test("4ka1nC/3Pa4/9/8p/8P/4c4/9/7C1/3p1p3/4K4 w", .Win, "i5h5", "e4h4", "h5g5", "h4g4", "g5h5", "g4h4", "h5g5", "h4g4", "g5h5");
+  repetition_test("4ka1nC/3Pa4/9/8p/8P/4c4/9/7C1/3p1p3/4K4 w", .Loss, "i5h5", "e4h4", "h5g5", "h4g4", "g5h5", "g4h4", "h5g5", "h4g4");
+ 
+  // 57. gunmount unprotected piece.
+  repetition_test("4k1b2/4n4/3aba3/4p4/9/8P/P2nP4/2N1BA3/8c/2BK2C2 w", .Win, "g0f0", "i1f1", "f2e1", "f1h1", "e1f2", "h1f1", "f2e1", "f1h1", "e1f2");
+  repetition_test("4k1b2/4n4/3aba3/4p4/9/8P/P2nP4/2N1BA3/8c/2BK2C2 w", .Loss, "g0f0", "i1f1", "f2e1", "f1h1", "e1f2", "h1f1", "f2e1", "f1h1");
+
+  // 58. gunmount cannon chases.
   repetition_test("2bakab2/9/4c3n/p1prp3R/9/2P6/P3P1c1P/2N1BC2B/4A4/3AK4 w", .Win, "f2g2", "g3f3", "i2g4", "f3g3", "g4i2", "g3f3", "i2g4");
 
+  // 59. red chase on pawn crossing river.
+  repetition_test("3akabC1/9/4b4/7P1/2n6/8p/3p5/9/4A1c2/2BAK1B1C w", .Win, "g0i2", "g1i1", "i2g0", "i1g1", "g0i2", "g1i1", "i2g0");
+
+  // 60. red chase on pawn that didn't cross river.
+  repetition_test("3akabC1/9/4b4/7P1/2n5p/9/3p5/9/4A1c2/2BAK1B1C w", .Draw, "g0i2", "g1i1", "i2g0", "i1g1", "g0i2", "g1i1", "i2g0");
+
+  // 61. red chase using cannon on black rook 
+  repetition_test("3akabC1/9/4b4/r3p4/p1p6/4P4/P1P5n/NCr1B4/4A4/R2AK1B2 w", .Win, "h9h2", "i3g2", "e2g4", "g2h4", "g4e2", "h4g2", "e2g4", "g2h4", "g4e2");
+  repetition_test("3akabC1/9/4b4/r3p4/p1p6/4P4/P1P5n/NCr1B4/4A4/R2AK1B2 w", .Loss, "h9h2", "i3g2", "e2g4", "g2h4", "g4e2", "h4g2", "e2g4", "g2h4");
+
+  // 62. red chase on black chariot.
+  repetition_test("4kab2/4a4/4b3n/2r3p1p/2p2N3/9/1RP3P1P/4B3C/2r1A4/2N1KABc1 w", .Win, "i2i1", "c1c2", "i1i2", "c2c1", "i2i1", "c1c2", "i1i2");
+  repetition_test("4kab2/4a4/4b3n/2r3p1p/2p2N3/9/1RP3P1P/4B3C/2r1A4/2N1KABc1 w", .Loss, "i2i1", "c1c2", "i1i2", "c2c1", "i2i1", "c1c2");
+  repetition_test("4kab2/4a4/4b3n/2r3p1p/2p2N3/9/1RP3P1P/4B3C/2r1A4/2N1KABc1 w", .Win, "i2i1", "h0h1", "e1d0", "h1h0", "d0e1", "h0h1", "e1d0");
+  repetition_test("4kab2/4a4/4b3n/2r3p1p/2p2N3/9/1RP3P1P/4B3C/2r1A4/2N1KABc1 w", .Loss, "i2i1", "h0h1", "e1d0", "h1h0", "d0e1", "h0h1", "e1d0", "h1h0");
+
+  // 63. chariot pinned by cannon. chariot cannot chase. draw.
+  repetition_test("4ka3/4a4/9/4r4/9/9/9/1C2C4/p3A4/3K1AB1n w", .Draw, "b2b6", "e6e5", "b6b5", "e5e6", "b5b6", "e6e5", "b6b5");
+
+  // 64. chariot pinned by cannon. red chariot chases. loss for red.
+  repetition_test("3aka3/4c4/4r4/9/9/9/PR7/2p1CA3/7p1/2B2K3 w", .Win, "b3b7", "e7e3", "b7b3", "e3e4", "b3b4", "e4e3", "b4b3", "e3e4", "b3b4");
+  repetition_test("3aka3/4c4/4r4/9/9/9/PR7/2p1CA3/7p1/2B2K3 w", .Loss, "b3b7", "e7e3", "b7b3", "e3e4", "b3b4", "e4e3", "b4b3", "e3e4", "b3b4", "e4e3");
+
+  // 65. black chariot pinned by red cannon. red violated perpetual chase.
+  repetition_test("5kb2/4a4/4ba3/5r3/9/P6R1/3cpCpc1/4BA3/4A4/2BK5 w", .Win, "h4h6", "f6f5", "h6h5", "f5f6", "h5h6", "f6f5", "h6h5");
+  repetition_test("5kb2/4a4/4ba3/5r3/9/P6R1/3cpCpc1/4BA3/4A4/2BK5 w", .Loss, "h4h6", "f6f5", "h6h5", "f5f6", "h5h6", "f6f5", "h6h5", "f5f6");
+
+  // 66. black chariot chased on one move. protected on another.
+  repetition_test("2bk1a1rC/4a1R2/4b4/9/9/4cp3/9/4B4/N3Ap3/2BAK4 w", .Draw, "g8h8", "h9g9", "h8g8", "g9h9", "g8h8", "h9g9", "h8g8", "g9h9", "g8h8");
+
   // legal king-pawn chases. draws.
+  // diagrams 67 - 70.
   repetition_test("4ka3/4a4/4b4/p7p/9/4C4/4P4/4B4/3K5/3Ac1B2 w", .Draw, "d1e1", "e0f0", "e1f1", "f0e0", "f1e1", "e0f0", "e1f1");
   repetition_test("3k2b1r/4a4/5a2b/3PP4/7P1/9/9/B4N2B/5K3/4p4 w", .Draw, "f1e1", "e0d0", "e1d1", "d0e0", "d1e1", "e0d0", "e1d1");
   repetition_test("4k1b1c/7P1/3a5/9/9/9/9/9/3K5/9 w", .Draw, "h8i8", "i9h9", "i8h8", "h9i9", "h8i8", "i9h9", "i8h8");
   repetition_test("4kab2/4a4/4b1n2/4p2P1/2p5P/9/9/7C1/4A4/4K4 w", .Draw, "h6g6", "g7h9", "g6h6", "h9g7", "h6g6", "g7h9");
 
   // exceptions to king-pawn chases.
+  // diagrams 71-75
   repetition_test("3a2b1r/4ak3/8p/7P1/9/9/9/B2NN3B/3K5/4p4 w", .Win, "d1e1", "e0d0", "e1d1", "d0e0", "d1e1", "e0d0", "e1d1");
   repetition_test("1c1ak4/N1PNa4/9/9/5P3/9/9/4Bp3/9/3p1K1p1 w", .Win, "c8b8", "b9c9", "b8c8", "c9b9", "c8b8", "b9c9", "b8c8");
   repetition_test("1Pbak2r1/4a4/4b4/2p6/9/3R5/2P6/4p2p1/3CC2N1/5K3 w", .Win, "d4e4", "e2d2", "e4d4", "d2e2", "d4e4", "e2d2", "e4d4", "d2e2", "d4e4"); 
   repetition_test("1Pbak2r1/4a4/4b4/2p6/9/3R5/2P6/4p2p1/3CC2N1/5K3 w", .Loss, "d4e4", "e2d2", "e4d4", "d2e2", "d4e4", "e2d2", "e4d4", "d2e2"); 
 
   repetition_test("3akab2/c2R1R2c/4b4/9/9/9/9/4B4/4K4/2B6 w", .Draw, "d8d6", "d9e8", "d6d8", "e8d9", "f8f6", "f9e8", "f6f8", "e8f9", "d8d6", "d9e8");
+  repetition_test("2bak4/4a4/4b4/1rp6/P2R5/4pp3/9/CC7/4p4/5K3 w", .Win, "a5b5", "b6a6", "b5a5", "a6b6", "a5b5", "b6a6", "b5a5");
+  repetition_test("2bak4/4a4/4b4/1rp6/P2R5/4pp3/9/CC7/4p4/5K3 w", .Loss, "a5b5", "b6a6", "b5a5", "a6b6", "a5b5", "b6a6", "b5a5", "a6b6");
+  repetition_test("3rk1b2/4a4/3ab2r1/5R1N1/9/4p4/9/4B4/4A4/3AK1B2 w", .Win, "f6e6", "e4f4", "e6f6", "f4e4", "f6e6", "e4f4", "e6f6");
+  repetition_test("3rk1b2/4a4/3ab2r1/5R1N1/9/4p4/9/4B4/4A4/3AK1B2 w", .Loss, "f6e6", "e4f4", "e6f6", "f4e4", "f6e6", "e4f4");
 
-  // red attacks protected piece on one piece and chases on another. draw.
-  repetition_test("3k1a1cC/4a4/4b4/9/6PP1/2C6/2p1p4/4B4/4A4/4KAB2 w", .Draw, "c4h4", "h9g9", "h4g4", "g9h9", "g4h4", "h9g9", "h4g4");
+  repetition_test("1Pbak2r1/4a4/4b4/2p6/9/3R5/2P6/4p2p1/3CC2N1/5K3 w", .Win, "d4e4", "e2d2", "e4d4", "d2e2", "d4e4", "e2d2", "e4d4");
+  repetition_test("1Pbak2r1/4a4/4b4/2p6/9/3R5/2P6/4p2p1/3CC2N1/5K3 w", .Loss, "d4e4", "e2d2", "e4d4", "d2e2", "d4e4", "e2d2");
 
-  // red chase on impaired horse
-  repetition_test("5ab2/4k2P1/5an1b/p1p3p2/8p/2P4N1/6P1P/B8/5p2c/3KC4 w", .Win, "h4f5", "g7i6", "f5h4", "i6g7", "h4f5", "g7i6", "f5h4");
+  // river pawn chase diagram 77
+  repetition_test("4kab2/4a4/3rb4/9/9/9/8R/1p5p1/4A4/3AK1B2 w", .Win, "i3h3", "h2g2", "h3g3", "g2h2", "g3h3", "h2g2", "h3g3");
 
-  // critical positions
-  repetition_test("2bak4/RC2arN2/4b1n2/2p5p/6p2/2P6/4p1P1c/4B4/4A4/4KAB2 b", .Win, "e8f9", "b8b9", "f9e8", "b9b8", "e8f9", "b8b9");
-  repetition_test("2baka3/C4rN2/4b1n2/1Rp5p/6p2/2P6/4c1P1c/4B3C/4A4/4KAB2 w", .Win, "b6b8", "f9e8", "b8b6", "e8f9", "b6b8", "f9e8", "b8b6");
-  repetition_test("2baka3/C4rN2/4b1n2/1Rp5p/6p2/2P6/4c1P1c/4B3C/4A4/4KAB2 w", .Loss, "b6b8", "f9e8", "b8b6", "e8f9", "b6b8", "f9e8");
-  repetition_test("3aka3/C4rN2/4b1n2/N7p/2p3p2/8P/2P3P2/9/4A4/4KA3 w", .Win, "a6b8", "f9e8", "b8a6", "e8f9", "a6b8", "f9e8", "b8a6");
-  repetition_test("3aka3/C4rN2/4b1n2/N7p/2p3p2/8P/2P3P2/9/4A4/4KA3 w", .Loss, "a6b8", "f9e8", "b8a6", "e8f9", "a6b8", "f9e8");
-  repetition_test("3akabC1/9/4b4/r3p4/p1p6/4P4/P1P5n/NCr1B4/4A4/R2AK1B2 w", .Win, "h9h2", "i3g2", "e2g4", "g2h4", "g4e2", "h4g2", "e2g4", "g2h4", "g4e2");
-  repetition_test("3akabC1/9/4b4/r3p4/p1p6/4P4/P1P5n/NCr1B4/4A4/R2AK1B2 w", .Loss, "h9h2", "i3g2", "e2g4", "g2h4", "g4e2", "h4g2", "e2g4", "g2h4");
+  // rook chases 3 pieces diagram 78
+  repetition_test("2rakab2/9/8b/2NPP1p2/9/2P1c1P2/7R1/2n1B1p2/4A4/3AK1B2 w", .Draw, "h3c3", "c2a1", "c3e3", "e4f4", "e3f3", "f4e4", "f3g3", "g2h2", "g3a3", "a1c0", "a3c3", "c0a1", "c3e3", "e4f4", "e3f3", "f4e4", "f3h3", "h2g2", "h3a3", "a1c0", "a3c3", "c0a1", "c3e3", "e4f4");
+  repetition_test("2rakab2/9/8b/2NPP1p2/9/2P1c1P2/7R1/2n1B1p2/4A4/3AK1B2 w", .Win, "h3c3", "c2a1", "c3a3", "a1c2", "a3c3", "c2a1", "c3a3");
 
-  // perpetual offer.
-  repetition_test("4k4/3P2P1P/9/9/6b1c/5p1C1/9/9/4A4/3AK1p2 w", .Draw, "h4i4", "i5h5", "i4h4", "h5i5", "h4i4", "i5h5", "i4h4");
-  repetition_test("4k4/3P2P1P/9/9/6b1c/5p1C1/9/9/4A4/3AK1p2 w", .Draw, "h4i4", "i5h5", "i4h4", "h5i5", "h4i4", "i5h5");
-  repetition_test("2bak4/4a4/4b4/9/2p2r3/r8/1R7/4B4/9/1R2K1B2 w", .Draw, "b3b4", "a4a3", "b4b3", "a3a4", "b3b4", "a4a3");
-  repetition_test("2bk5/3c5/4bN3/1R2p4/9/9/3r5/3R1p3/3K5/9 w", .Draw, "b6b3", "d3d4", "b3b4", "d4d3", "b4b3", "d3d4", "b3b4");
-  repetition_test("2bak3r/4a4/4b4/p3C1R2/9/P8/5R3/9/4r4/5K3 w", .Draw, "g6i6", "i9g9", "i6g6", "g9i9", "g6i6", "i9g9");
+  // rook chase cannon, cannon chase two pawns. diagram 79
+  repetition_test("3aka3/9/4b4/p8/2b6/2N3B2/4P3p/2C1B4/3rA1p2/3AK4 w", .Win, "c2c3", "d1d3", "c3c1", "d3d1", "c1c3", "d1d3", "c3c1", "d3d1");
 
-  // red chases horse. black does alternative check & idle
-  repetition_test("3akr3/n3a4/4b4/9/P1b6/9/1n7/4B4/3RA4/2BAK4 w", .Win, "d1d3", "b3c1", "d3d1", "c1b3", "d1d3", "b3c1", "d3d1");
-  repetition_test("3akr3/n3a4/4b4/9/P1b6/9/1n7/4B4/3RA4/2BAK4 w", .Loss, "d1d3", "b3c1", "d3d1", "c1b3", "d1d3", "b3c1");
+  // diagram 80. two chariots chase two cannons
+  repetition_test("3rkabc1/4a3R/4b4/9/9/9/9/B8/1R2A4/c1BAK4 w", .Draw, "i8h8", "h9i9", "b1a1", "a0b0", "h8i8", "i9h9", "i8h8", "h9i9", "a1b1", "b0a0", "b1a1", "a0b0");
+  repetition_test("3rkabc1/4a3R/4b4/9/9/9/9/B8/1R2A4/c1BAK4 w", .Win, "b1a1", "a0b0", "a1b1", "b0a0", "b1a1", "a0b0", "a1b1");
 
-  // two-to-one chase.
-  repetition_test("4ka3/1CP1a4/4b4/2p6/1cb1r4/4CN3/4Pp2P/4B4/4A4/2BAK4 w", .Win, "f4g6", "e5e6", "g6f4", "e6e5", "f4g6", "e5e6", "g6f4");
-  repetition_test("4ka3/1CP1a4/4b4/2p6/1cb1r4/4CN3/4Pp2P/4B4/4A4/2BAK4 w", .Loss, "f4g6", "e5e6", "g6f4", "e6e5", "f4g6", "e5e6");
+  // diagram 81. two chariots chase one cannon.
+  repetition_test("2b1ka1P1/4a4/b8/p5R2/8c/7R1/P1p3p2/3rBn3/N2C2n1C/3K1NB2 w", .Win, "h4h5", "i5i7", "g6g7", "i7i6", "h5h6", "i6i5", "g7g5", "i5i7", "h6h7", "i7i6", "g5g6", "i6i5", "h7h5", "i5i7", "h5h7");
+
+  // diagram 82. 
+  repetition_test("4k4/9/9/9/3P5/4C4/2N6/6ppc/4p4/5K3 w", .Win, "c3e2", "e1d1", "e2c3", "d1e1", "c3e2", "e1d1", "e2c3");
+  repetition_test("4k4/9/9/9/3P5/4C4/2N6/6ppc/4p4/5K3 w", .Loss, "c3e2", "e1d1", "e2c3", "d1e1", "c3e2", "e1d1");
+
+  // false roots. diagram 83-85
+  // diagram 83.
+  repetition_test("2baka3/9/4b4/9/6c2/3R5/4c4/4C4/4N4/3AKA3 w", .Win, "d4g4", "g5d5", "g4d4", "d5g5", "d4g4", "g5d5", "g4d4");
+  repetition_test("2baka3/9/4b4/9/6c2/3R5/4c4/4C4/4N4/3AKA3 w", .Loss, "d4g4", "g5d5", "g4d4", "d5g5", "d4g4", "g5d5", "g4d4", "d5g5");
+
+  // diagram 84.
+  repetition_test("1r2knb1C/4a4/5ac1b/7R1/p8/9/9/9/4A4/3AK4 w", .Win, "h6g6", "g7h7", "g6h6", "h7g7", "h6g6", "g7h7", "g6h6"); 
+  repetition_test("1r2knb1C/4a4/5ac1b/7R1/p8/9/9/9/4A4/3AK4 w", .Loss, "h6g6", "g7h7", "g6h6", "h7g7", "h6g6", "g7h7");
+
+  // diagram 85.
+  repetition_test("2bakab2/r4rN2/6P2/p3P3p/9/P5R2/5c2P/4B4/4A4/3AK1B2 w", .Win, "g4g3", "f3f6", "g3g6", "f6f3", "g6g3", "f3f6", "g3g6");
+
+  // PROTECTED and ROOTED.
+  // diagram 86. protected cannon. draw.
+  repetition_test("3akab2/9/4b3r/8c/p8/7R1/P8/9/4A4/r1BAK3R w", .Draw, "h4h6", "i6i3", "h6h3", "i3i6", "h3h6", "i6i3", "h6h3");
+
+  // diagram 87. protected cannon. draw.
+  repetition_test("1r2kab2/4a4/4b4/4R3p/5P3/2R6/4c4/4r4/4A4/2B1KA3 w", .Draw, "c4c3", "e3e4", "c3c4", "e4e3", "c4c3", "e3e4");
+
+  // diagram 88. draw
+  repetition_test("2b1ka2c/4a4/4b3r/8c/p8/9/P4R3/8R/4A4/r1BAK3C w", .Draw, "f3f6", "i6i5", "f6f5", "i5i4", "f5f4", "i4i6", "f4f6", "i6i5", "f6f5");
+
+  // diagram 89. draw
+  repetition_test("4kab2/4a3c/2n1bc3/2R6/8p/C8/8P/3CB4/4A4/4KAB2 w", .Draw, "d2c2", "c7a8", "c6a6", "a8c7", "a6c6", "c7a8", "c6a6");
+
+  // diagram 90 & 91. red chases cannon. perpetual chase even though cannon is being offered.
+  repetition_test("2bak1r2/4a4/1C2b4/9/6p2/9/9/9/7R1/c1BAK4 w", .Win, "h1a1", "a0b0", "a1b1", "b0a0", "b1a1", "a0b0", "a1b1");
+  repetition_test("2bak1r2/4a4/1C2b4/9/6p2/9/9/9/7R1/c1BAK4 w", .Loss, "h1a1", "a0b0", "a1b1", "b0a0", "b1a1", "a0b0", "a1b1", "b0a0");
+  repetition_test("2bak4/4a4/4b4/CC7/3r5/1R7/5r3/4B4/4A4/c3KAB2 w", .Win, "b4a4", "a0b0", "a4b4", "b0a0", "b4a4", "a0b0", "a4b4");
+  repetition_test("2bak4/4a4/4b4/CC7/3r5/1R7/5r3/4B4/4A4/c3KAB2 w", .Loss, "b4a4", "a0b0", "a4b4", "b0a0", "b4a4", "a0b0");
+
+  // diagram 92. rook offer. red using pieces to chase black chariot.
+  repetition_test("2bak4/4a4/4b1n2/4p3p/9/1p1r5/c3RR3/B2CC3B/4p4/2p2K3 w", .Win, "e3d3", "d4e4", "d3e3", "e4d4", "e3d3", "d4e4", "d3e3");
+  repetition_test("2bak4/4a4/4b1n2/4p3p/9/1p1r5/c3RR3/B2CC3B/4p4/2p2K3 w", .Loss, "e3d3", "d4e4", "d3e3", "e4d4", "e3d3", "d4e4", "d3e3", "e4d4");
+
+
 
   // false roots chasing.
   repetition_test("3ak1b2/4a4/4b4/9/2c6/2R6/9/4C4/4A4/2BAK1B2 b", .Win, "c5g5", "c4g4", "g5c5", "g4c4", "c5g5", "c4g4"); 
   repetition_test("3ak1b2/4a4/4b4/9/2c6/2R6/9/4C4/4A4/2BAK1B2 b", .Loss, "c5g5", "c4g4", "g5c5", "g4c4", "c5g5", "c4g4", "g5c5");
-  repetition_test("2baka3/9/4b4/9/6c2/3R5/4c4/4C4/4N4/3AKA3 w", .Win, "d4g4", "g5d5", "g4d4", "d5g5", "d4g4", "g5d5", "g4d4");
-  repetition_test("2baka3/9/4b4/9/6c2/3R5/4c4/4C4/4N4/3AKA3 w", .Loss, "d4g4", "g5d5", "g4d4", "d5g5", "d4g4", "g5d5", "g4d4", "d5g5");
-  repetition_test("1r2knb1C/4a4/5ac1b/7R1/p8/9/9/9/4A4/3AK4 w", .Win, "h6g6", "g7h7", "g6h6", "h7g7", "h6g6", "g7h7", "g6h6"); 
-  repetition_test("1r2knb1C/4a4/5ac1b/7R1/p8/9/9/9/4A4/3AK4 w", .Loss, "h6g6", "g7h7", "g6h6", "h7g7", "h6g6", "g7h7");
   repetition_test("3aka3/r4rN2/6P2/p3P3p/9/6R2/P4c2P/4B4/4A4/3AK1B2 w", .Win, "g4g3", "f3f4", "g3g4", "f4f3", "g4g3", "f3f4", "g3g4");
   repetition_test("3aka3/r4rN2/6P2/p3P3p/9/6R2/P4c2P/4B4/4A4/3AK1B2 w", .Loss, "g4g3", "f3f4", "g3g4", "f4f3", "g4g3", "f3f4");
   repetition_test("4ka3/1r3cN2/5aP2/p3P3p/9/6R2/P4c2P/4B4/4A4/3AK1B2 w", .Win, "g4g3", "f3f4", "g3g4", "f4f3", "g4g3", "f3f4", "g3g4");
@@ -373,9 +492,19 @@ main :: () {
   repetition_test("4ka3/2r2cN2/5aP2/p3P3p/9/6R2/P4c2P/9/4A4/2BAK1B2 w", .Win, "g4g3", "f3f4", "g3g4", "f4f3", "g4g3", "f3f4", "g3g4");
   repetition_test("4ka3/2r2cN2/5aP2/p3P3p/9/6R2/P4c2P/9/4A4/2BAK1B2 w", .Loss, "g4g3", "f3f4", "g3g4", "f4f3", "g4g3", "f3f4");
 
-  // red chases cannon. perpetual chase even though cannon is being offered.
-  repetition_test("2bak1r2/4a4/1C2b4/9/6p2/9/9/9/7R1/c1BAK4 w", .Win, "h1a1", "a0b0", "a1b1", "b0a0", "b1a1", "a0b0", "a1b1");
-  repetition_test("2bak1r2/4a4/1C2b4/9/6p2/9/9/9/7R1/c1BAK4 w", .Loss, "h1a1", "a0b0", "a1b1", "b0a0", "b1a1", "a0b0", "a1b1", "b0a0");
+  // Chases.
+  repetition_test("2ca1k3/4a4/b3b4/2P5P/6p2/1c7/9/B7N/2nR5/2BAK4 w", .Win, "c6b6", "e7c5", "b6c6", "c5e7", "c6b6", "e7c5", "b6c6");
+  repetition_test("4kab2/4a4/4b4/3rC2R1/9/9/4n4/4B4/4A4/4KAB1c w", .Win, "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0", "i6h6");
+  repetition_test("1cbak4/R3a4/4b4/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Win, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8");
+  repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Win, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9", "a8b8");
+  repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Loss, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9");
+  repetition_test("2b1k1r2/9/4b4/9/9/2P3P2/1R7/2n1B4/4A4/4KABC1 w", .Win, "b3c3", "c2b0", "c3b3", "b0c2", "b3c3", "c2b0", "c3b3");
+
+  // perpetual offer.
+  repetition_test("4k4/3P2P1P/9/9/6b1c/5p1C1/9/9/4A4/3AK1p2 w", .Draw, "h4i4", "i5h5", "i4h4", "h5i5", "h4i4", "i5h5", "i4h4");
+  repetition_test("4k4/3P2P1P/9/9/6b1c/5p1C1/9/9/4A4/3AK1p2 w", .Draw, "h4i4", "i5h5", "i4h4", "h5i5", "h4i4", "i5h5");
+  repetition_test("2bak4/4a4/4b4/9/2p2r3/r8/1R7/4B4/9/1R2K1B2 w", .Draw, "b3b4", "a4a3", "b4b3", "a3a4", "b3b4", "a4a3");
+  repetition_test("2bk5/3c5/4bN3/1R2p4/9/9/3r5/3R1p3/3K5/9 w", .Draw, "b6b3", "d3d4", "b3b4", "d4d3", "b4b3", "d3d4", "b3b4");
 
   // non-perpetual chase.
   repetition_test("3k2b2/4P4/4b4/9/8p/6Bc1/6P1P/3AB4/4pp3/1p1K3R1 w", .Draw, "h0h1", "h4h3", "h1h0", "h3h4", "h0h1", "h4h3");
