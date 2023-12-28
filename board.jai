@@ -2056,6 +2056,9 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
         } else {
           update_subset(chased, chased_count, hashes.info[count+1]);
           chased, chased_count = intersect_chases(chased, chased_count, hashes.info[count]);
+          if chased_count == 0 then {
+            status = .Idle;
+          }
         }
       }
 
@@ -2078,9 +2081,7 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
     }
     
     if status == .Chase then {
-      if chased_count > 0 then {
-        return true, .PerpetualChase;
-      }
+      return true, .PerpetualChase;
     }
 
     return true, .PerpetualIdle;
