@@ -1892,132 +1892,6 @@ to_move32 :: (xiangqi: *Xiangqi, str: string) -> Move32 {
   return move;
 }
 
-perft_test_suite :: () {
-  // Perft Test Results from: https://www.chessprogramming.org/Chinese_Chess_Perft_Results
-  // Would be good to be able to find more perft results, so we can permutationally test
-  // the movegen better. - Daniel (Feb 19. 2023)
-
-  test :: (xiangqi: *Xiangqi, depth: int, expected: int) {
-    time := current_time_monotonic();
-    count := perft(xiangqi, depth);
-    time = current_time_monotonic() - time;
-    time_ns := to_nanoseconds(time);
-    seconds := cast(float) time_ns / 1_000_000_000.0;
- 
-    if count == expected then {
-      print("success for perft %1 in %2 seconds: %3\n", depth, seconds, count);
-    } else {
-      print("FAILED  for perft %1 in %2 seconds. got %3, expected %4\n", depth, seconds, count, expected);
-    }
-  }
-
-  xiangqi: Xiangqi;
-  xiangqi_startpos(*xiangqi);
-  print("FEN [startpos]\n");
-  test(*xiangqi, 1, 44);
-  test(*xiangqi, 2, 1_920);
-  test(*xiangqi, 3, 79_666);
-  test(*xiangqi, 4, 3_290_240);
-  test(*xiangqi, 5, 133_312_995);
-
-  fen := "r1ea1a3/4kh3/2h1e4/pHp1p1p1p/4c4/6P2/P1P2R2P/1CcC5/9/2EAKAE2 w - - 0 1";
-  print("FEN [%]\n", fen);
-  xiangqi_fen(*xiangqi, fen);
-  test(*xiangqi, 1, 38);
-  test(*xiangqi, 2, 1_128);
-  test(*xiangqi, 3, 43_929);
-  test(*xiangqi, 4, 1_339_047);
-
-  fen = "1ceak4/9/h2a5/2p1p3p/5cp2/2h2H3/6PCP/3AE4/2C6/3A1K1H1 w - - 0 1";
-  xiangqi_fen(*xiangqi, fen);
-  print("FEN [%]\n", fen);
-  test(*xiangqi, 1, 7);
-  test(*xiangqi, 2, 281);
-  test(*xiangqi, 3, 8_620);
-  test(*xiangqi, 4, 326_201);
-  test(*xiangqi, 5, 10_369_923);
-  test(*xiangqi, 6, 380_156_340);
-
-  fen = "5a3/3k5/3aR4/9/5r3/5h3/9/3A1A3/5K3/2EC2E2 w - - 0 1";
-  xiangqi_fen(*xiangqi, fen);
-  print("FEN [%]\n", fen);
-  test(*xiangqi, 1, 25);
-  test(*xiangqi, 2, 424);
-  test(*xiangqi, 3, 9_850);
-  test(*xiangqi, 4, 202_884);
-  test(*xiangqi, 5, 4_739_553);
-  test(*xiangqi, 6, 100_055_401);
-
-  fen = "CRH1k1e2/3ca4/4ea3/9/2hr5/9/9/4E4/4A4/4KA3 w - - 0 1";
-  xiangqi_fen(*xiangqi, fen);
-  print("FEN [%]\n", fen);
-  test(*xiangqi, 1, 28);
-  test(*xiangqi, 2, 516);
-  test(*xiangqi, 3, 14_808);
-  test(*xiangqi, 4, 395_483);
-  test(*xiangqi, 5, 11_842_230);
-
-  fen = "R1H1k1e2/9/3aea3/9/2hr5/2E6/9/4E4/4A4/4KA3 w - - 0 1";
-  xiangqi_fen(*xiangqi, fen);
-  print("FEN [%]\n", fen);
-  test(*xiangqi, 1, 21);
-  test(*xiangqi, 2, 364);
-  test(*xiangqi, 3, 7_626);
-  test(*xiangqi, 4, 162_837);
-  test(*xiangqi, 5, 3_500_505);
-  test(*xiangqi, 6, 81_195_154);
-
-  fen = "C1hHk4/9/9/9/9/9/h1pp5/E3C4/9/3A1K3 w - - 0 1";
-  xiangqi_fen(*xiangqi, fen);
-  print("FEN [%]\n", fen);
-  test(*xiangqi, 1, 28);
-  test(*xiangqi, 2, 222);
-  test(*xiangqi, 3, 6_241);
-  test(*xiangqi, 4, 64_971);
-  test(*xiangqi, 5, 1_914_306);
-  test(*xiangqi, 6, 23_496_493);
-
-  fen = "4ka3/4a4/9/9/4H4/p8/9/4C3c/7h1/2EK5 w - - 0 1";
-  xiangqi_fen(*xiangqi, fen);
-  print("FEN [%]\n", fen);
-  test(*xiangqi, 1, 23);
-  test(*xiangqi, 2, 345);
-  test(*xiangqi, 3, 8124);
-  test(*xiangqi, 4, 149_272);
-  test(*xiangqi, 5, 3_513_104);
-  test(*xiangqi, 6, 71_287_903);
-
-  fen = "2e1ka3/9/e3H4/4h4/9/9/9/4C4/2p6/2EK5 w - - 0 1";
-  xiangqi_fen(*xiangqi, fen);
-  print("FEN [%]\n", fen);
-  test(*xiangqi, 1, 21);
-  test(*xiangqi, 2, 195);
-  test(*xiangqi, 3, 3_883);
-  test(*xiangqi, 4, 48_060);
-  test(*xiangqi, 5, 933_096);
-  test(*xiangqi, 6, 12_250_386);
-
-  fen = "1C2ka3/9/C1Hae1h2/p3p3p/6p2/9/P3P3P/3AE4/3p2c2/c1EAK4 w - - 0 1";
-  xiangqi_fen(*xiangqi, fen);
-  print("FEN [%]\n", fen);
-  test(*xiangqi, 1, 30);
-  test(*xiangqi, 2, 830);
-  test(*xiangqi, 3, 22_787);
-  test(*xiangqi, 4, 649_866);
-  test(*xiangqi, 5, 17_920_736);
-
-  fen = "ChH1k1e2/c3a4/4ea3/9/2hr5/9/9/4C4/4A4/4KA3 w - - 0 1";
-  xiangqi_fen(*xiangqi, fen);
-  print("FEN [%]\n", fen);
-  test(*xiangqi, 1, 19);
-  test(*xiangqi, 2, 583);
-  test(*xiangqi, 3, 11_714);
-  test(*xiangqi, 4, 376_467);
-  test(*xiangqi, 5, 8_148_177);
-
-  print("Perft Test End.\n"); 
-}
-
 between_board :: (i: int, j: int) -> u16 {
   xboard: u64 = cast(u64) (1 << i);
   yboard: u64 = cast(u64) (1 << j);
@@ -2473,13 +2347,12 @@ get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int,
 // is_protected cannot be called while a position is incheck.
 // is_protected should only deal with LEGAL moves only. does not consider pseudo-legal moves.
 is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
-  // values for SEE algorithm.
-  VALUES :: int.[0, 200, 200, 400, 800, 400, 200];
-
   // SQUARES
   from: int = move.from;
   to: int = move.to;
 
+  // values for protection values. if, for example, rook > cannon, therefore cannon is automatically chasing the rook.
+  VALUES :: int.[0, 200, 200, 400, 800, 400, 200];
   if VALUES[xiangqi.board[to] >> 2] > VALUES[xiangqi.board[from] >> 2] then {
     return false;
   }
@@ -2646,35 +2519,6 @@ is_set :: inline (bitboard: Bitboard128, bit: int) -> bool {
 }
 
 #scope_file
-chase_ordering :: (move: Move32) -> s32 {
-  victim := move.capture >> 2;
-  attack := move.piece   >> 2;
-
-  if victim == attack then {
-    return 0;
-  }
-
-  //TABLE :: s32.[1000, 120, 120, 270, 600, 285, 30];
-  return 100; //TABLE[victim] - (TABLE[attack] / 100);
-}
-
-sort :: (moves: *Moves) {
-  i := 0;
-  while i < moves.count {
-    move := moves.array[i].move;
-    moves.array[i].score = chase_ordering(move);
-    i += 1;
-  }
-
-  for i: 0..moves.count-1 {
-    for j: i+1..moves.count-1 {
-      if moves.array[i].score < moves.array[j].score then {
-        move_swap(moves, i, j);
-      }
-    }
-  }
-}
-
 pawn_not_passed :: (move: Move32, turn: int) -> bool {
   piece_code := move.capture >> 2;
   to         := move.to;
@@ -2688,31 +2532,30 @@ clear_evasions :: inline (victims: [] u8) {
   }
 } 
 
+is_exchange_move :: (xiangqi: *Xiangqi, move: Move32) -> bool {
+  piece := move.piece >> 2;
+  capture := move.capture >> 2;
+  if piece != capture then {
+    return false;
+  } 
+
+  exchange := get_exchange_move(move);
+  xiangqi.turn ^= 1;
+  opp_att := attackers(xiangqi);
+  success := (piece != H || is_pseudolegal(xiangqi, exchange)) && is_legal(xiangqi, opp_att, exchange);
+  xiangqi.turn ^= 1;
+  return success;
+}
+
 get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> count: int {
+
   turn := xiangqi.turn;
   xiangqi.turn ^= 1;
   defer {
     xiangqi.turn ^= 1;
   }
-
-  is_exchange_move :: (xiangqi: *Xiangqi, move: Move32) -> bool {
-    piece := move.piece >> 2;
-    capture := move.capture >> 2;
-    if piece != capture then {
-      return false;
-    } 
-
-    exchange := get_exchange_move(move);
-    xiangqi.turn ^= 1;
-    opp_att := attackers(xiangqi);
-    success := (piece != H || is_pseudolegal(xiangqi, exchange)) && is_legal(xiangqi, opp_att, exchange);
-    xiangqi.turn ^= 1;
-    return success;
-  }
-
   moves: Moves;
   gen_chases(xiangqi, *moves);
-  //sort(*moves);
   att := attackers(xiangqi);
   count := 0;
   for move : moves {

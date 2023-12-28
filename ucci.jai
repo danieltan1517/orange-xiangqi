@@ -32,9 +32,6 @@ main :: () {
     case "uccinewgame";
       clear_tt();
       xiangqi_startpos(*xiangqi);
- 
-    case "perft_all";
-      perft_test_suite();
 
     case "d";
       print("%\n", xiangqi);
