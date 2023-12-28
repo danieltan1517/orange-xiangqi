@@ -480,7 +480,42 @@ main :: () {
   repetition_test("2bak4/4a4/4b1n2/4p3p/9/1p1r5/c3RR3/B2CC3B/4p4/2p2K3 w", .Win, "e3d3", "d4e4", "d3e3", "e4d4", "e3d3", "d4e4", "d3e3");
   repetition_test("2bak4/4a4/4b1n2/4p3p/9/1p1r5/c3RR3/B2CC3B/4p4/2p2K3 w", .Loss, "e3d3", "d4e4", "d3e3", "e4d4", "e3d3", "d4e4", "d3e3", "e4d4");
 
+  // diagram 93 - 95. knight discovered attack. rook offer. Loss
+  repetition_test("1r1ak1b2/N1RNC4/4b4/9/9/9/4P4/9/4p4/5K3 w", .Win, "c8b8", "b9c9", "b8c8", "c9b9", "c8b8", "b9c9", "b8c8");
+  repetition_test("5k3/4P4/9/9/9/9/9/5N3/9/3KRr1c1 w", .Win, "f2h1", "f0g0", "h1f2", "g0f0", "f2h1", "f0g0", "h1f2");
+  repetition_test("4k4/9/4c4/6PC1/9/9/9/4BN3/4A4/3AKR1rc w", .Win, "f2h1", "h0g0", "h1f2", "g0h0", "f2h1", "h0g0", "h1f2");
 
+  // diagram 96 - cannon chase chariot.
+  repetition_test("C4k3/3P5/9/5c3/1P7/2B6/2P2r3/3p1R3/5K3/9 w", .Win, "a9a3", "f3f5", "a3a5", "f5f3", "a5a3", "f3f5", "a3a5");
+
+  // diagram 97 & 98 - perpetual threat to capture after check. draw.
+  repetition_test("C1Na5/3Rak3/4bc3/2p6/n5b2/9/1p6r/4B4/4A4/2B1KA3 w", .Draw, "a9a8", "f8f9", "a8a9", "f9f8", "a9a8", "f8f9");
+  repetition_test("5k3/1n7/9/3P5/P1r5c/2B5R/6P2/4B4/4A4/3AK4 w", .Draw, "i4h4", "i5h5", "h4g4", "h5g5", "g4i4", "g5i5", "i4h4", "i5h5");
+
+  // diagram 99
+  repetition_test("4k4/3P2P1P/9/9/6b1c/5p1C1/9/9/4A4/3AK1p2 w", .Draw, "h4i4", "i5h5", "i4h4", "h5i5", "h4i4", "i5h5");
+  repetition_test("4k1b2/3P5/c3b2c1/7R1/9/9/9/9/4K4/9 w", .Draw, "h6f6", "h7f7", "f6i6", "f7i7", "i6b6", "a7b7", "b6g6", "i7g7", "g6f6", "g7f7", "f6h6", "f7h7", "h6b6", "b7a7", "b6h6", "h7f7", "h6f6", "f7h7", "f6h6", "h7f7", "h6f6");
+
+  // diagram 100 - 103. perpetual offer.
+  repetition_test("4k4/3P2P1P/9/9/6b1c/5p1C1/9/9/4A4/3AK1p2 w", .Draw, "h4i4", "i5h5", "i4h4", "h5i5", "h4i4", "i5h5", "i4h4");
+  repetition_test("4k4/3P2P1P/9/9/6b1c/5p1C1/9/9/4A4/3AK1p2 w", .Draw, "h4i4", "i5h5", "i4h4", "h5i5", "h4i4", "i5h5");
+  repetition_test("2bak4/4a4/4b4/9/2p2r3/r8/1R7/4B4/9/1R2K1B2 w", .Draw, "b3b4", "a4a1", "b4b1", "a1a3", "b1b3", "a3a6", "b3b6", "a6a8", "b6b8", "a8a1", "b8b1", "a1a3", "b1b3");
+  repetition_test("3r1k3/4P4/9/c1p2r3/9/2R6/9/4B4/4A4/4K1B2 w", .Draw, "c4g4", "f6g6", "g4h4", "g6h6", "h4f4", "h6f6", "f4i4", "f6i6", "i4h4", "i6h6", "h4g4", "h6g6", "g4h4", "g6h6");
+  repetition_test("2bk5/3c5/4bN3/1R2p4/9/9/3r5/3R1p3/3K5/9 w", .Draw, "b6b3", "d3d4", "b3b4", "d4d6", "b4b6", "d6d3", "b6b3", "d3d4");
+  repetition_test("2bk5/3c5/4bN3/1R2p4/9/9/3r5/3R1p3/3K5/9 w", .Draw, "b6b3", "d3d4", "b3b4", "d4d3", "b4b3", "d3d4", "b3b4");
+  repetition_test("1r1ak4/4aP3/b1P1b4/4C4/9/3R5/9/9/4p4/3K5 w", .Draw, "c7b7", "b9c9", "b7c7", "c9b9", "c7b7", "b9c9");
+
+  // Addition illustrations.
+ 
+  // Perpetual Chase:
+  repetition_test("2ca1k3/4a4/b3b4/2P5P/6p2/1c7/9/B7N/2nR5/2BAK4 w", .Win, "c6b6", "e7c5", "b6c6", "c5e7", "c6b6", "e7c5", "b6c6");
+
+  // non-perpetual chase.
+  repetition_test("3k2b2/4P4/4b4/9/8p/6Bc1/6P1P/3AB4/4pp3/1p1K3R1 w", .Draw, "h0h1", "h4h3", "h1h0", "h3h4", "h0h1", "h4h3");
+  repetition_test("3k2b2/4P4/4b4/9/8p/6Bc1/6P1P/3AB4/4pp3/1p1K3R1 w", .Draw, "h0h1", "h4h3", "h1h0", "h3h4", "h0h1", "h4h3", "h1h0");
+
+  // mutual perpetual chase.
+  repetition_test("3akab2/c2R1R2c/4b4/9/9/9/9/4B4/4K4/2B6 w", .Draw, "d8d6", "d9e8", "d6d8", "e8d9", "f8f6", "f9e8", "f6f8", "e8f9", "d8d6", "d9e8");
 
   // false roots chasing.
   repetition_test("3ak1b2/4a4/4b4/9/2c6/2R6/9/4C4/4A4/2BAK1B2 b", .Win, "c5g5", "c4g4", "g5c5", "g4c4", "c5g5", "c4g4"); 
@@ -493,25 +528,14 @@ main :: () {
   repetition_test("4ka3/2r2cN2/5aP2/p3P3p/9/6R2/P4c2P/9/4A4/2BAK1B2 w", .Loss, "g4g3", "f3f4", "g3g4", "f4f3", "g4g3", "f3f4");
 
   // Chases.
-  repetition_test("2ca1k3/4a4/b3b4/2P5P/6p2/1c7/9/B7N/2nR5/2BAK4 w", .Win, "c6b6", "e7c5", "b6c6", "c5e7", "c6b6", "e7c5", "b6c6");
   repetition_test("4kab2/4a4/4b4/3rC2R1/9/9/4n4/4B4/4A4/4KAB1c w", .Win, "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0", "i6h6");
   repetition_test("1cbak4/R3a4/4b4/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Win, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8");
   repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Win, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9", "a8b8");
   repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Loss, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9");
   repetition_test("2b1k1r2/9/4b4/9/9/2P3P2/1R7/2n1B4/4A4/4KABC1 w", .Win, "b3c3", "c2b0", "c3b3", "b0c2", "b3c3", "c2b0", "c3b3");
 
-  // perpetual offer.
-  repetition_test("4k4/3P2P1P/9/9/6b1c/5p1C1/9/9/4A4/3AK1p2 w", .Draw, "h4i4", "i5h5", "i4h4", "h5i5", "h4i4", "i5h5", "i4h4");
-  repetition_test("4k4/3P2P1P/9/9/6b1c/5p1C1/9/9/4A4/3AK1p2 w", .Draw, "h4i4", "i5h5", "i4h4", "h5i5", "h4i4", "i5h5");
   repetition_test("2bak4/4a4/4b4/9/2p2r3/r8/1R7/4B4/9/1R2K1B2 w", .Draw, "b3b4", "a4a3", "b4b3", "a3a4", "b3b4", "a4a3");
-  repetition_test("2bk5/3c5/4bN3/1R2p4/9/9/3r5/3R1p3/3K5/9 w", .Draw, "b6b3", "d3d4", "b3b4", "d4d3", "b4b3", "d3d4", "b3b4");
 
-  // non-perpetual chase.
-  repetition_test("3k2b2/4P4/4b4/9/8p/6Bc1/6P1P/3AB4/4pp3/1p1K3R1 w", .Draw, "h0h1", "h4h3", "h1h0", "h3h4", "h0h1", "h4h3");
-  repetition_test("3k2b2/4P4/4b4/9/8p/6Bc1/6P1P/3AB4/4pp3/1p1K3R1 w", .Draw, "h0h1", "h4h3", "h1h0", "h3h4", "h0h1", "h4h3", "h1h0");
-
-  // mutual perpetual chase.
-  repetition_test("3akab2/c2R1R2c/4b4/9/9/9/9/4B4/4K4/2B6 w", .Draw, "d8d6", "d9e8", "d6d8", "e8d9", "f8f6", "f9e8", "f6f8", "e8f9", "d8d6", "d9e8");
   print("% out of % tests successful\n", success, total);
   print("------------------------\n");
 
