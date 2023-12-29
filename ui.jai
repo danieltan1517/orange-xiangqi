@@ -1487,7 +1487,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         mark_previous_move(*xiangqi, .Idle);
       } 
 
-      judge_state, violation_level := judge_ntimes(*xiangqi, 0);
+      judge_state, violation_level := judge_ntimes(*xiangqi, 4);
 
       if judge_state == {
       case .Undecided;

@@ -192,6 +192,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     mark_previous_move(xiangqi, .Check);
     incheck_position = true;
   } else {
+    mark_previous_move(xiangqi, .Idle);
     incheck_position = false;
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
     // reverse futility pruning.
@@ -237,7 +238,6 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     if is_chase(xiangqi) {
       mark_previous_move(xiangqi, .Chase);
     } else {
-      mark_previous_move(xiangqi, .Idle);
     }
   }*/
 
@@ -437,6 +437,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
     incheck_position = true;
   } else {
     incheck_position = false;
+    mark_previous_move(xiangqi, .Idle);
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
     // reverse futility pruning.
     if evaluation >= beta + depth * 200 {
@@ -550,7 +551,7 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
   att := attackers(xiangqi);
   incheck_position := incheck(xiangqi, att);
   ply := history.ply;
-  best_score := ifx (incheck_position == true) then -MATE+ply else  evaluate(xiangqi, history);
+  best_score := ifx (incheck_position == true) then -MATE+ply else evaluate(xiangqi, history);
 
   if !incheck_position then {
     if best_score >= beta then {
@@ -1130,6 +1131,12 @@ tt_prune :: (tthit: bool, ttentry: Entry, alpha: int, beta: int, depth: int, pv:
 }
 
 tt_write :: (x: *Xiangqi, best_move: Move32, score: int, depth: int, flag: Flag) {
+  // don't store draw/mating scores in the transposition table.
+  // that's bad...
+  if score == 0 || abs(score) > (MATE - 100) then {
+    return;
+  }
+
   hash  := x.hash;
   index := hash % transpositions.count;
   prefetch(*transpositions[index]);
@@ -1164,14 +1171,15 @@ in_middlegame :: inline (history: *History) -> bool {
 
 judge_position :: (xiangqi: *Xiangqi) #expand {
   state := judge(xiangqi);
-  if state == {
-  case .Undecided;
-  case .Win;
-    `return MATE - `ply;
-  case .Draw;
-    `return -300 + `ply;
-  case .Loss;
-    `return -MATE + `ply;
+  if `ply > 1 then {
+    if state == {
+    case .Win;
+      `return  MATE - `ply;
+    case .Draw;
+      `return 0;
+    case .Loss;
+      `return -MATE + `ply;
+    }
   }
 }
 

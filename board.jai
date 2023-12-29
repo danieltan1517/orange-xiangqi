@@ -2002,11 +2002,6 @@ Info :: struct {
   chased: [6] u8;
 }
 
-is_chase :: inline (move: Move32) -> bool {
-  piece := move.piece >> 2;
-  return is_capture(move) && piece != G && piece != S;
-}
-
 // judge relative to the side playing the game.
 judge :: (xiangqi: *Xiangqi) -> GameState {
   // todo: fix later...
@@ -2095,7 +2090,7 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
   }
 
   ours := judge_one(xiangqi.hashes, count-1, ntimes);
-  if opps == Violations.UndecidedLevel then {
+  if ours == Violations.UndecidedLevel then {
     return .Undecided, opps;
   }
 

@@ -10,12 +10,6 @@ evaluate :: inline (xiangqi: *Xiangqi, history: *History) -> int {
   return nnue_evaluate_incr(xiangqi, history);
 }
 
-evaluation_phase_scale :: (midgame: int, endgame: int, phase: int) -> int {
-  midgame = midgame * phase;
-  endgame = endgame * (16 - phase);
-  return (midgame + endgame) / 16;
-}
-
 compute_phase :: (x: *Xiangqi) -> int {
   count := 0;
   count += (x.pieces[0].kni.count + x.pieces[1].kni.count);
