@@ -1970,12 +1970,21 @@ add_hash :: (board_hash: *Board_Hash, hash: u32, move: Move32) {
 
 mark_previous_move_check :: inline (xiangqi: *Xiangqi) {
   count := xiangqi.hashes.count - 1;
-  xiangqi.hashes.info[count].status = .Check;
+  if xiangqi.hashes.info[count].status != .Cancel {
+    xiangqi.hashes.info[count].status = .Check;
+  }
 }
 
 mark_previous_move :: inline (xiangqi: *Xiangqi, status: Status) {
   count := xiangqi.hashes.count - 1;
-  xiangqi.hashes.info[count].status = status;
+  if xiangqi.hashes.info[count].status != .Cancel {
+    xiangqi.hashes.info[count].status = status;
+  }
+}
+
+clear_previous_move :: inline (xiangqi: *Xiangqi) {
+  count := xiangqi.hashes.count - 1;
+  xiangqi.hashes.info[count].status = .Idle;
 }
 
 set_previous_chase_move :: inline (xiangqi: *Xiangqi, chased: [6] u8, chased_count: s8) {

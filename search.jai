@@ -122,6 +122,18 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
   best_move  := NULL_MOVE;
   flag       := Flag.Alpha;
   score: int;
+
+  chases: [8] Move32;
+  chase_count := 0;
+  victims: [6] u8;
+  moves_made_count := 0;
+  if !incheck(xiangqi) then {
+    chase_count = get_chases(xiangqi, chases);
+    mark_previous_move(xiangqi, .Idle);
+  } else {
+    mark_previous_move(xiangqi, .Check);
+  }
+
   moves_made := 0;
   for mov: xiangqi {
     if !is_legal(xiangqi, att, mov) then {
@@ -131,6 +143,13 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
 
     make_move(xiangqi, history, mov);
     history.seldepth = max(history.ply, history.seldepth);
+    if is_quiet(mov) then {
+      victim_count := get_evade(xiangqi, mov, chases, chase_count, victims);
+      if victim_count > 0 then { 
+        set_previous_chase_move(xiangqi, victims, cast(s8) victim_count);
+      } 
+    }
+
     if moves_made == 0 {
       score = -negamax(xiangqi, history, *child_pv, depth - 1, -beta, -alpha);
     } else {
@@ -234,12 +253,13 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     return beta;
   }
 
-  /*if incheck_position == false then {
-    if is_chase(xiangqi) {
-      mark_previous_move(xiangqi, .Chase);
-    } else {
-    }
-  }*/
+  // do a lazy chases initialization.
+  chases: [8] Move32;
+  chase_count := 0;
+  victims: [6] u8;
+  moves_made_count := 0;
+  initialized_chases := false;
+
 
   moves: Moves;
   score: int = 0;
@@ -277,6 +297,18 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     }
 
     make_move(xiangqi, history, mov);
+    if incheck_position == false && is_quiet(mov) then {
+      if initialized_chases == false then {
+        chase_count = get_chases(xiangqi, chases);
+        initialized_chases = true;
+      }
+
+      victim_count := get_evade(xiangqi, mov, chases, chase_count, victims);
+      if victim_count > 0 then { 
+        set_previous_chase_move(xiangqi, victims, cast(s8) victim_count);
+      } 
+    }
+
     history.seldepth = max(history.ply, history.seldepth);
 
     if moves_made == 0 {
@@ -473,6 +505,14 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
     }
   }
 
+  // do a lazy chases initialization.
+  chases: [8] Move32;
+  chase_count := 0;
+  victims: [6] u8;
+  moves_made_count := 0;
+  initialized_chases := false;
+
+
   moves: Moves;
   score: int = 0;
   best_score := -MATE + ply;
@@ -508,6 +548,17 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
     }
 
     make_move(xiangqi, history, mov);
+    if incheck_position == false && is_quiet(mov) then {
+      if initialized_chases == false then {
+        chase_count = get_chases(xiangqi, chases);
+        initialized_chases = true;
+      }
+
+      victim_count := get_evade(xiangqi, mov, chases, chase_count, victims);
+      if victim_count > 0 then { 
+        set_previous_chase_move(xiangqi, victims, cast(s8) victim_count);
+      } 
+    }
 
     R := 0;
     if incheck_position {
@@ -900,7 +951,7 @@ make_move :: (xiangqi: *Xiangqi, h: *History, move: Move32) {
 }
 
 unmake_move :: (xiangqi: *Xiangqi, history: *History, move: Move32) {
-  mark_previous_move(xiangqi, .Idle);
+  clear_previous_move(xiangqi);
   if is_capture(move) then {
     history.phase_value += phase_incr(move);
   }
@@ -919,7 +970,7 @@ make_null_move :: (xiangqi: *Xiangqi, hist: *History) {
 }
 
 unmake_null_move :: (xiangqi: *Xiangqi, hist: *History) {
-  mark_previous_move(xiangqi, .Idle);
+  clear_previous_move(xiangqi);
   unmake_null_move(xiangqi);
   hist.ply -= 1;
 }
@@ -1131,11 +1182,8 @@ tt_prune :: (tthit: bool, ttentry: Entry, alpha: int, beta: int, depth: int, pv:
 }
 
 tt_write :: (x: *Xiangqi, best_move: Move32, score: int, depth: int, flag: Flag) {
-  // don't store draw/mating scores in the transposition table.
-  // that's bad...
-  if score == 0 || abs(score) > (MATE - 100) then {
+  if abs(score) > (MATE-100) then
     return;
-  }
 
   hash  := x.hash;
   index := hash % transpositions.count;
