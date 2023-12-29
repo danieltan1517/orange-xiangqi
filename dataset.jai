@@ -95,7 +95,7 @@ positions_computed := 0;
 
 position_outbounds :: inline (evaluation: int) -> bool {
   evaluation = abs(evaluation);
-  return evaluation > MAX_SCORE;
+  return evaluation == 0 || evaluation > MAX_SCORE;
 }
 
 MAX_SCORE :: 1000;
