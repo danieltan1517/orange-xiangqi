@@ -666,10 +666,14 @@ repetition_test_suite :: () {
   repetition_test("4ka3/2r2cN2/5aP2/p3P3p/9/6R2/P4c2P/9/4A4/2BAK1B2 w", .Win, "g4g3", "f3f4", "g3g4", "f4f3", "g4g3", "f3f4", "g3g4");
   repetition_test("4ka3/2r2cN2/5aP2/p3P3p/9/6R2/P4c2P/9/4A4/2BAK1B2 w", .Loss, "g4g3", "f3f4", "g3g4", "f4f3", "g4g3", "f3f4");
 
-  // Chases.
+  // Chases:
   repetition_test("4kab2/4a4/4b4/3rC2R1/9/9/4n4/4B4/4A4/4KAB1c w", .Win, "h6i6", "i0h0", "i6h6", "h0i0", "h6i6", "i0h0", "i6h6");
+
+  // simple chases. chariot chases unprotected cannon
   repetition_test("1cbak4/R3a4/4b4/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Win, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8");
   repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Win, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9", "a8b8");
+
+
   repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Loss, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9");
   repetition_test("2b1k1r2/9/4b4/9/9/2P3P2/1R7/2n1B4/4A4/4KABC1 w", .Win, "b3c3", "c2b0", "c3b3", "b0c2", "b3c3", "c2b0", "c3b3");
   repetition_test("2bak4/4a4/4b4/9/2p2r3/r8/1R7/4B4/9/1R2K1B2 w", .Draw, "b3b4", "a4a3", "b4b3", "a3a4", "b3b4", "a4a3");
