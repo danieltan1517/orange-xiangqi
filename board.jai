@@ -1987,6 +1987,11 @@ clear_previous_move :: inline (xiangqi: *Xiangqi) {
   xiangqi.hashes.info[count].status = .Idle;
 }
 
+is_marked_cancel :: inline (xiangqi: *Xiangqi) -> bool {
+  count := xiangqi.hashes.count - 1;
+  return xiangqi.hashes.info[count].status == .Cancel;
+}
+
 set_previous_chase_move :: inline (xiangqi: *Xiangqi, chased: [6] u8, chased_count: s8) {
   count := xiangqi.hashes.count - 2;
   if xiangqi.hashes.info[count].status == .Idle {
@@ -1996,6 +2001,11 @@ set_previous_chase_move :: inline (xiangqi: *Xiangqi, chased: [6] u8, chased_cou
     }
     xiangqi.hashes.info[count].chased_count = chased_count;
   }
+}
+
+set_previous_idlemove :: inline (xiangqi: *Xiangqi) {
+  count := xiangqi.hashes.count - 2;
+  xiangqi.hashes.info[count].status = .Idle;
 }
 
 Board_Hash :: struct {
