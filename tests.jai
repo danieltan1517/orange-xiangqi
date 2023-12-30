@@ -673,6 +673,8 @@ repetition_test_suite :: () {
   repetition_test("1cbak4/R3a4/4b4/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Win, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8");
   repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Win, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9", "a8b8");
 
+  // test repetition material. 
+  repetition_test("1cbak4/R3a4/9/9/7r1/9/9/4B4/4A4/3AKCB2 w - - 0 1", .Undecided);
 
   repetition_test("1cbak4/R3a4/4b2C1/7P1/9/2P6/3pp4/8r/9/3AKA3 w", .Loss, "a8b8", "b9a9", "b8a8", "a9b9", "a8b8", "b9a9", "b8a8", "a9b9");
   repetition_test("2b1k1r2/9/4b4/9/9/2P3P2/1R7/2n1B4/4A4/4KABC1 w", .Win, "b3c3", "c2b0", "c3b3", "b0c2", "b3c3", "c2b0", "c3b3");
