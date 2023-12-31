@@ -1662,7 +1662,6 @@ to_fenstring :: (xiangqi: *Xiangqi) -> string {
 
 reset_hashes :: (xiangqi: *Xiangqi) {
   xiangqi.hashes.count = 0;
-  //print("HASHES: %\n", xiangqi.hashes.count);
 }
 
 init_rows_and_cols :: (xiangqi: *Xiangqi) {
@@ -2028,80 +2027,139 @@ judge :: (xiangqi: *Xiangqi) -> GameState {
   return state;
 }
 
-// judge relative to the side playing the game.
-judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must {
-  judge_one :: (hashes: Board_Hash, count: int, ntimes: int) -> Violations {
-    if count < 0 then {
-      return .UndecidedLevel;
-    }
-    
-    if hashes.info[count].status == .Cancel then {
-      return .UndecidedLevel;
-    }
-
-    hash := hashes.info[count].hash;
-    count -= 2;
-    status: Status = 0;
-    repeating: bool = false;
-    single_victim: bool = true;
-    chased: [6] u8;
-    chased_count := 0;
-    initialized := false;
-
-    update_subset :: (chased: [] u8, chased_count: int, info: Info) {
-      for i: 0..chased_count-1 {
-        if chased[i] == info.move.to {
-          chased[i] = info.move.from;
-        }
-      }
-    }
-
-    while count >= 0 {
-      if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
-        break;
-      }
-
-      status |= hashes.info[count].status;
-      if status == .Chase then {
-        if initialized == false {
-          chased = hashes.info[count].chased;
-          chased_count = hashes.info[count].chased_count;
-          initialized = true;
-        } else {
-          update_subset(chased, chased_count, hashes.info[count+1]);
-          chased, chased_count = intersect_chases(chased, chased_count, hashes.info[count]);
-          if chased_count == 0 then {
-            status = .Idle;
-          }
-        }
-      }
-
-      if hash == hashes.info[count].hash then {
-        ntimes -= 1;
-        if ntimes <= 0 then {
-          repeating = true;
-          break;
-        }
-      }
-      count -= 2;
-    }
-
-    if repeating == false then {
-      return .UndecidedLevel;
-    }
-
-    violation_level: Violations;
-    if status == .Check then {
-      violation_level = .PerpetualCheck;
-    } else if status == .Chase then {
-      violation_level = .PerpetualChase;
-    } else {
-      violation_level = .PerpetualIdle;
-    }
-
-    return violation_level;
+judge_one :: (hashes: Board_Hash, count: int, ntimes: int) -> Violations {
+  if count < 0 then {
+    return .UndecidedLevel;
   }
   
+  if hashes.info[count].status == .Cancel then {
+    return .UndecidedLevel;
+  }
+
+  hash := hashes.info[count].hash;
+  count -= 2;
+  status: Status = 0;
+  repeating: bool = false;
+  single_victim: bool = true;
+  chased: [6] u8;
+  chased_count := 0;
+  initialized := false;
+
+  update_subset :: (chased: [] u8, chased_count: int, info: Info) {
+    for i: 0..chased_count-1 {
+      if chased[i] == info.move.to {
+        chased[i] = info.move.from;
+      }
+    }
+  }
+
+  while count >= 0 {
+    if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
+      break;
+    }
+
+    status |= hashes.info[count].status;
+    if status == .Chase then {
+      if initialized == false {
+        chased = hashes.info[count].chased;
+        chased_count = hashes.info[count].chased_count;
+        initialized = true;
+      } else {
+        update_subset(chased, chased_count, hashes.info[count+1]);
+        chased, chased_count = intersect_chases(chased, chased_count, hashes.info[count]);
+        if chased_count == 0 then {
+          status = .Idle;
+        }
+      }
+    }
+
+    if hash == hashes.info[count].hash then {
+      ntimes -= 1;
+      if ntimes <= 0 then {
+        repeating = true;
+        break;
+      }
+    }
+    count -= 2;
+  }
+
+  if repeating == false then {
+    return .UndecidedLevel;
+  }
+
+  violation_level: Violations;
+  if status == .Check then {
+    violation_level = .PerpetualCheck;
+  } else if status == .Chase then {
+    violation_level = .PerpetualChase;
+  } else {
+    violation_level = .PerpetualIdle;
+  }
+
+  return violation_level;
+}
+
+is_repetition :: (hashes: Board_Hash, count: int, ntimes: int) -> bool {
+  if count < 0 then {
+    return false;
+  }
+  
+  if hashes.info[count].status == .Cancel then {
+    return false;
+  }
+
+  hash := hashes.info[count].hash;
+  count -= 2;
+
+  while count >= 0 {
+    if hashes.info[count+1].status == .Cancel || hashes.info[count].status == .Cancel then {
+      break;
+    }
+
+    if hash == hashes.info[count].hash then {
+      ntimes -= 1;
+      if ntimes <= 0 then {
+        return true;
+      }
+    }
+    count -= 2;
+  }
+
+  return false;
+}
+
+
+judge_prune :: (xiangqi: *Xiangqi, draw_score: int, beta: int) -> GameState {
+  count := xiangqi.hashes.count - 1;
+  ours := judge_one(xiangqi.hashes, count-1, 0);
+  if ours == Violations.UndecidedLevel then {
+    return .Undecided;
+  }
+
+  if ours == .PerpetualIdle && draw_score >= beta then {
+    if is_repetition(xiangqi.hashes, count, 0) then {
+      return .Draw;
+    } else {
+      return .Undecided;
+    }
+  }
+
+  opps := judge_one(xiangqi.hashes, count, 0);
+  if opps == Violations.UndecidedLevel then {
+    return .Undecided;
+  }
+
+  if ours == opps then {
+    return .Draw;
+  } else if ours > opps then {
+    return .Loss;
+  } else {
+    return .Win;
+  }
+}
+
+// judge relative to the side playing the game.
+judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations {
   count := xiangqi.hashes.count - 1;
   opps := judge_one(xiangqi.hashes, count, ntimes);
   if opps == Violations.UndecidedLevel then {
@@ -2110,7 +2168,7 @@ judge_ntimes :: (xiangqi: *Xiangqi, ntimes: int) -> GameState, Violations #must 
 
   ours := judge_one(xiangqi.hashes, count-1, ntimes);
   if ours == Violations.UndecidedLevel then {
-    return .Undecided, opps;
+    return .Undecided, ours;
   }
 
   if ours == opps then {
