@@ -72,5 +72,10 @@ protocol complaint Xiangqi Engine. This project supports Windows, Mac, and Linux
 * 2 Hidden Layers
 * Supports AVX2, SSE, and CPU without SIMD
 
+### Repetition Rules
+* 100% World Xiangqi Federation Repetition Rules Coverage
+* Full Chasing Rule Coverage
+* Understands Perpetual Check, Kill, Chase, Exhange, Block, Offer, Idle, etc.
+
 
 
