@@ -127,13 +127,17 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
   victims: [6] u8;
   moves_made_count := 0;
   incheck_position: bool;
-  if !incheck(xiangqi) then {
-    chase_count = get_chases(xiangqi, chases);
-    mark_previous_move(xiangqi, .Idle);
-    incheck_position = false;
-  } else {
-    mark_previous_move(xiangqi, .Check);
-    incheck_position = true;
+
+  todo: temporary workaround until I work out a better solution for this...
+  if xiangqi.hashes.count > 0 {
+    if !incheck(xiangqi) then {
+      chase_count = get_chases(xiangqi, chases);
+      mark_previous_move(xiangqi, .Idle);
+      incheck_position = false;
+    } else {
+      mark_previous_move(xiangqi, .Check);
+      incheck_position = true;
+    }
   }
 
   moves_made := 0;
@@ -145,12 +149,14 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
 
     make_move(xiangqi, history, mov);
     history.seldepth = max(history.ply, history.seldepth);
-    if incheck_position == false && is_quiet(mov) then {
-      victim_count := get_evade(xiangqi, mov, chases, chase_count, victims);
-      if victim_count > 0 then { 
-        set_previous_chase_move(xiangqi, victims, cast(s8) victim_count);
-      } else {
-        set_previous_idlemove(xiangqi);
+    if xiangqi.hashes.count > 1 {
+      if incheck_position == false && is_quiet(mov) then {
+        victim_count := get_evade(xiangqi, mov, chases, chase_count, victims);
+        if victim_count > 0 then { 
+          set_previous_chase_move(xiangqi, victims, cast(s8) victim_count);
+        } else {
+          set_previous_idlemove(xiangqi);
+        }
       }
     }
 
