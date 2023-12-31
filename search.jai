@@ -128,7 +128,7 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
   moves_made_count := 0;
   incheck_position: bool;
 
-  todo: temporary workaround until I work out a better solution for this...
+  // todo: temporary workaround until I work out a better solution for this...
   if xiangqi.hashes.count > 0 {
     if !incheck(xiangqi) then {
       chase_count = get_chases(xiangqi, chases);
