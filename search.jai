@@ -65,7 +65,6 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> bestmove
     print_info(xiangqi.main_thread, depth, seldepth, nodes, time_ms, score, nps, pv);
     depth += 1;
   }
-
   return best_move, score;
 }
 
