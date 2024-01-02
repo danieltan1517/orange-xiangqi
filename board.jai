@@ -2040,7 +2040,6 @@ judge_one :: (hashes: Board_Hash, count: int, ntimes: int) -> Violations {
   count -= 2;
   status: Status = 0;
   repeating: bool = false;
-  single_victim: bool = true;
   chased: [6] u8;
   chased_count := 0;
   initialized := false;
@@ -2060,7 +2059,7 @@ judge_one :: (hashes: Board_Hash, count: int, ntimes: int) -> Violations {
 
     status |= hashes.info[count].status;
     if status == .Chase then {
-      if initialized == false {
+      if !initialized {
         chased = hashes.info[count].chased;
         chased_count = hashes.info[count].chased_count;
         initialized = true;
@@ -2688,8 +2687,6 @@ get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_cou
   } else {
     xiangqi.hashes.info[count].status = .Idle;
   }
-
-  return;
 }
 
 moddiv90 :: inline (sq: int) -> int, int {
