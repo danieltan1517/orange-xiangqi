@@ -149,13 +149,8 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
     make_move(xiangqi, history, mov);
     history.seldepth = max(history.ply, history.seldepth);
     if xiangqi.hashes.count > 1 {
-      if incheck_position == false && is_quiet(mov) then {
-        victim_count := get_evade(xiangqi, mov, chases, chase_count, victims);
-        if victim_count > 0 then { 
-          set_previous_chase_move(xiangqi, victims, cast(s8) victim_count);
-        } else {
-          set_previous_idlemove(xiangqi);
-        }
+      if !incheck_position && is_quiet(mov) then {
+        get_evade(xiangqi, mov, chases, chase_count);
       }
     }
 
@@ -311,13 +306,8 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     }
 
     make_move(xiangqi, history, mov);
-    if incheck_position == false && is_quiet(mov) then {
-      victim_count := get_evade(xiangqi, mov, chases, chase_count, victims);
-      if victim_count > 0 then { 
-        set_previous_chase_move(xiangqi, victims, cast(s8) victim_count);
-      } else {
-        set_previous_idlemove(xiangqi);
-      }
+    if !incheck_position && is_quiet(mov) then {
+      get_evade(xiangqi, mov, chases, chase_count);
     }
 
     history.seldepth = max(history.ply, history.seldepth);
@@ -523,7 +513,6 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
   moves_made_count := 0;
   initialized_chases := is_marked_cancel(xiangqi);
 
-
   moves: Moves;
   score: int = 0;
   best_score := -MATE + ply;
@@ -558,19 +547,14 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       }
     }
 
-    if is_quiet(mov) && initialized_chases == false then {
+    if !incheck_position && is_quiet(mov) && initialized_chases == false then {
       chase_count = get_chases(xiangqi, chases);
       initialized_chases = true;
     }
 
     make_move(xiangqi, history, mov);
-    if is_quiet(mov) then {
-      victim_count := get_evade(xiangqi, mov, chases, chase_count, victims);
-      if victim_count > 0 then { 
-        set_previous_chase_move(xiangqi, victims, cast(s8) victim_count);
-      } else {
-        set_previous_idlemove(xiangqi);
-      }
+    if !incheck_position && is_quiet(mov) then {
+      get_evade(xiangqi, mov, chases, chase_count);
     }
 
     R := 0;

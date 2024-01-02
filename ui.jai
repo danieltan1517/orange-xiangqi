@@ -1283,7 +1283,6 @@ random_pick_board_position :: () {
   r := random_get() % xiangqi_openings.count;
   fen := xiangqi_openings[r]; 
   xiangqi_fen(*xiangqi, fen);
-  clear_evasions(victims);
   fen_string = copy_string(fen);
 }
 
@@ -1436,7 +1435,6 @@ gui_redo_move :: () {
 
 chases: [8] Move32;
 chase_count := 0;
-victims: [6] u8;
 
 gui_make_move :: (move: Move32, animate: bool) {
   for m: moves {
@@ -1445,10 +1443,7 @@ gui_make_move :: (move: Move32, animate: bool) {
       prev_from = move.from;
       prev_to   = move.to;
       make_move(*xiangqi, move);
-      victim_count := get_evade(*xiangqi, move, chases, chase_count, victims);
-      if moves_made_count > 0 && victim_count > 0 then { 
-        set_previous_chase_move(*xiangqi, victims, cast(s8) victim_count);
-      } 
+      get_evade(*xiangqi, move, chases, chase_count);
 
       // add another move.
       xiangqi.hashes.info[moves_made_count].move = move;
@@ -1577,7 +1572,6 @@ on_game_end :: (winner: GameEnd) {
     status_string = "";
     if engine_test_state == .SWITCH_SIDES {
       xiangqi_fen(*xiangqi, fen_string);
-      clear_evasions(victims);
       moves_made_count = 0;
       reset(*moves);
       legal_moves(*xiangqi, *moves);
@@ -2297,7 +2291,6 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
         }
         fen_string = "";
       } else {
-        clear_evasions(victims);
         if xiangqi_fen(*xiangqi, str) {
           fen_string = copy_string(str);
         } else {

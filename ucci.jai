@@ -82,18 +82,11 @@ main :: () {
 
       chases: [8] Move32;
       chase_count := 0;
-      victims: [6] u8;
-      moves_made_count := 0;
-      
       while str {
         token := parse_token(*str);
         move := to_move32(*xiangqi, token);
         make_move(*xiangqi, move);
-        victim_count := get_evade(*xiangqi, move, chases, chase_count, victims);
-        if moves_made_count > 0 && victim_count > 0 then { 
-          set_previous_chase_move(*xiangqi, victims, cast(s8) victim_count);
-        } 
-
+        get_evade(*xiangqi, move, chases, chase_count);
         if is_capture(move) then {
           reset_hashes(*xiangqi);
           chase_count = 0;
@@ -104,8 +97,6 @@ main :: () {
           chase_count = get_chases(*xiangqi, chases);
           mark_previous_move(*xiangqi, .Idle);
         }
-
-        moves_made_count += 1;
       }
 
     case "setoption";

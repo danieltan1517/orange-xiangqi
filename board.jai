@@ -2601,12 +2601,6 @@ pawn_not_passed :: (move: Move32, turn: int) -> bool {
 }
 
 #scope_export
-clear_evasions :: inline (victims: [] u8) {
-  for *vic: victims {
-    vic.* = 0xFF;
-  }
-} 
-
 is_exchange_move :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   piece := move.piece >> 2;
   capture := move.capture >> 2;
@@ -2659,11 +2653,19 @@ get_exchange_move :: (move: Move32) -> Move32 {
   return exchange;
 }
 
-get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_count: int, victims: [] u8) -> int {
-  for *vic: victims {
-    vic.* = 0xFF;
+get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_count: int) {
+  count := xiangqi.hashes.count - 2;
+  if count < 0 || xiangqi.hashes.info[count].status != .Idle {
+    return;
   }
 
+  // clear evasions
+  for i: 0..5 {
+    xiangqi.hashes.info[count].chased[i] = 0xFF;
+  }
+  xiangqi.hashes.info[count].chased_count = 0;
+
+  // figure out what chases have occured.
   att := attackers(xiangqi);
   victim_count := 0;
   for i: 0..chase_count-1 {
@@ -2677,11 +2679,17 @@ get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_cou
       continue;
     }
 
-    victims[victim_count] = to;
+    xiangqi.hashes.info[count].chased[victim_count] = to;
     victim_count += 1;
   }
+  xiangqi.hashes.info[count].chased_count = xx victim_count;
+  if victim_count > 0 then {
+    xiangqi.hashes.info[count].status = .Chase;
+  } else {
+    xiangqi.hashes.info[count].status = .Idle;
+  }
 
-  return victim_count;
+  return;
 }
 
 moddiv90 :: inline (sq: int) -> int, int {

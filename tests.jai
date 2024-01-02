@@ -292,16 +292,10 @@ repetition_test_suite :: () {
     xiangqi_fen(*xiangqi, fen);
     chases: [8] Move32;
     chase_count := 0;
-    victims: [6] u8;
-    moves_made_count := 0;
     for move_string: moves {
       move := to_move32(*xiangqi, move_string);
       make_move(*xiangqi, move);
-      victim_count := get_evade(*xiangqi, move, chases, chase_count, victims);
-      if moves_made_count > 0 && victim_count > 0 then { 
-        set_previous_chase_move(*xiangqi, victims, cast(s8) victim_count);
-      } 
-
+      get_evade(*xiangqi, move, chases, chase_count);
       att := attackers(*xiangqi);
       if incheck(*xiangqi, att) then {
         chase_count = 0;
@@ -313,7 +307,6 @@ repetition_test_suite :: () {
         chase_count = get_chases(*xiangqi, chases);
         mark_previous_move(*xiangqi, .Idle);
       } 
-      moves_made_count += 1;
     }
     judge_state, violation_level := judge_ntimes(*xiangqi, 0);
     if judge_state != actual_state {
