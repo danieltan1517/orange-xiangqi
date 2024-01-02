@@ -300,7 +300,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
       }
     }
 
-    if incheck_position == false && is_quiet(mov) && initialized_chases == false then {
+    if !incheck_position && is_quiet(mov) && !initialized_chases then {
       chase_count = get_chases(xiangqi, chases);
       initialized_chases = true;
     }
@@ -547,7 +547,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       }
     }
 
-    if !incheck_position && is_quiet(mov) && initialized_chases == false then {
+    if !incheck_position && is_quiet(mov) && !initialized_chases then {
       chase_count = get_chases(xiangqi, chases);
       initialized_chases = true;
     }
