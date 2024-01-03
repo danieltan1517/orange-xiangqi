@@ -321,24 +321,37 @@ work_array: [] Xiangqi_Work;
 
 #if OS == .LINUX {
   #import "POSIX";
-  buffer: [4096] u8;
+  buffer: [65536] u8;
   NEWLINE :: "\n";
+  messages: string;
 
-  // TODO: This getline needs to be made MORE robust!
   getline :: () -> string {
+    
+    if messages.count > 0 {
+      found, line, rest := split_from_left(messages, #char "\n");
+      if found then {
+        messages = rest;
+        return line;
+      }
+    }
+
     bytes_read := read(STDIN_FILENO, buffer.data, buffer.count);
-    str := to_string(buffer.data, bytes_read);
-    if str[bytes_read-1] == #char "\n" then
-      str.count -= 1;
-    return str;
+    messages = to_string(buffer.data, bytes_read);
+    found, line, rest := split_from_left(messages, #char "\n");
+    if found then {
+      messages = rest;
+      return line;
+    } else {
+      return "";
+    }
   }
-   
 } 
 
 #if OS == .WINDOWS {
   #import "Windows";
-  buffer: [4096] u8;
+  buffer: [65536] u8;
   NEWLINE :: "\r\n";
+  bytes_read: int = 0;
 
   // TODO: This getline needs to be made MORE robust!
   getline :: () -> string {

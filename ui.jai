@@ -2000,8 +2000,6 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
     str := get_ucci_position();
     timeManager := ifx xiangqi.turn == 0 r_time_manager else b_time_manager;
     write_to_process(process, to_u8_array(str));
-    sleep_milliseconds(2); // TODO: bad hack...
-
     gostr := ucci_go_command(engine, timeManager);
     write_to_process(process, to_u8_array(gostr));
 
