@@ -397,8 +397,15 @@ search_extensions :: (tthit: bool, ttentry: Entry, incheck_position: bool, xiang
       return -2;
     }
 
-    // TODO: need to test to make sure SSE functions correctly.
     sse_search :: (xiangqi: *Xiangqi, best_move: Move32, history: *History, depth: int, alpha: int, beta: int) -> int {
+      // do a lazy chases initialization.
+      chases: [8] Move32;
+      chase_count := 0;
+      victims: [6] u8;
+      initialized_chases := is_marked_cancel(xiangqi);
+
+
+
       incheck_position :: false;
       ttentry: Entry;
       moves: Moves;
@@ -409,8 +416,17 @@ search_extensions :: (tthit: bool, ttentry: Entry, incheck_position: bool, xiang
           erase_move(*moves, it_index);
           continue;
         }
+
+        if is_quiet(mov) && !initialized_chases then {
+          chase_count = get_chases(xiangqi, chases);
+          initialized_chases = true;
+        }
   
         make_move(xiangqi, history, mov);
+        if is_quiet(mov) then {
+          get_evade(xiangqi, mov, chases, chase_count);
+        }
+
         score := -negascout_sse(xiangqi, history, depth - 1, -beta, -alpha);
         unmake_move(xiangqi, history, mov);
   
