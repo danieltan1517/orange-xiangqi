@@ -1213,7 +1213,7 @@ abs :: inline (value: int) -> int {
 }
 
 in_middlegame :: inline (history: *History) -> bool {
-  return history.phase_value > 4;
+  return history.phase_value > 6;
 }
 
 judge_position :: (xiangqi: *Xiangqi) #expand {
