@@ -2189,6 +2189,7 @@ bookfilename: string = "data/xiangqi_fens.txt";
 number_of_games: s32 = 1;
 
 draw_subwindow_newgame :: (r: Rect, data: *void) {
+  subwindow_newgame.title_text = get_ui_str().new_game;
 
   time_management_ui :: (rect: *Rect, name: string, time_manager: *TimeManager, k: float, id: int) {
     slider_theme := *default_overall_theme.slider_theme;
