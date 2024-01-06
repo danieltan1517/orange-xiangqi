@@ -351,20 +351,32 @@ work_array: [] Xiangqi_Work;
   #import "Windows";
   buffer: [65536] u8;
   NEWLINE :: "\r\n";
-  bytes_read: int = 0;
+  bytes_read: u32 = 0;
+  messages: string;
 
   // TODO: This getline needs to be made MORE robust!
   getline :: () -> string {
+
+    if messages.count > 0 {
+      found, line, rest := split_from_left(messages, #char "\n");
+      if found then {
+        messages = rest;
+        return line;
+      }
+    }
+
     stdin := GetStdHandle(STD_INPUT_HANDLE);
     bytes_read: u32;
     ReadFile(stdin, buffer.data, buffer.count, *bytes_read, null);
-    str := to_string(buffer.data, bytes_read);
-    normalize_line_endings(*str);
-    if str[str.count-1] == #char "\n" then
-      str.count -= 1;
-    if str[str.count-1] == #char "\r" then
-      str.count -= 1;
-    return str;
+    messages = to_string(buffer.data, bytes_read);
+    normalize_line_endings(*messages);
+    found, line, rest := split_from_left(messages, #char "\n");
+    if found then {
+      messages = rest;
+      return line;
+    } else {
+      return "";
+    }
   }
 } 
 
