@@ -27,13 +27,14 @@ main :: () {
 
   xiangqi: Xiangqi;
   xiangqi_startpos(*xiangqi);
+  game_moves: [..] Move32;
   defer {
     free_threads();
   }
   print("eval,positions\n");
   for i: 0..1_000_000_000 {
+    array_reserve(*game_moves, 1024);
     reset_temporary_storage();
-    // clear_tt();
     found, line, rest := split_from_left(text, #char "\n");
     if found == false {
       break;
@@ -46,10 +47,26 @@ main :: () {
 
     time_calendar := calendar_to_string(to_calendar(current_time_consensus()));
     print("----Game %. Time: [%]. Positions in Hash Table: %. Positions Evaluated: %. Depth %. Total %\n", i, time_calendar, table.count, positions_computed, DEPTH, MAX_COMPUTATIONS, to_standard_error=true);
-
-    // the starting position has 32 pieces total
     count := compute_phase(*xiangqi);
     while true {
+      line = eat_spaces(line);
+      token, found := parse_token(*line);
+      if found == false {
+        break;
+      }
+      move := to_move32(*xiangqi, token);
+      array_add(*game_moves, move);
+      make_move(*xiangqi, move);
+      if is_capture(move) {
+        count -= phase_incr(move);
+      }
+
+      if count < 3 then {
+        break;
+      }
+    }
+
+    while game_moves.count >= 5 {
       fen := to_fenstring(*xiangqi);
       rollout(fen, *table);
 
@@ -58,24 +75,11 @@ main :: () {
         break i;
       }
 
-      line = eat_spaces(line);
-      token, found := parse_token(*line);
-      if found == false {
-        break;
-      }
-      
-      move := to_move32(*xiangqi, token);
-
-      make_move(*xiangqi, move);
-      if is_capture(move) {
-        reset_hashes(*xiangqi);
-        count -= phase_incr(move);
-      }
-
-      if count < 3 then {
-        break;
-      }
+      move := pop(*game_moves);
+      unmake_move(*xiangqi, move);
     }
+
+    array_reset(*game_moves);
   }
 
 }
