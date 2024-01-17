@@ -747,7 +747,7 @@ main :: () {
   array_reserve(*red_pv_lines, 200);
   array_reserve(*black_pv_lines, 200);
   legal_moves(*xiangqi, *moves);
-  init_sound(win);
+  init_sound();
   init_textures();
   ui_init();
   ctrl_pressed := 0;
@@ -823,7 +823,8 @@ main :: () {
 
     simp.clear_render_target(.15, .15, .15, 1.0);
     render_xiangqiboard(cast(float)mouse_x, cast(float)mouse_y, mouse_event);
-    ui_per_frame_update(win, cast(s32) width, cast(s32) height, get_time());
+    time := seconds_since_init();
+    ui_per_frame_update(win, cast(s32) width, cast(s32) height, time);
     // The Subwindow starts open, but pressing the Close button can close it.
     if subwindow_newgame.open {  
       add_subwindow(*subwindow_newgame);
@@ -833,14 +834,12 @@ main :: () {
     render_ui();
 
     // sound effects.
-    pre_entity_update(sound_player);
-    for sound_player.streams  it.marked = true;
-    post_entity_update(sound_player, dt);
+    //Sound.update();
     draw_popups();  // This draws Subwindows as well.
     sleep_milliseconds(20);
     simp.swap_buffers(win);
     reset_temporary_storage();
-    looptime_end = cast(float)get_time();
+    looptime_end = cast(float)seconds_since_init();
   }
 
 }
@@ -1198,7 +1197,7 @@ show_pv_line :: (using pv_line: *PV_Info) -> string {
     print_to_builder(*builder, "% ", move);
   }
 
-  return builder_to_string(*builder, temp);
+  return builder_to_string(*builder,, allocator=temp);
 }
 
 width:  float = 680;
@@ -1227,9 +1226,8 @@ prev_from: u8 = 0xFF;
 prev_to: u8 = 0xFF;
 
 // sound player.
-sound_player : *Sound_Player;
-sound_quiet_move: *Mixer_Sound_Data;
-sound_capture_move: *Mixer_Sound_Data;
+sound_quiet_move: Sound.Sound_Data;
+sound_capture_move: Sound.Sound_Data;
 
 counter_history: [1024] s8;
 counter30: s8 = 0;
@@ -1286,72 +1284,31 @@ random_pick_board_position :: () {
   fen_string = copy_string(fen);
 }
 
-init_sound :: (win: Window_Type) {
-
-  // wav file.
-  load_wav_file :: (name: string) -> *Mixer_Sound_Data {
-    file_data, success := read_entire_file(name);
-    assert(success);
-    data := New(Mixer_Sound_Data);
-    data.name = copy_string(name);
-    data.buffer = file_data;
-
-    format, samples, success2, extra := get_wav_header(data.buffer);
-    if !success2 {
-      log("Unable to parse '%' as wav.\n", data.full_path);
-      return data;
-    }
-
-    if format.wFormatTag == WAVE_FORMAT_PCM {
-      data.type = .LINEAR_SAMPLE_ARRAY;
-      data.nchannels = cast(u16) format.nChannels;
-      data.nsamples_times_nchannels = samples.count/2;
-    } else if format.wFormatTag == WAVE_FORMAT_DVI_ADPCM {
-      data.type = .ADPCM_COMPRESSED;
-      data.wSamplesPerBlock = extra.wSamplesPerBlock;
-      data.nBlockAlign = format.nBlockAlign;
-      data.nchannels = cast(u16) format.nChannels;
-      data.nsamples_times_nchannels = extra.wSamplesAccordingToFactChunk * data.nchannels;
-    } else {
-      assert(false);
-    }
-
-    data.samples = cast(*s16) samples.data;
-    data.sampling_rate = cast(u32) format.nSamplesPerSec;
-    return data;
+stage_sound :: (data: *Sound.Sound_Data, category := Sound.Sound_Category.GENERAL_SFX, perturb := true) -> *Sound.Sound_Stream {
+  /*stream := Sound.make_stream(data, category);
+  if perturb {
+    stream.user_volume_scale = random_get_within_range(0.5, 1.4);
+    stream.rate_scale        = random_get_within_range(0.7, 1.22);
   }
-
-  sound_player = New(Sound_Player);
-  sound_player.update_history = true;
-  sound_quiet_move = load_wav_file("data/quiet_move.wav");
-  assert(sound_quiet_move != null);
-
-  sound_capture_move = load_wav_file("data/capture_move.wav");
-  assert(sound_capture_move != null);
-
-  // initialize sound player
-  init(sound_player, win, true, true);
-
+  return stream;*/
+  return null;
 }
 
-play_sound :: (data: *Mixer_Sound_Data, perturb: bool = true) -> *Sound_Stream {
-  stream := make_stream(sound_player, data);
+init_sound :: () {
+  /*sound_quiet_move = Sound.load_audio_file("data/quiet_move.wav");
+  assert(sound_quiet_move.loaded);
 
-  if stream {
-    stream.sound_data = data;
-  }
+  sound_capture_move = Sound.load_audio_file("data/capture_move.wav");
+  assert(sound_capture_move.loaded);
 
-  if perturb && stream {
-    stream.user_volume_scale = random_get_within_range(0.9, 1.0);
-    stream.desired_rate = random_get_within_range(0.85, 1.15);
-  }
+  // initialize sound player
+  Sound.sound_player_init(.{});
+  */
+}
 
-  if stream {
-    // @Temporary @Hack! We do not get the duration by default from an ogg file...
-    stream.repeat_end_position = cast(int)(data.sampling_rate * 234.475);
-  }
-  
-  return stream;
+play_sound :: (sound: *Sound.Sound_Data) {
+  //stream := stage_sound(sound, .GENERAL_SFX, true);
+  //Sound.start_playing(stream);
 }
 
 immediate_quad :: (x0: float, y0: float, x1: float, y1: float, color: Vector4, uv0: Vector2, uv1: Vector2, uv2: Vector2, uv3: Vector2) {
@@ -1456,15 +1413,15 @@ gui_make_move :: (move: Move32, animate: bool) {
         mov_anim_state = MovAnim.Play;
       }
 
-      sound_data: *Mixer_Sound_Data;
+      /*sound_data: *Sound.Sound_Data;
       if move.capture == 0 {
-        sound_data = sound_quiet_move;
+        sound_data = *sound_quiet_move;
       } else {
-        sound_data = sound_capture_move;
+        sound_data = *sound_capture_move;
       }
       if sound == true then {
         play_sound(sound_data);
-      }
+      }*/
       reset(*moves);
       legal_moves(*xiangqi, *moves);
       status_string = "";
@@ -1853,7 +1810,7 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
   if state == {
 
   case .ucciok;
-    out_buff := NewArray(SIZE, u8, allocator=temp);
+    out_buff := NewArray(SIZE, u8,, allocator=temp);
     err_buff: [] u8; // nothing.
     success, output_bytes := read_from_process(process, out_buff, err_buff, timeout_ms=0);
     messages: string;
@@ -1889,7 +1846,7 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
     }
 
   case .isready;
-    out_buff := NewArray(SIZE, u8, allocator=temp);
+    out_buff := NewArray(SIZE, u8,, allocator=temp);
     err_buff: [] u8; // nothing.
     success, output_bytes := read_from_process(process, out_buff, err_buff, timeout_ms=0);
     messages: string;
@@ -1927,7 +1884,7 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
       state = .idle;
       engine.timer = FLOAT32_INFINITY;
     } else {
-      out_buff := NewArray(SIZE, u8, allocator=temp);
+      out_buff := NewArray(SIZE, u8,, allocator=temp);
       err_buff: [] u8; // nothing.
       success, output_bytes := read_from_process(process, out_buff, err_buff, timeout_ms=0);
       messages: string;
@@ -2035,7 +1992,7 @@ get_ucci_position :: () -> string {
     print_to_builder(*builder, " %", move);
   }
   append(*builder, NEWLINE);
-  return builder_to_string(*builder, allocator=temp);
+  return builder_to_string(*builder,, allocator=temp);
 }
 
 to_u8_array :: (str: string) -> [] u8 {
@@ -2754,7 +2711,7 @@ create_pgn :: (builder: *String_Builder, winner: GameEnd) {
   // TODO: Robustness.
   file, success := file_open(filename_pgn, for_writing=true, keep_existing_content=true);
   if success {
-    data := builder_to_string(builder, allocator=temp);
+    data := builder_to_string(builder,, allocator=temp);
     file_write(*file, data);
     file_close(*file);
   }
@@ -2839,7 +2796,7 @@ simp :: #import "Simp";
 #import "Input";
 #import "Math";
 #import "GetRect";
-#import "Sound_Player";
+Sound :: #import "Sound_Player";
 #import "Wav_File";
 #import "File";
 #import "Random";

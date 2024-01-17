@@ -3,7 +3,7 @@
 // a buggy implementation with infinite loop problems
 // every once in a while, but usable...
 // 
-#run load_model("orange12_9_23.nnue");
+#run load_model("orange1_15_24.nnue");
 
 DEPTH :: 7;
 MOVETIME :: 3_600_000;
@@ -125,7 +125,7 @@ rollout :: (fen: string, table: *Table(u32, void)) {
     work_started = 0;
     for mov : moves {
       r := random_get() % 100;
-      if r < 40 then {
+      if r < 25 then {
         continue;
       }
 

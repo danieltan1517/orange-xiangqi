@@ -156,7 +156,7 @@ print_moves :: (from: int, moves: *Moves) {
   }
 
   append(*builder, "   a  b  c  d  e  f  g  h  i\n");
-  print("%\n", builder_to_string(*builder, allocator=temp));
+  print("%\n", builder_to_string(*builder,, allocator=temp));
 }
 
 AttFlags :: enum_flags {
@@ -1656,7 +1656,7 @@ to_fenstring :: (xiangqi: *Xiangqi) -> string {
     append(*builder, " b");
   }
 
-  return builder_to_string(*builder, allocator = temp);
+  return builder_to_string(*builder,, allocator=temp);
 
 }
 
