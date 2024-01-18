@@ -1921,14 +1921,10 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
         if starts_with(message, "bestmove ") then {
           parse_token(*message);
           message = eat_spaces(message);
-          if equals(message, "nobestmove") {
-            
-          } else {
-            mov_token := parse_token(*message);
-            mov := to_move32(*xiangqi, mov_token);
-            gui_make_move(mov, true);
-            state = .idle;
-          }
+          mov_token := parse_token(*message);
+          mov := to_move32(*xiangqi, mov_token);
+          gui_make_move(mov, true);
+          state = .idle;
         }
       }
     }
