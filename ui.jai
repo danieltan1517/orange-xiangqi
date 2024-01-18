@@ -1921,10 +1921,14 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
         if starts_with(message, "bestmove ") then {
           parse_token(*message);
           message = eat_spaces(message);
-          mov_token := parse_token(*message);
-          mov := to_move32(*xiangqi, mov_token);
-          gui_make_move(mov, true);
-          state = .idle;
+          if equals(message, "nobestmove") {
+            
+          } else {
+            mov_token := parse_token(*message);
+            mov := to_move32(*xiangqi, mov_token);
+            gui_make_move(mov, true);
+            state = .idle;
+          }
         }
       }
     }
@@ -2288,7 +2292,7 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
       filename_pgn = get_result(pgn_state);
     }
     rect.y -= k * 1.1;
-    slider(rect, *number_of_games, 1, 500, 1, slider_theme, prefix="Number of Games: ");
+    slider(rect, *number_of_games, 1, 10_000, 1, slider_theme, prefix="Number of Games: ");
 
     rect.y -= k * 1.1;
     rect.x -= k * 2.5;
@@ -2697,10 +2701,6 @@ create_pgn :: (builder: *String_Builder, winner: GameEnd) {
 
   i := 0;
   while i < moves_made_count {
-    if (i & 1) == 0 then {
-      print_to_builder(builder, "%1. ", (i>>1) + 1);
-    }
-
     print_to_builder(builder, "% ", xiangqi.hashes.info[i].move);
     i += 1;
   }

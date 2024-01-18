@@ -15,23 +15,100 @@ main :: () {
   init_tt(size_in_bytes = 128_000_000);
   random_seed(0xcafe_babe_10_31_1517);
   set_threads(6);
-  FILE_NAME :: "xiangqi_games.txt";
-  text, success := read_entire_file(FILE_NAME);
-  if !success {
-    print("Error. % cannot be opened.", FILE_NAME);
-    return;
-  }
-
-  table: Table(u32, void);
   init(*table, 16_000_000);
-
-  xiangqi: Xiangqi;
-  xiangqi_startpos(*xiangqi);
-  game_moves: [..] Move32;
   defer {
     free_threads();
   }
+
+  FILE_NAME :: "xiangqi_games.txt";
   print("eval,positions\n");
+  //compute_grandmaster_games(FILE_NAME);
+  compute_pgn("game.pgn");
+}
+
+table: Table(u32, void);
+compute_pgn :: (filename: string) {
+
+  compute_pgn_game :: (fen: string, game_moves_string: string) {
+    xiangqi: Xiangqi;
+    xiangqi_fen(*xiangqi, fen);
+    game_moves: [..] Move32;
+    defer {
+      array_reset(*game_moves);
+    }
+
+    count := compute_phase(*xiangqi);
+    while true {
+      token, found := parse_token(*game_moves_string);
+      if found == false {
+        break;
+      }
+      move := to_move32(*xiangqi, token);
+      array_add(*game_moves, move);
+      make_move(*xiangqi, move);
+      if is_capture(move) {
+        count -= phase_incr(move);
+      }
+
+      if count < 3 then {
+        break;
+      }
+    }
+
+    while game_moves.count >= 5 {
+      fen := to_fenstring(*xiangqi);
+      rollout(fen, *table);
+
+      reset_temporary_storage();
+      if positions_computed >= MAX_COMPUTATIONS then {
+        break;
+      }
+
+      move := pop(*game_moves);
+      unmake_move(*xiangqi, move);
+    }
+  }
+
+  text, success := read_entire_file(filename);
+  if !success {
+    print("Error. % cannot be opened.", filename);
+    return;
+  }
+
+  i := 0;
+  while true {
+    found, line, rest := split_from_left(text, #char "\n");
+    if !found then {
+      break;
+    }
+
+    if !begins_with(line, "[Fen") {
+      text = rest;
+      continue;
+    }
+
+    found=, fen, _ := split_from_right(line, #char "\"");
+    fen = advance(fen, 6);
+    text = rest;
+    found=, game_moves, rest= := split_from_left(text, #char "\n");
+    text = rest;
+    time_calendar := calendar_to_string(to_calendar(current_time_consensus()));
+    print("----Game %. Time: [%]. Positions in Hash Table: %. Positions Evaluated: %. Depth %. Total %\n", i, time_calendar, table.count, positions_computed, DEPTH, MAX_COMPUTATIONS, to_standard_error=true);
+
+    compute_pgn_game(fen, game_moves);
+    i += 1;
+  }
+}
+
+compute_grandmaster_games :: (filename: string) {
+  xiangqi: Xiangqi;
+  xiangqi_startpos(*xiangqi);
+  game_moves: [..] Move32;
+  text, success := read_entire_file(filename);
+  if !success {
+    print("Error. % cannot be opened.", filename);
+    return;
+  }
   for i: 0..1_000_000_000 {
     array_reserve(*game_moves, 1024);
     reset_temporary_storage();
@@ -225,7 +302,7 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
 
 start_threads :: (xiangqi: *Xiangqi, move: Move32, depth: int, movetime_ms: int) {
   if num_threads > 0 then {
-    work := New(Xiangqi_Work, allocator=temp);
+    work := New(Xiangqi_Work,, allocator=temp);
     work.fen = to_fenstring(xiangqi);
     work.hash = xiangqi.hash;
     work.bestmove = move;
