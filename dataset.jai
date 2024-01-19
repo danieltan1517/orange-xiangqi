@@ -7,7 +7,7 @@
 
 DEPTH :: 7;
 MOVETIME :: 3_600_000;
-MAX_COMPUTATIONS :: 50_000_000;
+MAX_COMPUTATIONS :: 100_000_000;
 
 main :: () {
   print("info string NNUE Model: %\n", get_nnuename(), to_standard_error=true);
@@ -22,7 +22,7 @@ main :: () {
 
   FILE_NAME :: "xiangqi_games.txt";
   print("eval,positions\n");
-  //compute_grandmaster_games(FILE_NAME);
+  compute_grandmaster_games(FILE_NAME);
   compute_pgn("game.pgn");
 }
 
@@ -55,16 +55,17 @@ compute_pgn :: (filename: string) {
       }
     }
 
+    best_move: Move32 = NULL_MOVE;
     while game_moves.count >= 5 {
       fen := to_fenstring(*xiangqi);
-      rollout(fen, *table);
-
+      rollout(fen, *table, best_move);
       reset_temporary_storage();
       if positions_computed >= MAX_COMPUTATIONS then {
         break;
       }
 
       move := pop(*game_moves);
+      best_move = move;
       unmake_move(*xiangqi, move);
     }
   }
@@ -143,16 +144,17 @@ compute_grandmaster_games :: (filename: string) {
       }
     }
 
+    best_move: Move32 = NULL_MOVE;
     while game_moves.count >= 5 {
       fen := to_fenstring(*xiangqi);
-      rollout(fen, *table);
-
+      rollout(fen, *table, best_move);
       reset_temporary_storage();
       if positions_computed >= MAX_COMPUTATIONS then {
         break i;
       }
 
       move := pop(*game_moves);
+      best_move = move;
       unmake_move(*xiangqi, move);
     }
 
@@ -187,7 +189,7 @@ PositionStatus :: enum {
   TacticalPosition;
 }
 
-rollout :: (fen: string, table: *Table(u32, void)) {
+rollout :: (fen: string, table: *Table(u32, void), best_move: Move32) {
   xiangqi: Xiangqi;
   xiangqi_fen(*xiangqi, fen);
   moves: Moves;
@@ -202,7 +204,7 @@ rollout :: (fen: string, table: *Table(u32, void)) {
     work_started = 0;
     for mov : moves {
       r := random_get() % 100;
-      if r < 25 then {
+      if r < 25 && mov != best_move then {
         continue;
       }
 
