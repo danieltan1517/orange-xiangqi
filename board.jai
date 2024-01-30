@@ -2434,11 +2434,10 @@ is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   set_bit(*bitboard, from);
   while true {
     from, opps_flags = get_attackers(xiangqi, *stack, opps_flags, turn, to, arr, bitboard, false);
-    set_bit(*bitboard, from);
     if from == -1 {
       return false;
     } 
-
+    set_bit(*bitboard, from);
     move := Move32.{
       from=cast(u8)from, 
       to=cast(u8)to, 
@@ -2566,14 +2565,14 @@ Bitboard128 :: struct {
 
 set_bit :: inline (bitboard: *Bitboard128, bit: int) {
   index := bit / 64;
-  bit_index := bit % 64;
-  bitboard.board[index] |= cast(u64) (1 << bit_index);
+  bit_index: u64 = cast(u64)(bit % 64);
+  bitboard.board[index] |= ((cast(u64)1) << bit_index);
 }
 
 is_set :: inline (bitboard: Bitboard128, bit: int) -> bool {
   index := bit / 64;
-  bit_index := bit % 64;
-  return (bitboard.board[index] & cast(u64) (1 << bit_index)) != 0;
+  bit_index: u64 = cast(u64)(bit % 64);
+  return (bitboard.board[index] & ((cast(u64)1) << bit_index)) != 0;
 }
 
 #scope_file
