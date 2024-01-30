@@ -1518,8 +1518,17 @@ on_game_end :: (winner: GameEnd) {
     auto_test_engines = false;
   }
 
+  #if OS == .WINDOWS {
+    NEWLINE :: "\n"; // normalized line endings.
+  } else {
+    NEWLINE :: "\n";
+  }
+
   for *engine: engines_array {
-    engine.state = .newgame;
+    process := *engine.process;
+    protocol := ifx engine.protocol == .uci "uci" else "ucci";
+    write_to_process(process, to_u8_array(tprint("%1newgame%2", protocol, NEWLINE)));
+    engine.timer = FLOAT32_INFINITY;
   }
 
   counter30 = 0;
@@ -1863,8 +1872,6 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
         engine.timer = FLOAT32_INFINITY;
       } 
     }
-  case .newgame;
-    state = .uccinewgame;
   case .uccinewgame;
     state = .idle;
   case .idle;
