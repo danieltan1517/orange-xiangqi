@@ -352,6 +352,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
           }
           if moves.array[it_index].score < 100_000 then {
             R -= moves.array[it_index].score / 40_000;
+            R = max(1, R);
           }
         }
       }
@@ -618,6 +619,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
         R = 4 - improving;
         if moves.array[it_index].score < 100_000 then {
           R -= moves.array[it_index].score / 40_000;
+          R = max(1, R);
         }
       }
     }
