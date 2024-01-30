@@ -69,8 +69,9 @@ protocol complaint Xiangqi Engine. This project supports Windows, Mac, and Linux
 
 ### Evaluation
 * Efficiently Updatable Neural Networks with Incremental Update
-* 2 Hidden Layers
+* 2 Layer Neural Network (2 x (1620 x 128) -> 1)
 * Supports AVX2, SSE, and CPU without SIMD
+* Trained on 40000 Grandmaster Games
 
 ### Repetition Rules
 * 100% World Xiangqi Federation Repetition Rules Coverage
