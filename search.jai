@@ -209,16 +209,27 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     depth -= 3;
   }
 
+  improving := 1;
   att := attackers(xiangqi);
   incheck_position := true;
   child_pv: PV;
   if incheck(xiangqi, att) then {
+    improving = 1;
+    history.evals[ply] = -MATE;
     mark_previous_move(xiangqi, .Check);
     incheck_position = true;
   } else {
     mark_previous_move(xiangqi, .Idle);
     incheck_position = false;
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
+    if ply < 4 || evaluation > history.evals[ply-2] || evaluation > history.evals[ply-4] then {
+      improving = 1;
+    } else {
+      improving = 0;
+    }
+
+    depth -= 1 - improving;
+    history.evals[ply] = cast(s16) evaluation;
     // reverse futility pruning.
     if evaluation >= beta + depth * 200 {
       return evaluation;
@@ -272,9 +283,13 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
   best_score := -MATE + ply;
   best_move  := NULL_MOVE;
   flag       := Flag.Alpha;
-  late_move_pruning := depth * depth + 3;
+  late_move_pruning := (depth * depth + 3) / (2 - improving);
   late_quiet_see := -12 * depth * depth;
   late_quiet_cap := -100 * depth;
+  tt_capture: bool = false;
+  if tthit && extension == 1 && is_capture(ttentry.best_move) then {
+    tt_capture = true;
+  }
 
   for mov: xiangqi {
     if !is_legal(xiangqi, att, mov) then {
@@ -331,7 +346,13 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         if quiet_moves_made < 2 || depth < 3 then {
           R = 1;
         } else {
-          R = 3;
+          R = 4 - improving;
+          if tt_capture == true {
+            R += 3;
+          }
+          if moves.array[it_index].score < 100_000 then {
+            R -= moves.array[it_index].score / 40_000;
+          }
         }
       }
 
@@ -479,15 +500,26 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
     depth -= 3;
   }
 
+  improving := 1;
   att := attackers(xiangqi);
   incheck_position := true;
   if incheck(xiangqi, att) then {
+    improving = 1;
+    history.evals[ply] = -MATE;
     mark_previous_move(xiangqi, .Check);
     incheck_position = true;
   } else {
     incheck_position = false;
     mark_previous_move(xiangqi, .Idle);
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
+    if ply < 4 || evaluation > history.evals[ply-2] || evaluation > history.evals[ply-4] then {
+      improving = 1;
+    } else {
+      improving = 0;
+    }
+
+    depth -= 1 - improving;
+    history.evals[ply] = cast(s16) evaluation;
     // reverse futility pruning.
     if evaluation >= beta + depth * 200 {
       return evaluation;
@@ -535,7 +567,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
   best_move  := NULL_MOVE;
   moves_made := 0;
   quiet_moves_made := 0;
-  late_move_pruning := depth * depth + 3;
+  late_move_pruning := (depth * depth + 3) / (2 - improving);
   late_quiet_see := -12 * depth * depth;
   late_quiet_cap := -100 * depth;
 
@@ -583,7 +615,10 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       if quiet_moves_made < 2 || depth < 3 then {
         R = 1;
       } else {
-        R = 3;
+        R = 4 - improving;
+        if moves.array[it_index].score < 100_000 then {
+          R -= moves.array[it_index].score / 40_000;
+        }
       }
     }
 
@@ -1129,6 +1164,7 @@ History :: struct {
   phase_value: int;
   max_search_depth: int;
   moves:       [128] Move32;
+  evals:       [128] s16;
   accumulator: [128] Accumulator #align 64; 
   killer:  [128][2] Move32;
   counter: [14][90] Move32;
