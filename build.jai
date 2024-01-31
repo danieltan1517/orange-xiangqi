@@ -186,7 +186,7 @@ bayeselo_run_pgn :: (output_file: string, pgn_files: ..string) {
 
   read_bayeselo :: () #expand {
     while true {
-      success = read_from_process(*process, output, error, timeout_ms=1);
+      success = read_from_process(*process, output, error, timeout_ms=500);
       str: string;
       str.data = output.data;
       str.count = output.count;
