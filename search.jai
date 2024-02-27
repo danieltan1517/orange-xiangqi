@@ -231,7 +231,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     depth -= 1 - improving;
     history.evals[ply] = cast(s16) evaluation;
     // reverse futility pruning.
-    if evaluation >= beta + depth * 200 {
+    if evaluation >= beta + depth * 75 && abs(evaluation) < (MATE-100) {
       return evaluation;
     }
 
@@ -256,12 +256,13 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     }
 
     // razoring.
-    if depth <= 5 && evaluation + (150*depth) <= alpha {
+    if depth <= 5 && evaluation + (65*depth) <= alpha {
       score := quiescene(xiangqi, history, alpha, alpha+1);
       if score <= alpha then {
         return score;
       }
     }
+    depth += 1 - improving;
   }
 
   extension := search_extensions(tthit, ttentry, incheck_position, xiangqi, history, depth, alpha, beta);
@@ -348,7 +349,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         } else {
           R = 4 - improving;
           if tt_capture == true {
-            R += 3;
+            R += 2;
           }
           if moves.array[it_index].score < 100_000 then {
             R -= moves.array[it_index].score / 40_000;
@@ -522,7 +523,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
     depth -= 1 - improving;
     history.evals[ply] = cast(s16) evaluation;
     // reverse futility pruning.
-    if evaluation >= beta + depth * 200 {
+    if evaluation >= beta + depth * 75 {
       return evaluation;
     }
 
@@ -547,12 +548,13 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
     }
 
     // razoring.
-    if depth <= 5 && evaluation + (150*depth) <= alpha {
+    if depth <= 5 && evaluation + (65*depth) <= alpha {
       score := quiescene(xiangqi, history, alpha, alpha+1);
       if score <= alpha then {
         return score;
       }
     }
+    depth += 1 - improving;
   }
 
   // do a lazy chases initialization.
@@ -1235,9 +1237,6 @@ tt_prune :: (tthit: bool, ttentry: Entry, alpha: int, beta: int, depth: int, pv:
 }
 
 tt_write :: (x: *Xiangqi, best_move: Move32, score: int, depth: int, flag: Flag) {
-  if abs(score) > (MATE-100) then
-    return;
-
   hash  := x.hash;
   index := hash % transpositions.count;
   prefetch(*transpositions[index]);

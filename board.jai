@@ -2470,6 +2470,10 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
     return VALUES[xiangqi.board[to] >> 2];
   }
 
+  if !is_protected(xiangqi, move) then {
+    return VALUES[xiangqi.board[to] >> 2];
+  }
+
   ours: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
   opps: SEE_Flags = SEE_TABLE[SQUARES[turn ^ 1][to]] | SEE_Flags.Attacking;
   row, col := moddiv90(to);
@@ -2637,7 +2641,7 @@ get_exchange_move :: (move: Move32) -> Move32 {
 
 get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_count: int) {
   count := xiangqi.hashes.count - 2;
-  if count < 0 || xiangqi.hashes.info[count].status != .Idle {
+  if count < 0 || xiangqi.hashes.info[count].status & (.Check|.Cancel) {
     return;
   }
 
