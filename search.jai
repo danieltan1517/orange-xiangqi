@@ -1272,7 +1272,6 @@ in_middlegame :: inline (history: *History) -> bool {
 judge_position :: (xiangqi: *Xiangqi) #expand {
   if `ply > 1 then {
     state := judge_prune(xiangqi, 0, `beta);
-    //state := judge(xiangqi);
     if state == {
     case .Win;
       `return  MATE - `ply;

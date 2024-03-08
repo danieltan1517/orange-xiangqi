@@ -446,37 +446,37 @@ incheck :: inline (xiangqi: *Xiangqi) -> bool {
   return incheck(xiangqi, att);
 }
 
+knight_check :: (xiangqi: *Xiangqi, kni: int, diff: int) -> bool {
+  start := 0;
+  end := 3;
+  if diff > 0 {
+    start = 4;
+    end = 7;
+  } 
+  for i : start..end {
+    if diff == KNI_DIR[i] then {
+      index := kni + KNI_BLK[i];
+      if xiangqi.board[index] == 0 then {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+legal :: (pieces: Array_u8, arr: [2] u64, ksq: int, attflags: AttFlags, type: AttFlags, number: int) -> bool {
+  if attflags & type {
+    for sq : pieces {
+      between, r := get_table_entry(sq, ksq);
+      if popcount(arr[r] & between) == number then {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 incheck :: (xiangqi: *Xiangqi, attflags: AttFlags) -> bool {
-
-  knight_check :: (xiangqi: *Xiangqi, kni: int, diff: int) -> bool {
-    start := 0;
-    end := 3;
-    if diff > 0 {
-      start = 4;
-      end = 7;
-    } 
-    for i : start..end {
-      if diff == KNI_DIR[i] then {
-        index := kni + KNI_BLK[i];
-        if xiangqi.board[index] == 0 then {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  legal :: (pieces: Array_u8, arr: [2] u64, ksq: int, attflags: AttFlags, type: AttFlags, number: int) -> bool {
-    if attflags & type {
-      for sq : pieces {
-        between, r := get_table_entry(sq, ksq);
-        if popcount(arr[r] & between) == number then {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
 
   if attflags == 0 then {
     return false;
@@ -2508,9 +2508,9 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
     turn ^= 1;
     gain[d] = VALUES[piece_code] - gain[d-1];
     // prune.
-    if max(-gain[d-1], gain[d]) < 0 then {
+    /*if max(-gain[d-1], gain[d]) < 0 then {
       break; 
-    }
+    }*/
 
     if piece_code == 1 then {
       // search for possible discovery knight.
