@@ -517,6 +517,59 @@ incheck :: (xiangqi: *Xiangqi, attflags: AttFlags) -> bool {
   return false;
 }
 
+num_attackers :: (xiangqi: *Xiangqi, attflags: AttFlags) -> int, checkflags: AttFlags {
+  num_checkers := 0;
+  checkflags: AttFlags;
+  if attflags & .Pawn {
+    num_checkers += 1;
+    checkflags |= .Pawn;
+  }
+
+  turn := xiangqi.turn;
+  opp := turn ^ 1;
+  ksq := get_king(xiangqi, turn);
+
+  if attflags & .Knight {
+    for kni : xiangqi.pieces[opp].kni {
+      abs_diff, diff := index_abs_diff(ksq, kni);
+      if abs_diff > 19 then {
+        continue;
+      }
+      if knight_check(xiangqi, kni, diff) then {
+        num_checkers += 1;
+        checkflags |= .Knight;
+      }
+    }
+  }
+
+  // kings can never face each other. so no need to check the king.
+  krow, kcol := moddiv90(ksq);
+  occ_row: u64 = xiangqi.rows[kcol];
+  occ_col: u64 = xiangqi.cols[krow];
+  arr: [2] u64 = .[occ_row, occ_col];
+  if attflags & .Rook {
+    for sq : xiangqi.pieces[opp].rook {
+      between, r := get_table_entry(sq, ksq);
+      if popcount(arr[r] & between) == 2 then {
+        num_checkers += 1;
+        checkflags |= .Rook;
+      }
+    }
+  }
+
+  if attflags & .Cannon {
+    for sq : xiangqi.pieces[opp].cannon {
+      between, r := get_table_entry(sq, ksq);
+      if popcount(arr[r] & between) == 3 then {
+        num_checkers += 1;
+        checkflags |= .Cannon;
+      }
+    }
+  }
+
+  return num_checkers, checkflags;
+}
+
 is_attacked_by_knight :: (xiangqi: *Xiangqi, kni: int, diff: int, from: int, to: int) -> bool {
   bits := cast(u64) KNIGHT_TABLE[kni];
   if diff > 0 {
@@ -1121,6 +1174,23 @@ copy_pv :: (pv: *PV, child_pv: PV, mov: Move32) {
 }
 
 NULL_MOVE :: Move32.{0,0,0,0};
+
+gen_checks :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
+  assert(att != 0);
+  turn := xiangqi.turn;
+  pieces := *xiangqi.pieces[turn];
+  num_checkers, checkflags := num_attackers(xiangqi, att);
+
+  // unblockable, undodgable check.
+  if num_checkers > 2 {
+    king_moves(xiangqi, moves, pieces.king.array[0], turn);
+    return;  
+  } else if num_checkers == 2 {
+
+  } else {
+
+  }
+}
 
 legal_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   gen_moves(xiangqi, moves);
@@ -1858,7 +1928,6 @@ perft_divide :: (xiangqi: *Xiangqi, depth: int) -> int {
 perft :: (xiangqi: *Xiangqi, depth: int) -> int {
   if depth <= 0 then
     return 1;
-
   moves: Moves;
   legal_moves(xiangqi, *moves);
 
