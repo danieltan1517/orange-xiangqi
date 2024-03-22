@@ -1175,20 +1175,30 @@ copy_pv :: (pv: *PV, child_pv: PV, mov: Move32) {
 
 NULL_MOVE :: Move32.{0,0,0,0};
 
-gen_checks :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
+gen_check_quiets :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
   assert(att != 0);
   turn := xiangqi.turn;
   pieces := *xiangqi.pieces[turn];
   num_checkers, checkflags := num_attackers(xiangqi, att);
+  king_quiet_moves(xiangqi, moves, pieces.king.array[0], turn);
 
   // unblockable, undodgable check.
-  if num_checkers > 2 {
-    king_moves(xiangqi, moves, pieces.king.array[0], turn);
+  if num_checkers > 2 || checkflags & .Pawn {
     return;  
-  } else if num_checkers == 2 {
+  }
+
+  if num_checkers == 2 {
 
   } else {
+    if checkflags == .Rook {
 
+    } else if checkflags == .Cannon {
+
+    } else if checkflags == .Knight {
+
+    } else {
+
+    }
   }
 }
 
