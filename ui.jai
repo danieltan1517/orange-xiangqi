@@ -834,7 +834,7 @@ main :: () {
     render_ui();
 
     // sound effects.
-    //Sound.update();
+    Sound.update();
     draw_popups();  // This draws Subwindows as well.
     sleep_milliseconds(20);
     simp.swap_buffers(win);
@@ -851,7 +851,7 @@ render_arrow :: (arrow: Arrow, corner_x: float, corner_y: float, square: float) 
   arrow_point :: (index: int, corner_x: float, corner_y: float, square: float, half_square: float) -> Vector2 {
     index = orient_piece(cast(u8)index);
     row, col := row_col_of(cast(u8)index);
-    return make_vector2(corner_x + square * row + half_square, corner_y + square * col + half_square);
+    return Vector2.{corner_x + square * row + half_square, corner_y + square * col + half_square};
   }
 
   hsquare := square * .5;
@@ -865,8 +865,8 @@ render_arrow :: (arrow: Arrow, corner_x: float, corner_y: float, square: float) 
   ct   := (dx / hypotenuse);
   st   := (dy / hypotenuse);
   size := square * .12;
-  w    := make_vector2(ct, st) * size;
-  h    := make_vector2(st, -ct) * size;
+  w    := Vector2.{ct, st} * size;
+  h    := Vector2.{st, -ct} * size;
 
   qsquare := square * .70;
   from_pt.x += ct * square * .425;
@@ -883,8 +883,8 @@ render_arrow :: (arrow: Arrow, corner_x: float, corner_y: float, square: float) 
   from_pt = to_pt;
   to_pt.x += ct * qsquare * .6;
   to_pt.y += st * qsquare * .6;
-  w  = make_vector2(ct, st) * size;
-  h  = make_vector2(st, -ct) * size;
+  w  = Vector2.{ct, st} * size;
+  h  = Vector2.{st, -ct} * size;
   p0 = from_pt + w - h * 2.25;
   p1 = to_pt + w;
   p2 = from_pt + w + h * 2.25;
@@ -1104,10 +1104,10 @@ render_piece :: (board_x: float, board_y: float, sq: float, from: u8, sprite_x: 
     sprite_y += 2.0;
   }
 
-  uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/7.0);
-  uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/7.0);
-  uv2 := make_vector2((sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
-  uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
+  uv0 := Vector2.{sprite_x*1.0/7.0, sprite_y*1.0/7.0};
+  uv1 := Vector2.{(sprite_x+1.0)*1.0/7.0, sprite_y*1.0/7.0};
+  uv2 := Vector2.{(sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0};
+  uv3 := Vector2.{sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0};
 
   immediate_quad(gridx, gridy, gridx + sq, gridy + sq, color, uv0, uv1, uv2, uv3);
 }
@@ -1127,10 +1127,10 @@ render_possible_move :: (board_x: float, board_y: float, sq: float, from: u8, co
   gridx := board_x + index_x*sq; 
   gridy := board_y + index_y*sq;
 
-  uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/7.0);
-  uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/7.0);
-  uv2 := make_vector2((sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
-  uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
+  uv0 := Vector2.{sprite_x*1.0/7.0, sprite_y*1.0/7.0};
+  uv1 := Vector2.{(sprite_x+1.0)*1.0/7.0, sprite_y*1.0/7.0};
+  uv2 := Vector2.{(sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0};
+  uv3 := Vector2.{sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0};
 
   // enlarge or make it smaller to make the move highlighting more aesthetically pleasing... 
   if mov_anim_state != .Play && piece != 0 then {
@@ -1152,10 +1152,10 @@ render_piece_drag :: (mousex: float, mousey: float, hsq: float, sq: float, sprit
     sprite_y += 2.0;
   }
 
-  uv0 := make_vector2(sprite_x*1.0/7.0, sprite_y*1.0/7.0);
-  uv1 := make_vector2((sprite_x+1.0)*1.0/7.0, sprite_y*1.0/7.0);
-  uv2 := make_vector2((sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
-  uv3 := make_vector2(sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0);
+  uv0 := Vector2.{sprite_x*1.0/7.0, sprite_y*1.0/7.0};
+  uv1 := Vector2.{(sprite_x+1.0)*1.0/7.0, sprite_y*1.0/7.0};
+  uv2 := Vector2.{(sprite_x+1.0)*1.0/7.0, (sprite_y+1.0)*1.0/7.0};
+  uv3 := Vector2.{sprite_x*1.0/7.0, (sprite_y+1.0)*1.0/7.0};
 
   immediate_quad(mousex - hsq, mousey - hsq, mousex + hsq, mousey + hsq, color, uv0, uv1, uv2, uv3);
 
@@ -1285,17 +1285,16 @@ random_pick_board_position :: () {
 }
 
 stage_sound :: (data: *Sound.Sound_Data, category := Sound.Sound_Category.GENERAL_SFX, perturb := true) -> *Sound.Sound_Stream {
-  /*stream := Sound.make_stream(data, category);
+  stream := Sound.make_stream(data, category);
   if perturb {
     stream.user_volume_scale = random_get_within_range(0.5, 1.4);
     stream.rate_scale        = random_get_within_range(0.7, 1.22);
   }
-  return stream;*/
-  return null;
+  return stream;
 }
 
 init_sound :: () {
-  /*sound_quiet_move = Sound.load_audio_file("data/quiet_move.wav");
+  sound_quiet_move = Sound.load_audio_file("data/quiet_move.wav");
   assert(sound_quiet_move.loaded);
 
   sound_capture_move = Sound.load_audio_file("data/capture_move.wav");
@@ -1303,19 +1302,18 @@ init_sound :: () {
 
   // initialize sound player
   Sound.sound_player_init(.{});
-  */
 }
 
 play_sound :: (sound: *Sound.Sound_Data) {
-  //stream := stage_sound(sound, .GENERAL_SFX, true);
-  //Sound.start_playing(stream);
+  stream := stage_sound(sound, .GENERAL_SFX, true);
+  Sound.start_playing(stream);
 }
 
 immediate_quad :: (x0: float, y0: float, x1: float, y1: float, color: Vector4, uv0: Vector2, uv1: Vector2, uv2: Vector2, uv3: Vector2) {
-  p0 := make_vector2(x0, y0);    
-  p3 := make_vector2(x0, y1);
-  p2 := make_vector2(x1, y1);
-  p1 := make_vector2(x1, y0);
+  p0 := Vector2.{x0, y0};    
+  p3 := Vector2.{x0, y1};
+  p2 := Vector2.{x1, y1};
+  p1 := Vector2.{x1, y0};
   simp.immediate_quad(p0, p1, p2, p3, color, uv0, uv1, uv2, uv3);
 }
 
@@ -1413,7 +1411,7 @@ gui_make_move :: (move: Move32, animate: bool) {
         mov_anim_state = MovAnim.Play;
       }
 
-      /*sound_data: *Sound.Sound_Data;
+      sound_data: *Sound.Sound_Data;
       if move.capture == 0 {
         sound_data = *sound_quiet_move;
       } else {
@@ -1421,7 +1419,7 @@ gui_make_move :: (move: Move32, animate: bool) {
       }
       if sound == true then {
         play_sound(sound_data);
-      }*/
+      }
       reset(*moves);
       legal_moves(*xiangqi, *moves);
       status_string = "";
