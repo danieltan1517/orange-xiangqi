@@ -398,7 +398,7 @@ is_legal :: (xiangqi: *Xiangqi, attackers: AttFlags, move: Move32) -> bool {
   return true;
 }
 
-get_modified_row_cols :: (xiangqi: *Xiangqi, ksq: int, move: Move32) -> occ_row: u64, occ_col: u64, krow: int, kcol: int {
+get_modified_row_cols :: (xiangqi: *Xiangqi, ksq: int, move: Move32) -> occ_row: u64, occ_col: u64 {
   krow, kcol := moddiv90(ksq);
   occ_row: u64 = xiangqi.rows[kcol];
   if kcol == move.from / 9 {
@@ -418,7 +418,7 @@ get_modified_row_cols :: (xiangqi: *Xiangqi, ksq: int, move: Move32) -> occ_row:
     occ_col |= cast, no_check(u16) (1 << (move.to / 9));
   }
 
-  return occ_row, occ_col, krow, kcol;
+  return occ_row, occ_col;
 }
 
 get_table_entry :: (sq1: int, sq2: int) -> u64, u64 #expand {
@@ -446,7 +446,7 @@ incheck :: inline (xiangqi: *Xiangqi) -> bool {
   return incheck(xiangqi, att);
 }
 
-knight_check :: (xiangqi: *Xiangqi, kni: int, diff: int) -> bool {
+knight_check :: (xiangqi: *Xiangqi, kni: int, diff: int) -> bool, int {
   start := 0;
   end := 3;
   if diff > 0 {
@@ -457,11 +457,11 @@ knight_check :: (xiangqi: *Xiangqi, kni: int, diff: int) -> bool {
     if diff == KNI_DIR[i] then {
       index := kni + KNI_BLK[i];
       if xiangqi.board[index] == 0 then {
-        return true;
+        return true, index;
       }
     }
   }
-  return false;
+  return false, -1;
 }
 
 legal :: (pieces: Array_u8, arr: [2] u64, ksq: int, attflags: AttFlags, type: AttFlags, number: int) -> bool {
@@ -642,7 +642,7 @@ is_legal_ksq :: (xiangqi: *Xiangqi, move: Move32, ksq: int, attflags: AttFlags) 
     }
   }
 
-  occ_row, occ_col, krow, kcol := get_modified_row_cols(xiangqi, ksq, move);
+  occ_row, occ_col := get_modified_row_cols(xiangqi, ksq, move);
   arr: [2] u64 = .[occ_row, occ_col];
 
   if !legal(xiangqi.pieces[opp].king, arr, ksq, move.to, attflags, .King, 2) {
@@ -864,6 +864,20 @@ rook_quiets :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
   cols_bits: u64 = ROOK_MAGICS[col][xiangqi.cols[row]] & (~xiangqi.cols[row]);
   add_row_moves(xiangqi, moves, rows_bits, move, col);
   add_col_moves(xiangqi, moves, cols_bits, move, row);
+}
+
+rook_quiets_check :: (xiangqi: *Xiangqi, moves: *Moves, sq: int, row_or_col: u64) {
+  row, col := moddiv90(sq);
+  move: Move32;
+  move.from = cast(u8) sq;
+  move.piece = xiangqi.board[sq];
+  if row_or_col == 1 {
+    rows_bits: u64 = ROOK_MAGICS[row][xiangqi.rows[col]] & (~xiangqi.rows[col]) & 0b1_1111_1111;
+    add_row_moves(xiangqi, moves, rows_bits, move, col);
+  } else {
+    cols_bits: u64 = ROOK_MAGICS[col][xiangqi.cols[row]] & (~xiangqi.cols[row]);
+    add_col_moves(xiangqi, moves, cols_bits, move, row);
+  }
 }
 
 rook_captures :: (xiangqi: *Xiangqi, moves: *Moves, sq: int) {
@@ -1175,30 +1189,111 @@ copy_pv :: (pv: *PV, child_pv: PV, mov: Move32) {
 
 NULL_MOVE :: Move32.{0,0,0,0};
 
+// generates psuedolegal check moves.
+// attempts to do a more clear pruning of pseudolegal moves.
+
 gen_check_quiets :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
   assert(att != 0);
   turn := xiangqi.turn;
+  opp  := turn ^ 1;
+  ksq := get_king(xiangqi, turn);
   pieces := *xiangqi.pieces[turn];
   num_checkers, checkflags := num_attackers(xiangqi, att);
   king_quiet_moves(xiangqi, moves, pieces.king.array[0], turn);
 
   // unblockable, undodgable check.
-  if num_checkers > 2 || checkflags & .Pawn {
+  if num_checkers > 2 || checkflags & .Pawn || checkflags == (.Rook|.Knight) {
     return;  
   }
 
   if num_checkers == 2 {
 
+    // cannot block a double cannon|rook check
+    // note that double cannon refers to two cannons simultaneously checking the king
+    // not cannon using another cannon as a mount.
+    if checkflags == .Rook {
+      return;
+    }
+
   } else {
     if checkflags == .Rook {
-
+      
     } else if checkflags == .Cannon {
+      krow, kcol := moddiv90(ksq);
+      occ_row: u64 = xiangqi.rows[kcol];
+      occ_col: u64 = xiangqi.cols[krow];
+      arr: [2] u64 = .[occ_row, occ_col];
+      // determine if the mount can be moved.
+      for can : xiangqi.pieces[opp].cannon {
+        between, r := get_table_entry(can, ksq);
+        bit_line := cast(u64)(arr[r] & between);
+        if popcount(bit_line) == 3 then {
+          bit_line &= bit_line - 1;
+          mount := bit_scan_forward(bit_line);
+          if r == 0 {
+            mount = row_col_to_index(mount, kcol);
+          } else {
+            mount = row_col_to_index(krow, mount);
+          }
+
+          // cannot move an opponent's piece
+          if ((xiangqi.board[mount] >> 1) & 1) == turn {
+            if (xiangqi.board[mount] >> 2) == {
+            case A;
+              advisor_quiet_moves(xiangqi, moves, mount);
+            case E;
+              ele_quiet_moves(xiangqi, moves, mount);
+            case H;
+              kni_quiet_moves(xiangqi, moves, mount);
+            case R;
+              rook_quiets_check(xiangqi, moves, mount, r);
+            case C;
+              rook_quiets_check(xiangqi, moves, mount, r);
+            case S;
+              pawn_quiet_moves(xiangqi, moves, mount, turn);
+            }
+          }
+
+          
+
+
+        }
+      }
 
     } else if checkflags == .Knight {
-
-    } else {
-
-    }
+      to := -1;
+      for kni : xiangqi.pieces[opp].kni {
+        abs_diff, diff := index_abs_diff(ksq, kni);
+        if abs_diff > 19 then {
+          continue;
+        }
+        is_checked, index := knight_check(xiangqi, kni, diff);
+        if is_checked then {  
+          to = index;
+        }
+      }
+      row, col := moddiv90(to);
+      occ_row: u64 = xiangqi.rows[col];
+      occ_col: u64 = xiangqi.cols[row];
+      arr: [2] u64 = .[occ_row, occ_col];
+      opps_flags: SEE_Flags = SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking;
+      stack: Stack;
+      bitboard: Bitboard128;
+      while true {
+        from, opps_flags= := get_attackers(xiangqi, *stack, opps_flags, turn, to, arr, bitboard, false, CANNON_VALUE = 1, ROOK_VALUE = 1);
+        if from == -1 {
+          break;
+        } 
+        set_bit(*bitboard, from);
+        move := Move32.{
+          from=cast(u8)from, 
+          to=cast(u8)to, 
+          capture=xiangqi.board[to], 
+          piece=xiangqi.board[from]
+        };
+        append_move(moves, move);
+      }
+    } 
   }
 }
 
@@ -2411,7 +2506,8 @@ sliding_see :: (pieces: Array_u8, stack: *Stack, arr: [2] u64, to: int, count: i
   }
 }
 
-get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int, to: int, arr: [2] u64, bitboard: Bitboard128, flying_general: bool) -> int, SEE_Flags {
+// TODO: see if there is a better way to write this...
+get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int, to: int, arr: [2] u64, bitboard: Bitboard128, flying_general: bool, $CANNON_VALUE: int = 3, $ROOK_VALUE: int = 2) -> int, SEE_Flags {
   while is_empty(stack) && flags != 0 {
 
     if flags & .Adv then {
@@ -2439,13 +2535,13 @@ get_attackers :: (xiangqi: *Xiangqi, stack: *Stack, flags: SEE_Flags, turn: int,
     } 
 
     if flags & .Cannon then {
-      sliding_see(xiangqi.pieces[turn].cannon, stack, arr, to, 3, bitboard);
+      sliding_see(xiangqi.pieces[turn].cannon, stack, arr, to, CANNON_VALUE, bitboard);
       flags &= ~.Cannon;
       continue;
     } 
 
     if flags & .Rook then {
-      sliding_see(xiangqi.pieces[turn].rook, stack, arr, to, 2, bitboard);
+      sliding_see(xiangqi.pieces[turn].rook, stack, arr, to, ROOK_VALUE, bitboard);
       flags &= ~.Rook;
       continue;
     } 

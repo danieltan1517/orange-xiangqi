@@ -742,6 +742,8 @@ main :: () {
   font := simp.get_font_at_size("data", "SourceHanSansHWSC-Regular.otf", 16);
   ui_set_font(font);
 
+  //xiangqi_fen(*xiangqi, "5k3/9/9/9/3n5/2B6/6N2/C8/3K5/4RAB2 b - - 0 1");
+  //xiangqi_fen(*xiangqi, "5k3/9/9/9/3n5/2B6/6N2/C8/3K5/4RAB2 b - - 0 1");
   xiangqi_startpos(*xiangqi);
   reset(*moves);
   array_reserve(*red_pv_lines, 200);
@@ -752,7 +754,7 @@ main :: () {
   ui_init();
   ctrl_pressed := 0;
 
-  load_engines_at_startup();
+  //load_engines_at_startup();
 
   subwindow_newgame.rect = get_rect(50,50,580,580);
   subwindow_newgame.draw = draw_subwindow_newgame;
@@ -1421,10 +1423,17 @@ gui_make_move :: (move: Move32, animate: bool) {
         play_sound(sound_data);
       }
       reset(*moves);
-      legal_moves(*xiangqi, *moves);
-      status_string = "";
+
 
       att := attackers(*xiangqi);
+      // TODO: remove after done.
+      /*if incheck(*xiangqi, att) {
+        gen_check_quiets(*xiangqi, att, *moves);
+      } else {
+        legal_moves(*xiangqi, *moves);
+      }*/
+      legal_moves(*xiangqi, *moves);
+      status_string = "";
       if incheck(*xiangqi, att) then {
         chase_count = 0;
         status_string = get_ui_str().status_string[0];
@@ -2211,10 +2220,18 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
     arr := get_engine_names(true);
     label(rect, get_ui_str().fen, label_theme);
     rect.x += k * 2.5;
-    action_c, _, fen_state := text_input(rect, subwindow_fenstring, text_theme);
-    if action_c & .TEXT_MODIFIED {
-      subwindow_fenstring = get_result(fen_state);
+
+    // TODO: see if this is a problem...
+    action_c, newsubwindow_fenstring := text_input(rect, subwindow_fenstring, text_theme);
+    modify_string :: (ps: *string, new_value: string) {
+      free(ps.*);
+      ps.* = copy_string(new_value);
     }
+
+    if action_c & .ENTERED {
+      modify_string(*subwindow_fenstring, newsubwindow_fenstring);
+    }
+
     rect.y -= k * 1.1;
     rect.x -= k * 2.5;
     label(rect, get_ui_str().red, label_theme);
@@ -2244,7 +2261,7 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
     if button(rect, get_ui_str().play) {
       counter30 = 0;
       subwindow_newgame.open = false;
-      str := get_result(fen_state);
+      str := subwindow_fenstring;
       if !str || equal(str, "startpos") then {
         xiangqi_startpos(*xiangqi);
         if fen_string {
@@ -2262,7 +2279,7 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
           fen_string = "";
         }
       }
-      set_input(fen_state, "startpos"); 
+      //set_input(fen_state, "startpos"); 
       subwindow_fenstring = "startpos";
       status_string = "";
       moves_made_count = 0;
