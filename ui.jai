@@ -742,9 +742,9 @@ main :: () {
   font := simp.get_font_at_size("data", "SourceHanSansHWSC-Regular.otf", 16);
   ui_set_font(font);
 
-  //xiangqi_fen(*xiangqi, "5k3/9/9/9/3n5/2B6/6N2/C8/3K5/4RAB2 b - - 0 1");
-  //xiangqi_fen(*xiangqi, "5k3/9/9/9/3n5/2B6/6N2/C8/3K5/4RAB2 b - - 0 1");
-  xiangqi_startpos(*xiangqi);
+  //xiangqi_fen(*xiangqi, "1ceak4/9/h2a5/2p1p3p/5cp2/2h2H3/6PCP/3AE4/2C6/3A1K1H1 w - - 0 1");
+  xiangqi_fen(*xiangqi, "1cbak4/9/n2a5/2p1p3p/5cp2/2n2N3/6PCP/3AB4/2C6/3A1K1N1 w - - 0 1");
+ //"CnN1k1b2/c3a4/4ba3/9/2nr5/9/9/4C4/4A4/4KA3 w - - 0 1");
   reset(*moves);
   array_reserve(*red_pv_lines, 200);
   array_reserve(*black_pv_lines, 200);
@@ -1426,12 +1426,6 @@ gui_make_move :: (move: Move32, animate: bool) {
 
 
       att := attackers(*xiangqi);
-      // TODO: remove after done.
-      /*if incheck(*xiangqi, att) {
-        gen_check_quiets(*xiangqi, att, *moves);
-      } else {
-        legal_moves(*xiangqi, *moves);
-      }*/
       legal_moves(*xiangqi, *moves);
       status_string = "";
       if incheck(*xiangqi, att) then {
