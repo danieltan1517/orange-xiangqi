@@ -299,11 +299,10 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     }
 
     legal_moves += 1;
-    if !incheck_position && is_quiet(mov) && moves_made >= late_move_pruning then {
-      break;
-    }
-
     if !incheck_position && depth < 3 then {
+      if is_quiet(mov) && moves_made >= late_move_pruning then {
+        break;
+      }
       if is_quiet(mov) {
         // quiet move.
         if see(xiangqi, mov) < late_quiet_see {
@@ -718,12 +717,10 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
     }
   }
 
-  if incheck_position && num_legal_moves == 0 then {
-    return -MATE + ply;
-  }
-
-  if !incheck_position && is_checkmate(xiangqi, num_legal_moves, att) then {
-    return -MATE + ply;
+  if num_legal_moves == 0 then {
+    if (incheck_position || is_checkmate(xiangqi, history, num_legal_moves, att)) then { 
+      return -MATE + ply;
+    }
   }
 
   return best_score;
@@ -1273,3 +1270,43 @@ judge_position :: (xiangqi: *Xiangqi) #expand {
   }
 }
 
+is_checkmate :: (xiangqi: *Xiangqi, h: *History, num_legal_moves: int, att: AttFlags) -> bool {
+  if num_legal_moves != 0 then return false;
+  turn := xiangqi.turn;
+  pieces := *xiangqi.pieces[turn];
+  if att == 0 && (h.phase_value > 8 || pieces.pawn.count > 0) then return false;
+  for adv : pieces.adv {
+    if dir_legal_moves(xiangqi, att, adv, DEFENSE_SQ_TABLE, ADV_DIR) {
+      return false;
+    }
+  }
+  for ele : pieces.ele {
+    if blocked_legal_moves(xiangqi, att, ele, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR) {
+      return false;
+    }
+  }
+  for pawn: pieces.pawn {
+    if dir_legal_moves(xiangqi, att, pawn, KP_TABLE[turn], KING_DIR) {
+      return false;
+    }
+  }
+  for kni : pieces.kni {
+    if blocked_legal_moves(xiangqi, att, kni, KNIGHT_TABLE, KNI_DIR, KNI_BLK) {
+      return false;
+    }
+  }
+  if dir_legal_moves(xiangqi, att, get_king(xiangqi, turn), KP_TABLE[turn], KING_DIR) {
+    return false;
+  }
+  for rook : pieces.rook {
+    if rook_quiet_legal(xiangqi, att, rook) {
+      return false;
+    }
+  }
+  for cannon : pieces.cannon {
+    if rook_quiet_legal(xiangqi, att, cannon) {
+      return false;
+    }
+  }
+  return true;
+}

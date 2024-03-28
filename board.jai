@@ -1159,46 +1159,6 @@ dir_moves :: (xiangqi: *Xiangqi, moves: *Moves, ksq: int, TABLE: [90] u8, DIR: [
   }
 }
 
-is_checkmate :: (xiangqi: *Xiangqi, num_legal_moves: int, att: AttFlags) -> bool {
-  if num_legal_moves != 0 then return false;
-  turn := xiangqi.turn;
-  pieces := *xiangqi.pieces[turn];
-  for adv : pieces.adv {
-    if dir_legal_moves(xiangqi, att, adv, DEFENSE_SQ_TABLE, ADV_DIR) {
-      return false;
-    }
-  }
-  for ele : pieces.ele {
-    if blocked_legal_moves(xiangqi, att, ele, DEFENSE_SQ_TABLE, ELE_DIR, ADV_DIR) {
-      return false;
-    }
-  }
-  for pawn: pieces.pawn {
-    if dir_legal_moves(xiangqi, att, pawn, KP_TABLE[turn], KING_DIR) {
-      return false;
-    }
-  }
-  for kni : pieces.kni {
-    if blocked_legal_moves(xiangqi, att, kni, KNIGHT_TABLE, KNI_DIR, KNI_BLK) {
-      return false;
-    }
-  }
-  if dir_legal_moves(xiangqi, att, get_king(xiangqi, turn), KP_TABLE[turn], KING_DIR) {
-    return false;
-  }
-  for rook : pieces.rook {
-    if rook_quiet_legal(xiangqi, att, rook) {
-      return false;
-    }
-  }
-  for cannon : pieces.cannon {
-    if rook_quiet_legal(xiangqi, att, cannon) {
-      return false;
-    }
-  }
-  return true;
-}
-
 dir_legal_moves :: (xiangqi: *Xiangqi, att: AttFlags, ksq: int, TABLE: [90] u8, DIR: [] int) -> bool {
   move: Move32;
   move.from = cast(u8) ksq;
@@ -1521,7 +1481,6 @@ gen_check_captures :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
 
 
   check_sq = find_checker(check_sq, checkflags, xiangqi, opp, turn, ksq, arr);
-  assert(check_sq != -1);
   row, col := moddiv90(check_sq);
   occ_row = xiangqi.rows[col];
   occ_col = xiangqi.cols[row];
@@ -1557,7 +1516,6 @@ gen_check_captures :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
 // generates psuedolegal check moves.
 // attempts to do a more clear pruning of pseudolegal moves.
 gen_check_quiets :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
-  assert(att != 0);
   turn := xiangqi.turn;
   opp  := turn ^ 1;
   ksq := get_king(xiangqi, turn);
