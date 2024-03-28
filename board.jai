@@ -1436,11 +1436,11 @@ gen_check_captures :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
   ksq := get_king(xiangqi, turn);
   pieces := *xiangqi.pieces[turn];
   num_checkers, checkflags := num_attackers(xiangqi, att);
+  check_sq := -1;
   krow, kcol := moddiv90(ksq);
   occ_row: u64 = xiangqi.rows[kcol];
   occ_col: u64 = xiangqi.cols[krow];
   arr: [2] u64 = .[occ_row, occ_col];
-  check_sq := -1;
   defer king_capture_moves(xiangqi, moves, pieces.king.array[0], turn);
   if checkflags & .Cannon {
     // determine if the mount can be moved.
@@ -1522,8 +1522,10 @@ gen_check_captures :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
 
   check_sq = find_checker(check_sq, checkflags, xiangqi, opp, turn, ksq, arr);
   assert(check_sq != -1);
-
   row, col := moddiv90(check_sq);
+  occ_row = xiangqi.rows[col];
+  occ_col = xiangqi.cols[row];
+  arr2: [2] u64 = .[occ_row, occ_col];
   arr[0] |= cast(u64)(1 << row);
   arr[1] |= cast(u64)(1 << col);
 
@@ -1531,7 +1533,7 @@ gen_check_captures :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
   stack: Stack;
   bitboard: Bitboard128;
   while true {
-    from, flags= := get_attackers(xiangqi, *stack, flags, turn, check_sq, arr, bitboard, false, CHANGES = true);
+    from, flags= := get_attackers(xiangqi, *stack, flags, turn, check_sq, arr2, bitboard, false, CHANGES = true);
     if from == -1 {
       break;
     } 
@@ -1699,13 +1701,7 @@ gen_check_quiets :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
 
 legal_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   att := attackers(xiangqi);
-  if incheck(xiangqi, att) {
-    //gen_check_captures(xiangqi, att, moves);
-    gen_captures(xiangqi, moves);
-    gen_check_quiets(xiangqi, att, moves);
-  } else {
-    gen_moves(xiangqi, moves);
-  }
+  gen_moves(xiangqi, moves);
   i := 0;
   while i < moves.count {
     move := moves.array[i].move;

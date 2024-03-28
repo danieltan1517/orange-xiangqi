@@ -784,7 +784,11 @@ pick_quiescene :: (xiangqi: *Xiangqi, att: AttFlags, index: int, stage: Stage, m
   if stage == {
   
   case .Quiescene;
-    gen_captures(xiangqi, moves);
+    if incheck_position then {
+      gen_check_captures(xiangqi, att, moves);
+    } else {
+      gen_captures(xiangqi, moves);
+    }
     stage += 1;
     #through;
   case .Quiescene_Captures;
@@ -868,7 +872,11 @@ pick_move :: (xiangqi: *Xiangqi, att: AttFlags, index: int, stage: Stage, moves:
 
     #through;
   case .InitCaptures;
-    gen_captures(xiangqi, moves);
+    if incheck_position then {
+      gen_check_captures(xiangqi, att, moves);
+    } else {
+      gen_captures(xiangqi, moves);
+    }
     i := index;
     while i < moves.count {
       move := moves.array[i].move;
