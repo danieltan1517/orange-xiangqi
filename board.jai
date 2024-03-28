@@ -323,6 +323,7 @@ is_cannon_pseudolegal :: (xiangqi: *Xiangqi, from: int, to: int) -> bool {
   return count == 1 || (count == 3 && xiangqi.board[to] != 0);
 }
 
+// TODO: not used. maybe delete later?
 is_rook_pseudolegal :: (xiangqi: *Xiangqi, from: int, to: int, arr: [2] u64) -> bool {
   between, r := get_table_entry(from, to);
   occ := arr[r];
@@ -330,6 +331,7 @@ is_rook_pseudolegal :: (xiangqi: *Xiangqi, from: int, to: int, arr: [2] u64) -> 
   return count == 1 || (count == 2 && xiangqi.board[to] != 0);
 }
 
+// TODO: not used. maybe delete later?
 is_cannon_pseudolegal :: (xiangqi: *Xiangqi, from: int, to: int, arr: [2] u64) -> bool {
   between, r := get_table_entry(from, to);
   occ := arr[r];

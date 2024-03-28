@@ -1274,7 +1274,13 @@ is_checkmate :: (xiangqi: *Xiangqi, h: *History, num_legal_moves: int, att: AttF
   if num_legal_moves != 0 then return false;
   turn := xiangqi.turn;
   pieces := *xiangqi.pieces[turn];
-  if att == 0 && (h.phase_value > 8 || pieces.pawn.count > 0) then return false;
+
+  // using correct discrete heuristics to quickly compute that a stalemate is not possible.
+  // 1.) if there are more than one pawn, we know for certain there cannot be a stalemate.
+  // because at least one pawn can be pinned.
+  // 2.) rooks always can make a move if there are no pinners of the king.
+  if pieces.pawn.count > 1 || (att == 0 && pieces.rook.count > 0) return false;
+
   for adv : pieces.adv {
     if dir_legal_moves(xiangqi, att, adv, DEFENSE_SQ_TABLE, ADV_DIR) {
       return false;
