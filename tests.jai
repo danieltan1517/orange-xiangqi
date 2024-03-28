@@ -8,9 +8,9 @@ success := 0;
 
 main :: () {
   init_xiangqi_tables();
-  //see_test_suite();
+  see_test_suite();
   //protection_test_suite();
-  perft_test_suite();
+  //perft_test_suite();
   //repetition_test_suite();
 }
 
