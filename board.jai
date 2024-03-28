@@ -1430,8 +1430,6 @@ NULL_MOVE :: Move32.{0,0,0,0};
 
 
 gen_check_captures :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
-  //assert(att != 0);
-
   mount_cannon := -1;
   turn := xiangqi.turn;
   opp  := turn ^ 1;
@@ -1476,17 +1474,12 @@ gen_check_captures :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
           case S;
             pawn_capture_moves(xiangqi, moves, mount, turn);
           }
-        } else {
-          // opponent is using his own piece as a mount
-          if (xiangqi.board[mount] >> 2) == R {
-            checkflags &= ~.Rook;
-          }
-        }
+        } 
       }
     }
   }
 
-  if num_checkers >= 2 then return;
+  if num_checkers > 1 then return;
   find_checker :: inline (check_sq: int, checkflags: AttFlags, xiangqi: *Xiangqi, opp: int, turn: int, ksq: int, arr: [2] u64) -> int {
     if check_sq != -1 then return check_sq;
 
