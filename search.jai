@@ -285,14 +285,12 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     tt_capture = true;
   }
 
-  legal_moves := 0;
   for mov: xiangqi {
     if !is_legal(xiangqi, att, mov) then {
       erase_move(*moves, it_index);
       continue;
     }
 
-    legal_moves += 1;
     if !incheck(att) && depth < 3 then {
       if is_quiet(mov) && moves_made >= late_move_pruning then {
         break;
