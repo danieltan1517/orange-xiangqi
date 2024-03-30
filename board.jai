@@ -167,6 +167,7 @@ AttFlags :: enum_flags {
   Rook;
   Cannon;
   Pawn;
+  Check;
   All :: King | Advisor | Elephant | Knight | Rook | Cannon | Pawn;
   KingEle :: King | Elephant;
   KingAdv :: King | Advisor;
@@ -201,9 +202,17 @@ SEE_TABLE : [90] SEE_Flags: SEE_Flags.[
 
 attackers :: (xiangqi: *Xiangqi) -> AttFlags #must {
 
-  is_attacked_by_knight :: (diff: int) -> bool {
+  knight_flags :: (xiangqi: *Xiangqi, from: int, to: int, diff: int) -> AttFlags {
     diff += 19;
-    return ((1 << diff) & 0b101_000001_0001_0000_0000_0000_01_0001_00000_101) != 0;
+    flags: AttFlags = 0;
+    if ((1 << diff) & 0b101_000001_0001_0000_0000_0000_01_0001_00000_101) != 0 {
+      flags |= .Knight;
+      if is_blocked_pseudolegal(xiangqi, from, to, KNIGHT_TABLE, KNI_DIR, KNI_BLK) {
+        flags |= .Check;
+      }
+    }
+
+    return flags;
   }
 
   attflags: AttFlags = 0;
@@ -214,7 +223,7 @@ attackers :: (xiangqi: *Xiangqi) -> AttFlags #must {
   for att : PAWN_ATT[turn] {
     to := att + ksq;
     if xiangqi.board[to] == OPP_PAWN {
-      attflags |= .Pawn;
+      attflags |= (.Pawn | .Check);
     }
   }
 
@@ -223,10 +232,7 @@ attackers :: (xiangqi: *Xiangqi) -> AttFlags #must {
     if abs_diff > 19 then {
       continue;
     }
-
-    if is_attacked_by_knight(diff) then {
-      attflags |= .Knight;
-    }
+    attflags |= knight_flags(xiangqi, kni, ksq, diff);
   }
 
   krow, kcol := moddiv90(ksq);
@@ -234,29 +240,26 @@ attackers :: (xiangqi: *Xiangqi) -> AttFlags #must {
   occ_col: u64 = xiangqi.cols[krow];
   arr: [2] u64 = .[occ_row, occ_col];
 
-  attacking :: (pieces: Array_u8, arr: [2] u64, ksq: int, min: int, max: int) -> bool {
+  attacking :: (pieces: Array_u8, arr: [2] u64, ksq: int, min: int, max: int, checknum: int, flags: AttFlags) -> AttFlags {
+    result: AttFlags = 0;
     for sq : pieces {
       between, r := get_table_entry(sq, ksq);
       p := popcount(arr[r] & between);
       if p >= min && p <= max then {
-        return true;
+        result |= flags;
+      }
+      if p == checknum then {
+        result |= .Check;
       }
     }
-    return false;
+    return result;
   }
 
-  if attacking(xiangqi.pieces[opp].king, arr, ksq, 3, 3) {
-    attflags |= .King;
-  }
+  // there cannot be a -1 popcount so we just use -1 to skip the check.
+  attflags |= attacking(xiangqi.pieces[opp].king, arr, ksq, 3, 3, -1, .King);
 
-  if attacking(xiangqi.pieces[opp].rook, arr, ksq, 2, 3) {
-    attflags |= .Rook;
-  }
-
-  if attacking(xiangqi.pieces[opp].cannon, arr, ksq, 2, 4) {
-    attflags |= .Cannon;
-  }
-
+  attflags |= attacking(xiangqi.pieces[opp].rook, arr, ksq, 2, 3, 2, .Rook);
+  attflags |= attacking(xiangqi.pieces[opp].cannon, arr, ksq, 2, 4, 3, .Cannon);
   return attflags;
 }
 
@@ -305,7 +308,6 @@ is_rook_pseudolegal :: (xiangqi: *Xiangqi, from: int, to: int) -> bool {
     occ = xiangqi.cols[row];
   }
   count := popcount(occ & between);
-
   return count == 1 || (count == 2 && xiangqi.board[to] != 0);
 }
 
@@ -343,7 +345,6 @@ is_cannon_pseudolegal :: (xiangqi: *Xiangqi, from: int, to: int, arr: [2] u64) -
 /// is_pseudolegal() takes a random move and tests whether the move is
 /// pseudo legal. It is used to validate moves from transposition table that can be corrupted
 /// due to SMP concurrent access or hash position key aliasing.
-
 is_pseudolegal :: (using xiangqi: *Xiangqi, move: Move32) -> bool {
 
   from:    int = move.from;
@@ -460,7 +461,7 @@ popcount :: (value: u64) -> int #expand {
 
 incheck :: inline (xiangqi: *Xiangqi) -> bool {
   att := attackers(xiangqi);
-  return incheck(xiangqi, att);
+  return incheck(att);
 }
 
 knight_check :: (xiangqi: *Xiangqi, kni: int, diff: int) -> bool, int {
@@ -493,45 +494,8 @@ legal :: (pieces: Array_u8, arr: [2] u64, ksq: int, attflags: AttFlags, type: At
   return true;
 }
 
-incheck :: (xiangqi: *Xiangqi, attflags: AttFlags) -> bool {
-
-  if attflags == 0 then {
-    return false;
-  }
-  if attflags & .Pawn {
-    return true;
-  }
-
-  turn := xiangqi.turn;
-  opp := turn ^ 1;
-  ksq := get_king(xiangqi, turn);
-
-  if attflags & .Knight {
-    for kni : xiangqi.pieces[opp].kni {
-      abs_diff, diff := index_abs_diff(ksq, kni);
-      if abs_diff > 19 then {
-        continue;
-      }
-      if knight_check(xiangqi, kni, diff) then {
-        return true;
-      }
-    }
-  }
-
-  // kings can never face each other. so no need to check the king.
-  krow, kcol := moddiv90(ksq);
-  occ_row: u64 = xiangqi.rows[kcol];
-  occ_col: u64 = xiangqi.cols[krow];
-  arr: [2] u64 = .[occ_row, occ_col];
-  if !legal(xiangqi.pieces[opp].rook, arr, ksq, attflags, .Rook, 2) {
-    return true;
-  }
-
-  if !legal(xiangqi.pieces[opp].cannon, arr, ksq, attflags, .Cannon, 3) {
-    return true;
-  }
-
-  return false;
+incheck :: inline (attflags: AttFlags) -> bool {
+  return (attflags & .Check) != 0;
 }
 
 num_attackers :: (xiangqi: *Xiangqi, attflags: AttFlags) -> int, checkflags: AttFlags {
@@ -1661,7 +1625,12 @@ gen_check_quiets :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
 
 legal_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   att := attackers(xiangqi);
-  gen_moves(xiangqi, moves);
+  if att & .Check {
+    gen_check_captures(xiangqi, att, moves);
+    gen_check_quiets(xiangqi, att, moves);
+  } else {
+    gen_moves(xiangqi, moves);
+  }
   i := 0;
   while i < moves.count {
     move := moves.array[i].move;

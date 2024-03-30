@@ -125,17 +125,14 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
   chase_count := 0;
   victims: [6] u8;
   moves_made_count := 0;
-  incheck_position: bool;
 
   // todo: temporary workaround until I work out a better solution for this...
   if xiangqi.hashes.count > 0 {
-    if !incheck(xiangqi) then {
+    if !incheck(att) then {
       chase_count = get_chases(xiangqi, chases);
       mark_previous_move(xiangqi, .Idle);
-      incheck_position = false;
     } else {
       mark_previous_move(xiangqi, .Check);
-      incheck_position = true;
     }
   }
 
@@ -149,7 +146,7 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
     make_move(xiangqi, history, mov);
     history.seldepth = max(history.ply, history.seldepth);
     if xiangqi.hashes.count > 1 {
-      if !incheck_position && is_quiet(mov) then {
+      if !incheck(att) && is_quiet(mov) then {
         get_evade(xiangqi, mov, chases, chase_count);
       }
     }
@@ -207,16 +204,13 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
 
   improving := 1;
   att := attackers(xiangqi);
-  incheck_position := true;
   child_pv: PV;
-  if incheck(xiangqi, att) then {
+  if incheck(att) then {
     improving = 1;
     history.evals[ply] = -MATE;
     mark_previous_move(xiangqi, .Check);
-    incheck_position = true;
   } else {
     mark_previous_move(xiangqi, .Idle);
-    incheck_position = false;
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
     if ply < 4 || evaluation > history.evals[ply-2] || evaluation > history.evals[ply-4] then {
       improving = 1;
@@ -265,7 +259,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     depth -= 3;
   }
 
-  extension := search_extensions(tthit, ttentry, incheck_position, xiangqi, history, depth, alpha, beta);
+  extension := search_extensions(tthit, ttentry, incheck(att), xiangqi, history, depth, alpha, beta);
   if extension == -100 {
     return beta;
   }
@@ -299,7 +293,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     }
 
     legal_moves += 1;
-    if !incheck_position && depth < 3 then {
+    if !incheck(att) && depth < 3 then {
       if is_quiet(mov) && moves_made >= late_move_pruning then {
         break;
       }
@@ -316,13 +310,13 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
       }
     }
 
-    if !incheck_position && is_quiet(mov) && !initialized_chases then {
+    if !initialized_chases && !incheck(att) && is_quiet(mov) then {
       chase_count = get_chases(xiangqi, chases);
       initialized_chases = true;
     }
 
     make_move(xiangqi, history, mov);
-    if !incheck_position && is_quiet(mov) then {
+    if !incheck(att) && is_quiet(mov) then {
       get_evade(xiangqi, mov, chases, chase_count);
     }
 
@@ -331,7 +325,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
     score: int = 0;
     if moves_made == 0 {
       extend_depth := 0;
-      if incheck_position then {
+      if incheck(att) then {
         extend_depth = 1;
       } else if mov == ttentry.best_move && extension != 0 {
         extend_depth = extension;
@@ -339,7 +333,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
       score = -negamax(xiangqi, history, *child_pv, depth + extend_depth - 1, -beta, -alpha);
     } else {
       R := 0;
-      if incheck_position {
+      if incheck(att) {
         R = 0;
       } else if is_capture(mov) {
         R = 1;
@@ -361,7 +355,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
 
       score = -negamax(xiangqi, history, *child_pv, depth - R, -alpha-1, -alpha);
       if alpha+1 != beta && score > alpha {
-        R := ifx (incheck_position) 0 else 1;
+        R := ifx incheck(att) 0 else 1;
         score = -negamax(xiangqi, history, *child_pv, depth - R, -beta, -alpha);
       }
     }
@@ -380,7 +374,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         flag = Flag.Exact;
         copy_pv(pv, child_pv, best_move);
         if score >= beta then {
-          update_hist(history, moves, best_move, depth, incheck_position);
+          update_hist(history, moves, best_move, depth, incheck(att));
           tt_write(xiangqi, best_move, best_score, depth, .Beta);
           return best_score;
         }
@@ -421,9 +415,6 @@ search_extensions :: (tthit: bool, ttentry: Entry, incheck_position: bool, xiang
       chase_count := 0;
       victims: [6] u8;
       initialized_chases := is_marked_cancel(xiangqi);
-
-
-
       incheck_position :: false;
       ttentry: Entry;
       moves: Moves;
@@ -499,14 +490,11 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
 
   improving := 1;
   att := attackers(xiangqi);
-  incheck_position := true;
-  if incheck(xiangqi, att) then {
+  if incheck(att) then {
     improving = 1;
     history.evals[ply] = -MATE;
     mark_previous_move(xiangqi, .Check);
-    incheck_position = true;
   } else {
-    incheck_position = false;
     mark_previous_move(xiangqi, .Idle);
     evaluation := ifx tthit then ttentry.score else evaluate(xiangqi, history);
     if ply < 4 || evaluation > history.evals[ply-2] || evaluation > history.evals[ply-4] then {
@@ -579,7 +567,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       break;
     }
 
-    if !incheck_position && depth < 3 then {
+    if !incheck(att) && depth < 3 then {
       if is_quiet(mov) {
         // quiet move.
         if see(xiangqi, mov) < late_quiet_see {
@@ -593,18 +581,18 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       }
     }
 
-    if !incheck_position && is_quiet(mov) && !initialized_chases then {
+    if !initialized_chases && !incheck(att) && is_quiet(mov) then {
       chase_count = get_chases(xiangqi, chases);
       initialized_chases = true;
     }
 
     make_move(xiangqi, history, mov);
-    if !incheck_position && is_quiet(mov) then {
+    if !incheck(att) && is_quiet(mov) then {
       get_evade(xiangqi, mov, chases, chase_count);
     }
 
     R := 0;
-    if incheck_position {
+    if incheck(att) {
       R = 0;
     } else if moves_made == 0 || is_capture(mov) {
       R = 1;
@@ -633,7 +621,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       best_score = score;
       best_move  = mov;
       if score >= beta then {
-        update_hist(history, moves, best_move, depth, incheck_position);
+        update_hist(history, moves, best_move, depth, incheck(att));
         return best_score;
       }
     } 
@@ -646,10 +634,9 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
 quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> eval: int {
   unwrap_time();
   att := attackers(xiangqi);
-  incheck_position := incheck(xiangqi, att);
   ply := history.ply;
   best_score := -MATE+ply;
-  if !incheck_position then {
+  if !incheck(att) then {
     best_score = evaluate(xiangqi, history);
     if best_score >= beta then {
       return best_score;
@@ -680,7 +667,7 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
     }
     num_legal_moves += 1;
 
-    if !incheck_position then {
+    if !incheck(att) then {
       // ~10 elo. 
       // quiescene delta pruning. if a capture move does nothing
       // to improve the current score, skip the capture move.
@@ -699,7 +686,7 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
     score := -quiescene(xiangqi, history, -beta, -alpha);
     unmake_move(xiangqi, history, mov);
 
-    if incheck_position && is_quiet(mov) then {
+    if incheck(att) && is_quiet(mov) then {
       evasion_moves += 1;
       if evasion_moves >= 2 {
         break;
@@ -718,7 +705,7 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
   }
 
   if num_legal_moves == 0 then {
-    if (incheck_position || is_checkmate(xiangqi, history, num_legal_moves, att)) then { 
+    if (incheck(att) || is_checkmate(xiangqi, history, num_legal_moves, att)) then { 
       return -MATE + ply;
     }
   }
@@ -733,7 +720,7 @@ for_expansion :: (xiangqi: *Xiangqi, body: Code, f: For_Flags) #expand {
     defer {
       it_index += 1;
     }
-    `it, stage= := pick_move(xiangqi, `att, it_index, stage, *`moves, `ttentry.best_move, `history, `incheck_position);
+    `it, stage= := pick_move(xiangqi, `att, it_index, stage, *`moves, `ttentry.best_move, `history);
     if stage == .Quit then {
       break;
     }
@@ -749,7 +736,7 @@ captures_only :: (xiangqi: *Xiangqi, body: Code, f: For_Flags) #expand {
     defer {
       it_index += 1;
     }
-    `it, stage= := pick_quiescene(xiangqi, `att, it_index, stage, *`moves, `history, `incheck_position);
+    `it, stage= := pick_quiescene(xiangqi, `att, it_index, stage, *`moves, `history);
     if stage == .Quiescene_End then {
       break;
     }
@@ -777,11 +764,11 @@ Stage :: enum {
   Quiescene_End :: 14;
 }
 
-pick_quiescene :: (xiangqi: *Xiangqi, att: AttFlags, index: int, stage: Stage, moves: *Moves, h: *History, incheck_position: bool) -> Move32, Stage {
+pick_quiescene :: (xiangqi: *Xiangqi, att: AttFlags, index: int, stage: Stage, moves: *Moves, h: *History) -> Move32, Stage {
   if stage == {
   
   case .Quiescene;
-    if incheck_position then {
+    if incheck(att) then {
       gen_check_captures(xiangqi, att, moves);
     } else {
       gen_captures(xiangqi, moves);
@@ -794,7 +781,7 @@ pick_quiescene :: (xiangqi: *Xiangqi, att: AttFlags, index: int, stage: Stage, m
       return move, stage;
     }
     stage += 1;
-    if !incheck_position then {
+    if !incheck(att) then {
       stage = .Quiescene_End;
       return NULL_MOVE, stage;
     }
@@ -850,7 +837,7 @@ score_evasion :: (move: Move32, evasion_history: [][90] s32) -> s32 {
   return evasion_history[piece][to];
 }
 
-pick_move :: (xiangqi: *Xiangqi, att: AttFlags, index: int, stage: Stage, moves: *Moves, best_move: Move32, h: *History, incheck_position: bool) -> Move32, Stage {
+pick_move :: (xiangqi: *Xiangqi, att: AttFlags, index: int, stage: Stage, moves: *Moves, best_move: Move32, h: *History) -> Move32, Stage {
 
   score_quiet_move :: (move: Move32, board_history: [][90] s32, counter_history: [][90] s32, follow_history: [][90] s32) -> s32 {
     piece := move.piece >> 1;
@@ -869,7 +856,7 @@ pick_move :: (xiangqi: *Xiangqi, att: AttFlags, index: int, stage: Stage, moves:
 
     #through;
   case .InitCaptures;
-    if incheck_position then {
+    if incheck(att) then {
       gen_check_captures(xiangqi, att, moves);
     } else {
       gen_captures(xiangqi, moves);
@@ -922,7 +909,7 @@ pick_move :: (xiangqi: *Xiangqi, att: AttFlags, index: int, stage: Stage, moves:
     #through; 
   case .InitQuiets;
     k1, k2, ch := get_killers(h);
-    if incheck_position == true {
+    if incheck(att) {
       gen_check_quiets(xiangqi, att, moves);
       evasion_history := get_evasion(h); 
       i := index;
