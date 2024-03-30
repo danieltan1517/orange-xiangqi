@@ -1625,12 +1625,7 @@ gen_check_quiets :: (xiangqi: *Xiangqi, att: AttFlags, moves: *Moves) {
 
 legal_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   att := attackers(xiangqi);
-  if att & .Check {
-    gen_check_captures(xiangqi, att, moves);
-    gen_check_quiets(xiangqi, att, moves);
-  } else {
-    gen_moves(xiangqi, moves);
-  }
+  gen_moves(xiangqi, moves);
   i := 0;
   while i < moves.count {
     move := moves.array[i].move;

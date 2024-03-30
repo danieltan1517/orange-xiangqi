@@ -297,7 +297,7 @@ repetition_test_suite :: () {
       make_move(*xiangqi, move);
       get_evade(*xiangqi, move, chases, chase_count);
       att := attackers(*xiangqi);
-      if incheck(*xiangqi, att) then {
+      if incheck(att) then {
         chase_count = 0;
         mark_previous_move_check(*xiangqi);
       } else if is_capture(move) || is_pawn_advance(move) {
