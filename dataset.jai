@@ -3,7 +3,7 @@
 // a buggy implementation with infinite loop problems
 // every once in a while, but usable...
 // 
-#run load_model("orange1_15_24.nnue");
+#run load_model("orange2_25_24.nnue");
 
 DEPTH :: 7;
 MOVETIME :: 3_600_000;
@@ -218,7 +218,7 @@ rollout :: (fen: string, table: *Table(u32, void), best_move: Move32) {
       }
  
       att := attackers(*xiangqi);
-      if incheck(*xiangqi, att) then {
+      if incheck(att) then {
         continue;
       }
 
@@ -240,7 +240,7 @@ rollout :: (fen: string, table: *Table(u32, void), best_move: Move32) {
       evaluation_score := evaluate(*xiangqi);
       quiescene_score  := quiescene(*xiangqi, *history, alpha, beta);
   
-      if abs(evaluation_score - quiescene_score) > 40 then {
+      if abs(evaluation_score - quiescene_score) > 60 then {
         continue;
       }
 
