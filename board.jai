@@ -1066,7 +1066,7 @@ gen_moves :: (xiangqi: *Xiangqi, moves: *Moves) {
   }
 }
 
-gives_check :: (xiangqi: *Xiangqi, move: Move32) -> bool {
+gives_check :: (xiangqi: *Xiangqi, flags: AttFlags, move: Move32) -> bool {
   opponent := xiangqi.turn ^ 1;
   ksq := get_king(xiangqi, opponent);
   piece: int = move.piece;
@@ -1101,37 +1101,44 @@ gives_check :: (xiangqi: *Xiangqi, move: Move32) -> bool {
     }
   }
 
+  if flags == 0 return false;
+
   from := move.from;
   x_pieces := *xiangqi.pieces[turn];
 
   // is there a discovered check?
-
-  for kni : x_pieces.kni {
-    //if kni == from then continue;
-    abs_diff, diff := index_abs_diff(ksq, kni);
-    if abs_diff > 19 then {
-      continue;
-    }
-    if is_attacked_by_knight(xiangqi, kni, diff, from, ksq) then {
-      return true;
-    }
-  }
-
-  for rook : x_pieces.rook {
-    if rook == from then continue;
-    between, r := get_table_entry(rook, ksq);
-    bit_line := cast(u64)(arr[r] & between);
-    if popcount(bit_line) == 2 then {
-      return true;
+  if flags & .Knight {
+    for kni : x_pieces.kni {
+      //if kni == from then continue;
+      abs_diff, diff := index_abs_diff(ksq, kni);
+      if abs_diff > 19 then {
+        continue;
+      }
+      if is_attacked_by_knight(xiangqi, kni, diff, from, ksq) then {
+        return true;
+      }
     }
   }
 
-  for cannon : x_pieces.cannon {
-    if cannon == from then continue;
-    between, r := get_table_entry(cannon, ksq);
-    bit_line := cast(u64)(arr[r] & between);
-    if popcount(bit_line) == 3 then {
-      return true;
+  if flags & .Rook {
+    for rook : x_pieces.rook {
+      if rook == from then continue;
+      between, r := get_table_entry(rook, ksq);
+      bit_line := cast(u64)(arr[r] & between);
+      if popcount(bit_line) == 2 then {
+        return true;
+      }
+    }
+  }
+
+  if flags & .Cannon {
+    for cannon : x_pieces.cannon {
+      if cannon == from then continue;
+      between, r := get_table_entry(cannon, ksq);
+      bit_line := cast(u64)(arr[r] & between);
+      if popcount(bit_line) == 3 then {
+        return true;
+      }
     }
   }
 
@@ -2411,9 +2418,7 @@ perft :: (xiangqi: *Xiangqi, depth: int) -> int {
     return moves.count;
   } else {
     for mov: moves {
-      //is_checking_move := gives_check(xiangqi, mov);
       make_move(xiangqi, mov);
-      //assert(incheck(xiangqi) == is_checking_move, "move: [%]\n%", mov, xiangqi.*);
       count += perft(xiangqi, depth-1);
       unmake_move(xiangqi, mov);
     }
@@ -3150,7 +3155,7 @@ is_exchange_move :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   return success;
 }
 
-get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> count: int {
+get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> count: int, AttFlags {
 
   turn := xiangqi.turn;
   xiangqi.turn ^= 1;
@@ -3177,7 +3182,7 @@ get_chases :: (xiangqi: *Xiangqi, chases: [] Move32) -> count: int {
     }
   }
 
-  return count;
+  return count, att;
 }
 
 get_exchange_move :: (move: Move32) -> Move32 {
