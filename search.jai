@@ -656,6 +656,12 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
   unwrap_time();
   att := attackers(xiangqi);
   ply := history.ply;
+
+  // on the rare occasion if we overflow.
+  if ply > 127 then {
+    return evaluate(xiangqi, history);
+  }
+
   best_score := -MATE+ply;
   if !incheck(att) then {
     best_score = evaluate(xiangqi, history);

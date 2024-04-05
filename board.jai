@@ -3219,7 +3219,7 @@ get_evade :: (xiangqi: *Xiangqi, move: Move32, chase_moves: [] Move32, chase_cou
     }
 
     xiangqi.hashes.info[count].chased[victim_count] = to;
-    victim_count += 1;
+    victim_count = min(victim_count + 1, 5);
   }
   xiangqi.hashes.info[count].chased_count = xx victim_count;
   if victim_count > 0 then {

@@ -6,7 +6,7 @@
 #run load_model("orange2_25_24.nnue");
 
 DEPTH :: 7;
-MOVETIME :: 3_600_000;
+MOVETIME :: 3_000;
 MAX_COMPUTATIONS :: 50_000_000;
 
 main :: () {
