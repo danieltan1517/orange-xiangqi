@@ -7,7 +7,7 @@
 
 DEPTH :: 7;
 MOVETIME :: 3_000;
-MAX_COMPUTATIONS :: 50_000_000;
+MAX_COMPUTATIONS :: 100_000_000;
 
 main :: () {
   print("info string NNUE Model: %\n", get_nnuename(), to_standard_error=true);
@@ -288,6 +288,9 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   score: int = 0;
   while depth <= search_depth {
     score = negamax_root(xiangqi, *history, *pv, depth, alpha, beta);
+    if search_should_stop == true {
+      return MATE-1, PositionStatus.CriticalPosition;
+    }
     alpha = max(score - delta, -MATE);
     beta  = min(score + delta,  MATE);
     depth += 1;
