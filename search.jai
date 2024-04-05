@@ -136,6 +136,7 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
     }
   }
 
+  quiet_moves_made := 0;
   moves_made := 0;
   for mov: xiangqi {
     if !is_legal(xiangqi, att, mov) then {
@@ -154,7 +155,26 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
     if moves_made == 0 {
       score = -negamax(xiangqi, history, *child_pv, depth - 1, -beta, -alpha);
     } else {
-      score = -negamax(xiangqi, history, *child_pv, depth - 1, -alpha-1, -alpha);
+
+      R := 0;
+      if incheck(att) {
+        R = 0;
+      } else if is_capture(mov) {
+        R = 1;
+      } else {
+        // Late Move Reduction. ~30 elo.
+        if quiet_moves_made < 1 || depth < 3 then {
+          R = 1;
+        } else {
+          R = 3;
+          if moves.array[it_index].score < 100_000 then {
+            R -= moves.array[it_index].score / 40_000;
+            R = max(1, R);
+          }
+        }
+      }
+
+      score = -negamax(xiangqi, history, *child_pv, depth - R, -alpha-1, -alpha);
       if score > alpha {
         score = -negamax(xiangqi, history, *child_pv, depth - 1, -beta, -alpha);
       }
@@ -162,6 +182,10 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
 
     unmake_move(xiangqi, history, mov);
     moves_made += 1;
+    if is_quiet(mov) {
+      quiet_moves_made += 1;
+    }
+
     if score > best_score {
       best_score = score;
       best_move  = mov;
@@ -290,7 +314,6 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
       erase_move(*moves, it_index);
       continue;
     }
-
     if !incheck(att) && depth < 3 then {
       if is_quiet(mov) && moves_made >= late_move_pruning then {
         break;
@@ -337,7 +360,7 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         R = 1;
       } else {
         // Late Move Reduction. ~30 elo.
-        if quiet_moves_made < 2 || depth < 3 then {
+        if quiet_moves_made < 1 || depth < 3 then {
           R = 1;
         } else {
           R = 4 - improving;
@@ -596,7 +619,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
       R = 1;
     } else {
       // Late Move Reduction. ~30 elo.
-      if quiet_moves_made < 2 || depth < 3 then {
+      if quiet_moves_made < 1 || depth < 3 then {
         R = 1;
       } else {
         R = 4 - improving;

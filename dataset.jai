@@ -7,7 +7,7 @@
 
 DEPTH :: 7;
 MOVETIME :: 3_600_000;
-MAX_COMPUTATIONS :: 100_000_000;
+MAX_COMPUTATIONS :: 50_000_000;
 
 main :: () {
   print("info string NNUE Model: %\n", get_nnuename(), to_standard_error=true);
