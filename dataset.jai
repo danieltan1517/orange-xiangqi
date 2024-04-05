@@ -23,13 +23,13 @@ main :: () {
   FILE_NAME :: "xiangqi_games.txt";
   print("eval,positions\n");
   compute_grandmaster_games(FILE_NAME);
-  compute_pgn("game.pgn");
 }
 
 table: Table(u32, void);
 compute_pgn :: (filename: string) {
 
   compute_pgn_game :: (fen: string, game_moves_string: string) {
+    clear_tt();
     xiangqi: Xiangqi;
     xiangqi_fen(*xiangqi, fen);
     game_moves: [..] Move32;
@@ -111,6 +111,7 @@ compute_grandmaster_games :: (filename: string) {
     return;
   }
   for i: 0..1_000_000_000 {
+    clear_tt();
     array_reserve(*game_moves, 1024);
     reset_temporary_storage();
     found, line, rest := split_from_left(text, #char "\n");

@@ -1425,7 +1425,7 @@ gui_make_move :: (move: Move32, animate: bool) {
       att := attackers(*xiangqi);
       legal_moves(*xiangqi, *moves);
       status_string = "";
-      if incheck(*xiangqi, att) then {
+      if incheck(att) then {
         chase_count = 0;
         status_string = get_ui_str().status_string[0];
         mark_previous_move_check(*xiangqi);
