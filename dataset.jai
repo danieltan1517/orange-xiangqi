@@ -233,17 +233,6 @@ rollout :: (fen: string, table: *Table(u32, void), best_move: Move32) {
       ticks = 300_000_000;
       history.phase_value = compute_phase(*xiangqi);
       nnue_incremental_init(*xiangqi, *history);
-  
-      // do not compute positions which are not 'quiet'. 'quiet' positions are such
-      // that a depth of 1 does not change the position much. exchanges will not 
-      // change the evaluation much in quiet positions.
-      // this is similar to the 'quiet' position definition found in fairy stockfish
-      evaluation_score := evaluate(*xiangqi);
-      quiescene_score  := quiescene(*xiangqi, *history, alpha, beta);
-  
-      if abs(evaluation_score - quiescene_score) > 60 then {
-        continue;
-      }
 
       work_started += 1;
       start_threads(*xiangqi, mov, DEPTH, MOVETIME);
@@ -282,6 +271,16 @@ search_evaluation :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) 
   evaluation_score := evaluate(xiangqi);
   history.phase_value = compute_phase(xiangqi);
   nnue_incremental_init(xiangqi, *history);
+  
+  // do not compute positions which are not 'quiet'. 'quiet' positions are such
+  // that a depth of 1 does not change the position much. exchanges will not 
+  // change the evaluation much in quiet positions.
+  // this is similar to the 'quiet' position definition found in fairy stockfish
+  quiescene_score  := quiescene(xiangqi, *history, alpha, beta);
+  
+  if abs(evaluation_score - quiescene_score) > 60 then {
+    return quiescene_score, PositionStatus.TacticalPosition;
+  }
   
   pv: PV;
   depth := 1;
@@ -343,10 +342,20 @@ wait_for_threads_finish :: (table: *Table(u32,void), work_remaining: int) -> bes
       }
       if status == .QuietPosition then {
         VOID: void;
-        table_add(table, hash, VOID);
-        add_evaluation(fen, score);
+        if score > 0 {
+          r := random_get() % 100;
+          if r > 40 then {
+            table_add(table, hash, VOID);
+            add_evaluation(fen, score);
+          }
+        } else {
+          table_add(table, hash, VOID);
+          add_evaluation(fen, score);
+        }
       }
-      if status == .CriticalPosition then {
+      if score > 90 {
+        bestmove = move;
+      } else if status == .CriticalPosition then {
         bestmove = move;
       }
     }
