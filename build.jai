@@ -279,7 +279,7 @@ download_xiangqi_games :: () {
 }
 
 download_nnue_model :: () {
-  fileId :: "1e6xAw6lU-yVAn8zhPncL91PFVru8izdk";
+  fileId ::"10P1dOx_mgzaokMPm7oZTHmwXoBA2g6gZ";
   link := tprint("https://drive.google.com/uc?export=download&id=%1", fileId);
   download_file(link, "orange2_25_24.zip");
   unzip_file("orange2_25_24.zip");
