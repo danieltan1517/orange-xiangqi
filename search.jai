@@ -527,7 +527,7 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
     depth -= 1 - improving;
     history.evals[ply] = cast(s16) evaluation;
     // reverse futility pruning.
-    if evaluation >= beta + depth * 75 {
+    if evaluation >= beta + depth * 75 && evaluation < (MATE-100) {
       return evaluation;
     }
 
@@ -1294,7 +1294,6 @@ is_checkmate :: (xiangqi: *Xiangqi, h: *History, num_legal_moves: int, att: AttF
   // because at least one pawn can be pinned.
   // 2.) rooks always can make a move if there are no pinners of the king.
   if pieces.pawn.count > 1 || (att == 0 && pieces.rook.count > 0) return false;
-
   for adv : pieces.adv {
     if dir_legal_moves(xiangqi, att, adv, DEFENSE_SQ_TABLE, ADV_DIR) {
       return false;
