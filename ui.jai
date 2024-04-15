@@ -1203,7 +1203,7 @@ width:  float = 680;
 height: float = 680;
 sprites: simp.Texture;
 setting_sprite: simp.Texture;
-piece_style: enum s32 { European; Classic; Stylized; } = .Classic;
+piece_style: enum s32 { European; Classic; Stylized; } = .European;
 board_style: enum s32 { White; Mocha; Bamboo; Rust; } = .White;
 language: enum s32 { English; Chinese; } = .English;
 orient := false;

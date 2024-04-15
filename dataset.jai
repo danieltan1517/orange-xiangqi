@@ -3,9 +3,9 @@
 // a buggy implementation with infinite loop problems
 // every once in a while, but usable...
 // 
-#run load_model("orange2_25_24.nnue");
+#run load_model("orange4_11_24.nnue");
 
-DEPTH :: 7;
+DEPTH :: 9;
 MOVETIME :: 3_000;
 MAX_COMPUTATIONS :: 100_000_000;
 
