@@ -1743,7 +1743,7 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
   ucci_go_command :: (engine: *Engine, using timeManager: TimeManager) -> string {
     if #complete time_control == {
     case .None;
-      return tprint("go depth 5%1", NEWLINE);
+      return tprint("go depth 10%1", NEWLINE);
 
     case .Clock;
       // time in milliseconds
