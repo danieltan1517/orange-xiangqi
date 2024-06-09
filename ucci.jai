@@ -129,14 +129,14 @@ setoption_command :: (str: string) {
   } else if begins_with(str, "Threads ") {
     parse_token(*str);
     value, success := parse_int(*str);
-    if success == true && value >= 1 && value <= 256 {
+    if success == true && (value >= 1 && value <= 256) {
       print("info string Threads %\n", value);
       set_threads(value);
     }
   } else if begins_with(str, "Hash ") {
     parse_token(*str);
     value, success := parse_int(*str);
-    if success == true && value >= 1 && value <= 2000 {
+    if success == true && (value >= 1 && value <= 2000) {
       print("info string Hash %\n", value);
       value *= 1_000_000;
       init_tt(value);
@@ -144,7 +144,7 @@ setoption_command :: (str: string) {
   } else if begins_with(str, "MultiPV ") {
     parse_token(*str);
     value, success := parse_int(*str);
-    if success == true && value >= 1 && value <= 256 {
+    if success == true && (value >= 1 && value <= 256) {
       print("info string MultiPV %\n", value);
       set_multi_pv(value);
     }
