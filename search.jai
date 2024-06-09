@@ -30,49 +30,75 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> bestmove
   beta  :=  MATE;
   delta :=  100;
 
+  root_moves: Moves;
+
   // aspiration window with iterative deepening.
   searchstarttime = current_time_monotonic();
   ticks = 300_000_000;
   depth := 1;
-  score: int;
   pv: PV;
   history.phase_value = compute_phase(xiangqi);
   nnue_incremental_init(xiangqi, history);
+  best_score := -MATE;
+
   while depth <= search_depth {
-    score = unwrap(negamax_root(xiangqi, history, *pv, depth, alpha, beta));
-    time_taken := current_time_monotonic() - searchstarttime;
-    if score <= alpha then {
-      print("info lowerbound score %\n", score);
-      alpha = max(score-delta, -MATE);
-      delta += delta + delta / 5;
-      continue;
-    }
+    best_score = -MATE;
+    pv_index := 1;
+    end_multipv = false; 
+    while pv_index <= multi_pv {
+      score := unwrap(negamax_root(xiangqi, history, *pv, depth, alpha, beta, *root_moves));
+      if end_multipv == true {
+        break;
+      }
 
-    if score >= beta then {
-      print("info upperbound score %\n", score);
-      beta = min(score+delta, MATE);
-      delta += delta + delta / 5;
-      continue;
-    }
+      time_taken := current_time_monotonic() - searchstarttime;
+      if score <= alpha then {
+        print("info lowerbound score %\n", score);
+        alpha = max(score-delta, -MATE);
+        delta += delta + delta / 5;
+        continue;
+      }
+ 
+      if score >= beta then {
+        print("info upperbound score %\n", score);
+        beta = min(score+delta, MATE);
+        delta += delta + delta / 5;
+        continue;
+      }
+ 
+      ticks = 8192;
+      alpha = max(score - delta, -MATE);
+      beta  = min(score + delta,  MATE);
+      if score > best_score {
+        best_score = score;
+        best_move = pv.moves[0];
+      }
 
-    ticks = 8192;
-    alpha = max(score - delta, -MATE);
-    beta  = min(score + delta,  MATE);
-    best_move = pv.moves[0];
-    time_ms := max(1, to_milliseconds(time_taken)); // convert secs to ms, minimum is 1 to avoid division by zero.
-    seldepth := history.seldepth;
-    nps  := nodes * 1000 / time_ms; // max to avoid a divide by zero bug.
-    print_info(xiangqi.main_thread, depth, seldepth, nodes, time_ms, score, nps, pv);
+      append_move(*root_moves, pv.moves[0]);
+      time_ms := max(1, to_milliseconds(time_taken)); // convert secs to ms, minimum is 1 to avoid division by zero.
+      seldepth := history.seldepth;
+      nps  := nodes * 1000 / time_ms; // max to avoid a divide by zero bug.
+      print_info(xiangqi.main_thread, pv_index, depth, seldepth, nodes, time_ms, score, nps, pv);
+      pv_index += 1;
+    }
+    clear_moves(*root_moves);
     depth += 1;
   }
-  return best_move, score;
+
+  return best_move, best_score;
+}
+
+multi_pv: int = 1;
+
+set_multi_pv :: (value: int) {
+  multi_pv = max(value, 1);
 }
 
 searchstarttime: Apollo_Time;
 time_stop_ms: int;
 search_should_stop: bool = false;
 
-print_info :: (main_thread: bool, depth: int, seldepth: int, nodes: int, time_ms: int, score: int, nps: int, pv: PV) {
+print_info :: (main_thread: bool, pv_index: int, depth: int, seldepth: int, nodes: int, time_ms: int, score: int, nps: int, pv: PV) {
   if main_thread == false return;
   if abs(score) > 19900 {
 
@@ -82,10 +108,10 @@ print_info :: (main_thread: bool, depth: int, seldepth: int, nodes: int, time_ms
     } else {
       score = MATE - score;
     }
-    print("info depth % seldepth % nodes % time % score mate % nps % pv %\n", depth, seldepth, nodes, time_ms, score, nps, pv);
+    print("info depth % seldepth % multipv % nodes % time % score mate % nps % pv %\n", depth, seldepth, pv_index, nodes, time_ms, score, nps, pv);
 
   } else {
-    print("info depth % seldepth % nodes % time % score % nps % pv %\n", depth, seldepth, nodes, time_ms, score, nps, pv);
+    print("info depth % seldepth % multipv % nodes % time % score % nps % pv %\n", depth, seldepth, pv_index, nodes, time_ms, score, nps, pv);
   }
 }
 
@@ -110,7 +136,7 @@ unwrap_time :: () #expand {
   }
 }
 
-negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: int, beta: int) -> int {
+negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: int, beta: int, root_moves: *Moves) -> int {
   history.max_search_depth = depth;
   ttentry, tthit := tt_probe(xiangqi);
   att := attackers(xiangqi);
@@ -139,6 +165,9 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
   quiet_moves_made := 0;
   moves_made := 0;
   for mov: xiangqi {
+    if contains_move(root_moves, mov) then {
+      continue;
+    }
     if !is_legal(xiangqi, att, mov) then {
       erase_move(*moves, it_index);
       continue;
@@ -203,8 +232,13 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
   }
 
   tt_write(xiangqi, best_move, best_score, depth, flag);
+  if moves_made == 0 then {
+    end_multipv = true; 
+  }
   return best_score;
 }
+
+end_multipv: bool = false;
 
 negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: int, beta: int) -> int {
   unwrap_time();
@@ -302,8 +336,6 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
   best_move  := NULL_MOVE;
   flag       := Flag.Alpha;
   late_move_pruning := (depth * depth + 3) / (2 - improving);
-  late_quiet_see := -12 * depth * depth;
-  late_quiet_cap := -100 * depth;
   tt_capture: bool = false;
   if tthit && extension == 1 && is_capture(ttentry.best_move) then {
     tt_capture = true;
@@ -319,11 +351,15 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         break;
       }
       if is_quiet(mov) {
+        depth_r := depth - (4 - improving);
+        late_quiet_see := -12 * depth_r * depth_r;
         // quiet move.
         if see(xiangqi, mov) < late_quiet_see {
           continue;
         }
       } else {
+        depth_r := depth - 1;
+        late_quiet_cap := -100 * depth_r;
         // capture move.
         if see(xiangqi, mov) < late_quiet_cap {
           continue;
@@ -575,8 +611,6 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
   moves_made := 0;
   quiet_moves_made := 0;
   late_move_pruning := (depth * depth + 3) / (2 - improving);
-  late_quiet_see := -12 * depth * depth;
-  late_quiet_cap := -100 * depth;
 
   for mov: xiangqi {
     if !is_legal(xiangqi, att, mov) then {
@@ -591,11 +625,15 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
     if !incheck(att) && depth < 3 then {
       if is_quiet(mov) {
         // quiet move.
+        depth_r := depth - (4 - improving);
+        late_quiet_see := -12 * depth_r * depth_r;
         if see(xiangqi, mov) < late_quiet_see {
           continue;
         }
       } else {
         // capture move.
+        depth_r := depth - 1;
+        late_quiet_cap := -100 * depth_r;
         if see(xiangqi, mov) < late_quiet_cap {
           continue;
         }

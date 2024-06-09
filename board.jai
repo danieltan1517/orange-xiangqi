@@ -1794,6 +1794,17 @@ for_expansion :: (moves: *Moves, body: Code, f: For_Flags) #expand {
   }
 }
 
+contains_move :: (moves: *Moves, move: Move32) -> bool {
+  i := 0;
+  while i < moves.count {
+    if moves.array[i].move == move {
+      return true;
+    }
+    i += 1;
+  }
+  return false;
+}
+
 append_move :: (moves: *Moves, move: Move32) {
   capture: int = move.capture;
   piece: int = move.piece;
@@ -1939,6 +1950,16 @@ reset :: (arr: *Array_u8) {
   arr.count = 0;
   data := arr.array.data;
   memset(data, 0, size_of(u8) * 7);
+}
+
+clear_moves :: (moves: *Moves) {
+  i := 0;
+  while i < moves.count {
+    moves.array[i].move.move = 0;
+    moves.array[i].score = 0;
+    i += 1;
+  }
+  moves.count = 0;
 }
 
 for_expansion :: (a: *Array_u8, body: Code, flags: For_Flags) #expand {

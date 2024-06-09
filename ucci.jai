@@ -24,6 +24,7 @@ main :: () {
       print("option Clear Hash type button\n");
       print("option Hash type spin min 1 max 2000 default 16\n");
       print("option Threads type spin min 1 max 256 default 1\n");
+      print("option MultiPV type spin min 1 max 256 default 1\n");
       print("ucciok\n");
  
     case "isready";
@@ -139,6 +140,13 @@ setoption_command :: (str: string) {
       print("info string Hash %\n", value);
       value *= 1_000_000;
       init_tt(value);
+    }
+  } else if begins_with(str, "MultiPV ") {
+    parse_token(*str);
+    value, success := parse_int(*str);
+    if success == true && value >= 1 && value <= 256 {
+      print("info string MultiPV %\n", value);
+      set_multi_pv(value);
     }
   }
 }
