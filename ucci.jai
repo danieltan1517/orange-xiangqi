@@ -212,15 +212,12 @@ go_command :: (command: string, xiangqi: *Xiangqi) {
 }
 
 
-// Daniel (Mar 12, 2023)
-// this function handles the clock time management.
-// basic algorithm to do clock time management.
-// may come back to changing how this works later.
+// Daniel (June 10, 2024)
+// This function handles clock management when playing with a clock.
 time_management :: (time: int, incr: int) -> movetime: int {
-  // simplified version copied over from "Chess Engine in Jai."
-  // handle edge case where increment is greater than time.
   total: int = max(1, time + (50 * incr) - 50 * 50);
-  return min(cast(int)(time * 0.9221 - 50), cast(int)(total * 5.9280)) - 10;
+  alloc: int = cast(int) min(cast(float)time * 0.4193, cast(float)total * 0.0575);
+  return cast(int)(min(cast(float)time * 0.9221 - 50, cast(float)alloc * 5.9280)) - 10;
 }
 
 start_threads :: (xiangqi: *Xiangqi, depth: int, movetime_ms: int) {
