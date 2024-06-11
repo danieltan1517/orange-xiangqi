@@ -217,26 +217,10 @@ go_command :: (command: string, xiangqi: *Xiangqi) {
 // basic algorithm to do clock time management.
 // may come back to changing how this works later.
 time_management :: (time: int, incr: int) -> movetime: int {
-
   // simplified version copied over from "Chess Engine in Jai."
   // handle edge case where increment is greater than time.
-  if incr > time then
-    incr = 0;
-
-  time /= 30;
-  time -= 75;
-
-  // time up
-  if time < 0 {
-    time = 0;
-    incr -= 75;
-    if incr < 0 then {
-      incr = 1;
-    }
-  }
-
-  return max(time + incr, 1);
-
+  total: int = max(1, time + (50 * incr) - 50 * 50);
+  return min(cast(int)(time * 0.9221 - 50), cast(int)(total * 5.9280)) - 10;
 }
 
 start_threads :: (xiangqi: *Xiangqi, depth: int, movetime_ms: int) {

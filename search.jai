@@ -44,9 +44,9 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> bestmove
   while depth <= search_depth {
     best_score = -MATE;
     pv_index := 1;
-    end_multipv = false; 
+    end_multipv := false; 
     while pv_index <= multi_pv {
-      score := unwrap(negamax_root(xiangqi, history, *pv, depth, alpha, beta, *root_moves));
+      score := unwrap(negamax_root(xiangqi, history, *pv, depth, alpha, beta, *root_moves, *end_multipv));
       if end_multipv == true {
         break;
       }
@@ -136,7 +136,7 @@ unwrap_time :: () #expand {
   }
 }
 
-negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: int, beta: int, root_moves: *Moves) -> int {
+negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: int, beta: int, root_moves: *Moves, end_multipv: *bool) -> int {
   history.max_search_depth = depth;
   ttentry, tthit := tt_probe(xiangqi);
   att := attackers(xiangqi);
@@ -223,7 +223,7 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
         flag = Flag.Exact;
         copy_pv(pv, child_pv, best_move);
         if score >= beta then {
-          update_hist(history, moves, best_move, depth, false);
+          update_hist(history, moves, best_move, depth, incheck(att));
           tt_write(xiangqi, best_move, best_score, depth, .Beta);
           return best_score;
         }
@@ -233,12 +233,11 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
 
   tt_write(xiangqi, best_move, best_score, depth, flag);
   if moves_made == 0 then {
-    end_multipv = true; 
+    end_multipv.* = true; 
   }
   return best_score;
 }
 
-end_multipv: bool = false;
 
 negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: int, beta: int) -> int {
   unwrap_time();
@@ -351,14 +350,14 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         break;
       }
       if is_quiet(mov) {
-        depth_r := depth - (4 - improving);
+        depth_r := max(depth, 0);
         late_quiet_see := -12 * depth_r * depth_r;
         // quiet move.
         if see(xiangqi, mov) < late_quiet_see {
           continue;
         }
       } else {
-        depth_r := depth - 1;
+        depth_r := max(depth, 0);
         late_quiet_cap := -100 * depth_r;
         // capture move.
         if see(xiangqi, mov) < late_quiet_cap {
@@ -625,14 +624,14 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
     if !incheck(att) && depth < 3 then {
       if is_quiet(mov) {
         // quiet move.
-        depth_r := depth - (4 - improving);
+        depth_r := max(depth, 0);
         late_quiet_see := -12 * depth_r * depth_r;
         if see(xiangqi, mov) < late_quiet_see {
           continue;
         }
       } else {
         // capture move.
-        depth_r := depth - 1;
+        depth_r := max(depth, 0);
         late_quiet_cap := -100 * depth_r;
         if see(xiangqi, mov) < late_quiet_cap {
           continue;

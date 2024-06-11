@@ -522,7 +522,11 @@ main :: () {
         time_ms /= 1000.0;
         mins := cast(int) (time_ms / 60.0);
         secs := cast(int) fmod_cycling(time_ms, 60.0);
-        return tprint("%1 -- %2:%3", name, mins, formatInt(secs, minimum_digits=2));
+        if mins == 0 && secs <= 3 then {
+          return tprint("%1 -- 0:0%2", name, formatFloat(fmod_cycling(time_ms, 60.0) , trailing_width=3));
+        } else {
+          return tprint("%1 -- %2:%3", name, mins, formatInt(secs, minimum_digits=2));
+        }
       case .Time_per_move;
         if index == -1 then {
           return name;
@@ -2406,16 +2410,32 @@ right_panel_display: s32 = 0;
 engine_selection: s32 = 0;
 
 clock_update :: () {
-
+  if subwindow_newgame.open == true then {
+    return;
+  } 
   if xiangqi.turn == 0 {
     if r_time_manager.time_control == .Clock {
       r_time_ms -= dt * 1000;
-      r_time_ms = max(0.0, r_time_ms);
+      if r_time_ms < 0.0 {
+        print("Time Up Red!\n");
+        r_time_ms = 0.0;
+        for *engine: engines_array {
+          close_engine(engine);
+        }
+        exit(1);
+      }
     }
   } else {
     if b_time_manager.time_control == .Clock {
       b_time_ms -= dt * 1000;
-      b_time_ms = max(0.0, b_time_ms);
+      if b_time_ms < 0.0 {
+        print("Time Up Black!\n");
+        b_time_ms = 0.0;
+        for *engine: engines_array {
+          close_engine(engine);
+        }
+        exit(1);
+      }
     }
   }
 
