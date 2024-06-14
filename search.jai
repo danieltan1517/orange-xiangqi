@@ -45,6 +45,7 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> bestmove
     best_score = -MATE;
     pv_index := 1;
     end_multipv := false; 
+    clear_moves(*root_moves);
     while pv_index <= multi_pv {
       score := unwrap(negamax_root(xiangqi, history, *pv, depth, alpha, beta, *root_moves, *end_multipv));
       if end_multipv == true {
@@ -53,14 +54,18 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> bestmove
 
       time_taken := current_time_monotonic() - searchstarttime;
       if score <= alpha then {
-        print("info lowerbound score %\n", score);
+        if xiangqi.main_thread == true {
+          print("info lowerbound score %\n", score);
+        }
         alpha = max(score-delta, -MATE);
         delta += delta + delta / 5;
         continue;
       }
  
       if score >= beta then {
-        print("info upperbound score %\n", score);
+        if xiangqi.main_thread == true {
+          print("info upperbound score %\n", score);
+        }
         beta = min(score+delta, MATE);
         delta += delta + delta / 5;
         continue;
@@ -81,7 +86,6 @@ search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> bestmove
       print_info(xiangqi.main_thread, pv_index, depth, seldepth, nodes, time_ms, score, nps, pv);
       pv_index += 1;
     }
-    clear_moves(*root_moves);
     depth += 1;
   }
 

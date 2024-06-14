@@ -1,4 +1,5 @@
 main :: () {
+  modify_string(*subwindow_fenstring, "startpos");
   init_xiangqi_tables();
   init_textures :: () #expand {
     success := simp.texture_load_from_file(*sprites, "data/xiangqi.png");
@@ -1284,7 +1285,7 @@ random_pick_board_position :: () {
   r := random_get() % xiangqi_openings.count;
   fen := xiangqi_openings[r]; 
   xiangqi_fen(*xiangqi, fen);
-  fen_string = copy_string(fen);
+  modify_string(*fen_string, fen);
 }
 
 stage_sound :: (data: *Sound.Sound_Data, category := Sound.Sound_Category.GENERAL_SFX, perturb := true) -> *Sound.Sound_Stream {
@@ -1536,7 +1537,7 @@ on_game_end :: (winner: GameEnd) {
   counter30 = 0;
   // TODO: actually handle auto engine testing correctly...
   if auto_test_engines == true {
-    subwindow_fenstring = "startpos";
+    modify_string(*subwindow_fenstring, "startpos");
     status_string = "";
     if engine_test_state == .SWITCH_SIDES {
       xiangqi_fen(*xiangqi, fen_string);
@@ -2146,13 +2147,18 @@ load_engines_at_startup :: () {
 protocol_choice: s32 = 1;
 newgame_w_choice: s32 = 0;
 newgame_b_choice: s32 = 0;
-subwindow_fenstring := "startpos";
+subwindow_fenstring: string = "";
 
 game_mode_type: s32 = 0;
 subwindow_filestring := "";
 filename_pgn: string = "game.pgn";
 bookfilename: string = "data/xiangqi_fens.txt";
 number_of_games: s32 = 1;
+
+modify_string :: (ps: *string, new_value: string) {
+  free(ps.*);
+  ps.* = copy_string(new_value);
+}
 
 draw_subwindow_newgame :: (r: Rect, data: *void) {
   subwindow_newgame.title_text = get_ui_str().new_game;
@@ -2218,11 +2224,6 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
 
     // TODO: see if this is a problem...
     action_c, newsubwindow_fenstring := text_input(rect, subwindow_fenstring, text_theme);
-    modify_string :: (ps: *string, new_value: string) {
-      free(ps.*);
-      ps.* = copy_string(new_value);
-    }
-
     if action_c & .ENTERED {
       modify_string(*subwindow_fenstring, newsubwindow_fenstring);
     }
@@ -2265,7 +2266,7 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
         fen_string = "";
       } else {
         if xiangqi_fen(*xiangqi, str) {
-          fen_string = copy_string(str);
+          modify_string(*fen_string, str);
         } else {
           xiangqi_startpos(*xiangqi);
           if fen_string {
@@ -2275,7 +2276,7 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
         }
       }
       //set_input(fen_state, "startpos"); 
-      subwindow_fenstring = "startpos";
+      modify_string(*subwindow_fenstring, "startpos");
       status_string = "";
       moves_made_count = 0;
       reset(*moves);
@@ -2340,7 +2341,7 @@ draw_subwindow_newgame :: (r: Rect, data: *void) {
     if button(rect, get_ui_str().play) {
       counter30 = 0;
       subwindow_newgame.open = false;
-      subwindow_fenstring = "startpos";
+      modify_string(*subwindow_fenstring, "startpos");
       status_string = "";
       if fen_string {
         free(fen_string);
@@ -2589,7 +2590,7 @@ parse_uci_option :: (message: string) -> bool, Engine_Option #must {
   TF, option_name, rest = split_from_right(message, " type");
   if TF == false return false, option;
 
-  option.name = copy_string(option_name);
+  modify_string(*option.name, option_name);
 
   rest = eat_spaces(rest);
   uci_type, TF = parse_token(*rest);
@@ -2667,10 +2668,7 @@ parse_uci_option :: (message: string) -> bool, Engine_Option #must {
       value,TF := parse_token(*rest);
       if TF == false return false, option;
       rest = eat_spaces(rest);
-
-      combo_option := copy_string(value);
-      array_add(*option.combo_values, combo_option);
-
+      array_add(*option.combo_values, copy_string(value));
     case;
       return false, option;
     }

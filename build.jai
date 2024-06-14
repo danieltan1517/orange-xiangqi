@@ -136,7 +136,7 @@ build :: (exe_name: string, $add_files: #type (Workspace), release: bool) -> w: 
   target_options.output_executable_name = exe_name;
 
   if release == true {
-    set_optimization(*target_options, .VERY_OPTIMIZED); 
+    set_optimization(*target_options, .VERY_OPTIMIZED);
     target_options.stack_trace = false;
   } else {
     target_options.backend = .X64;
