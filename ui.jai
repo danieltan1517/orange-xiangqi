@@ -2418,24 +2418,16 @@ clock_update :: () {
     if r_time_manager.time_control == .Clock {
       r_time_ms -= dt * 1000;
       if r_time_ms < 0.0 {
-        print("Time Up Red!\n");
         r_time_ms = 0.0;
-        for *engine: engines_array {
-          close_engine(engine);
-        }
-        exit(1);
+        on_game_end(.Black_Wins);
       }
     }
   } else {
     if b_time_manager.time_control == .Clock {
       b_time_ms -= dt * 1000;
       if b_time_ms < 0.0 {
-        print("Time Up Black!\n");
         b_time_ms = 0.0;
-        for *engine: engines_array {
-          close_engine(engine);
-        }
-        exit(1);
+        on_game_end(.Red_Wins);
       }
     }
   }

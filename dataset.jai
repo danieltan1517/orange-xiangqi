@@ -5,7 +5,7 @@ main :: () {
   init_xiangqi_tables();
   init_tt(size_in_bytes = 128_000_000);
   random_seed(0xcafe_babe_10_31_1517);
-  set_threads(6);
+  set_threads(4);
   init(*table, 16_000_000);
   defer {
     free_threads();
@@ -36,11 +36,12 @@ free_threads :: () {
   }
 }
 
-search_thread :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
-  xiangqi_work := cast(*Xiangqi_Work) work;
-  _, score, status := search_score(*xiangqi_work.xiangqi, SEARCH_DEPTH, 3_000);
-  xiangqi_work.score = score;
-  xiangqi_work.status= status;
+search_thread :: (group: *Thread_Group, thread: *Thread, work_pointer: *void) -> Thread_Continue_Status {
+  work := cast(*Xiangqi_Work) work_pointer;
+  xiangqi := xiangqi_work[work.identifier];
+  _, score, status := search_score(*xiangqi, SEARCH_DEPTH, 3_000);
+  work.score = score;
+  work.status= status;
   return .CONTINUE;
 }
 
@@ -84,26 +85,21 @@ compute_game :: (game_line: string) {
       break;
     }
   }
-
-  reset_temporary_storage();
 }
+
+xiangqi_work: [40] Xiangqi;
 
 compute_position :: (xiangqi: *Xiangqi) {
 
-
-  add_work_to_queue :: (xiangqi_work: *Xiangqi_Work, xiangqi: *Xiangqi) {
-    copy_board(*xiangqi_work.xiangqi, xiangqi);
-    add_work(*thread_group, xiangqi_work);
+  add_work_to_queue :: (i: int, work: *Xiangqi_Work) {
+    work.identifier = i;
+    add_work(*thread_group, work);
   }
 
-
-
+  work: [40] Xiangqi_Work;
   moves_pv := search_best_pv(xiangqi, 4, 6, 3_000);
-
-  xiangqi_work: [20] Xiangqi_Work;
-
   work_started := 0;
-  for mov, i : moves_pv {
+  for mov : moves_pv {
     make_move(xiangqi, mov);
     if incheck(xiangqi) {
       unmake_move(xiangqi, mov);
@@ -114,10 +110,14 @@ compute_position :: (xiangqi: *Xiangqi) {
       continue;
     }
 
-    add_work_to_queue(*xiangqi_work[i], xiangqi);
+    i := work_started;
+    copy_board(*xiangqi_work[i], xiangqi);
+    add_work_to_queue(i, *work[i]);
     work_started += 1;
     unmake_move(xiangqi, mov);
-
+    if work_started >= work.count then {
+      break;
+    }
   }
 
   wait_for_threads_finish(work_started);
@@ -125,16 +125,19 @@ compute_position :: (xiangqi: *Xiangqi) {
 
 wait_for_threads_finish :: (work_remaining: int) {
   start(*thread_group);
+  reset_temporary_storage();
   while work_remaining > 0 {
     results := get_completed_work(*thread_group);
     for r : results {
+      assert(r != null, "Error. r is null");
       work := cast(*Xiangqi_Work) r;
+      id       := work.identifier;
       score    := work.score;
       status   := work.status;
       if status == .Normal && (score >= -500 && score <= 500) {
-        print("%,%\n", score, to_fenstring(*work.xiangqi));
+        print("%,%\n", score, to_fenstring(*xiangqi_work[id]));
         VOID: void;
-        table_add(*table, work.xiangqi.hash, VOID);
+        table_add(*table, xiangqi_work[id].hash, VOID);
       }
     }
     work_remaining -= results.count;
@@ -143,7 +146,7 @@ wait_for_threads_finish :: (work_remaining: int) {
 }
 
 Xiangqi_Work :: struct {
-  xiangqi: Xiangqi;
+  identifier: int;
   score: int;
   status: SearchStatus;
 }
