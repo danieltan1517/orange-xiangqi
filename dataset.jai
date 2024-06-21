@@ -13,6 +13,8 @@ main :: () {
  
   print("eval,positions\n");
   load_grandmaster_games("xiangqi_games.txt");
+  load_synthetic_games("game.pgn");
+  load_synthetic_games("game2.pgn");
 }
 
 thread_group: Thread_Group;
@@ -63,9 +65,47 @@ load_grandmaster_games :: (filename: string) {
   }
 }
 
-compute_game :: (game_line: string) {
+load_synthetic_games :: (filename: string) {
+
+  text, success := read_entire_file(filename);
+  assert(success, "Error. % file cannot be opened.", filename);
+
+  i := 0;
+
+  fen: string;
+  while true {
+    found, line, text= := split_from_left(text, #char "\n");
+    if found == false {
+      break;
+    }
+
+    if starts_with(line, "\n") {
+      continue;
+    } else if starts_with(line, "[Fen \"") {
+      advance(*line, 6);
+      fen = line;
+      replace_chars(fen, "\"", #char " ");
+      replace_chars(fen, "]", #char " ");
+    } else if starts_with(line, "[") {
+      continue;
+    } else {
+      compute_game(line, fen);
+      time_calendar := calendar_to_string(to_calendar(current_time_consensus()));
+      print("Game %. Games Positions Computed: %. %\n", i, table.count, time_calendar, to_standard_error=true);
+      i += 1;
+      
+    }
+  }
+
+}
+
+compute_game :: (game_line: string, fen := "") {
   xiangqi: Xiangqi;
-  xiangqi_startpos(*xiangqi);
+  if fen {
+    xiangqi_fen(*xiangqi, fen);
+  } else {
+    xiangqi_startpos(*xiangqi);
+  }
 
   line := game_line;
   phase_count := compute_phase(*xiangqi);
