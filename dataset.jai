@@ -375,6 +375,9 @@ search_score :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> be
     depth += 1;
   }
 
+  if abs(evaluation_score - score) > 80 then {
+    return best_move, evaluation_score, SearchStatus.Quiescene;
+  }
   return best_move, score, SearchStatus.Normal;
 }
 
