@@ -3031,11 +3031,9 @@ is_protected :: (xiangqi: *Xiangqi, move: Move32) -> bool {
   return false;
 }
 
-
 // static exchange evaluation. SEE.
 // todo: maybe this function should handle pins also.
-see :: (xiangqi: *Xiangqi, move: Move32) -> int {
-
+see :: (xiangqi: *Xiangqi, move: Move32, threshold: int = 0) -> bool {
   // values for SEE algorithm.
   VALUES :: int.[50000, 200, 200, 400, 800, 450, 200];
 
@@ -3043,13 +3041,14 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
   turn: int = xiangqi.turn;
   from: int = move.from;
   to: int = move.to;
+  vic := xiangqi.board[to];
 
-  if xiangqi.board[to] != 0 && VALUES[xiangqi.board[to] >> 2] > VALUES[xiangqi.board[from] >> 2] then {
-    return VALUES[xiangqi.board[to] >> 2];
+  if vic != 0 && VALUES[vic >> 2] > VALUES[xiangqi.board[from] >> 2] then {
+    return VALUES[vic >> 2] < threshold;
   }
 
-  if xiangqi.board[to] != 0 && !is_protected(xiangqi, move) then {
-    return VALUES[xiangqi.board[to] >> 2];
+  if vic != 0 && !is_protected(xiangqi, move) then {
+    return VALUES[vic >> 2] < threshold;
   }
 
   flag_index := 0;
@@ -3059,11 +3058,9 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
   ];
 
   row, col := moddiv90(to);
-  occ_row: u64 = xiangqi.rows[col];
-  occ_col: u64 = xiangqi.cols[row];
+  occ_row: u64 = xiangqi.rows[col] | cast(u64)(1 << row);
+  occ_col: u64 = xiangqi.cols[row] | cast(u64)(1 << col);
   arr: [2] u64 = .[occ_row, occ_col];
-  arr[0] |= cast(u64)(1 << row);
-  arr[1] |= cast(u64)(1 << col);
   stack: [2] Stack;
   flying_general := false;
 
@@ -3074,35 +3071,40 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
   bitboard: Bitboard128;
   set_bit(*bitboard, from);
 
-  gain: [16] int;
-
-  vic := xiangqi.board[to];
+  gains: int;
   if vic != 0 then {
-    gain[0] = VALUES[vic >> 2];
+    gains = VALUES[vic >> 2] - threshold;
   } else {
-    gain[0] = 0;
+    gains = 0 - threshold;
   }
 
-  d := 0;
+  result := 0;
   while true {
-    d += 1;
+    result ^= 1;
     turn ^= 1;
     flag_index ^= 1;
-    gain[d] = VALUES[piece_code] - gain[d-1];
-    if piece_code == 1 then {
+    if max(-gains, VALUES[piece_code] - gains) < result {
+      break;
+    }
+    gains = VALUES[piece_code] - gains;
+
+    if piece_code == {
+    case 0;
+      flying_general = true;
+    case 1;
       // search for possible discovery knight.
       flags[0] |= .Knight;
       flags[1] |= .Knight;
-    } else if piece_code == 5 {
+    case 5;
       // search for possible cannon battery.
       flags[0] |= .Cannon;
       flags[1] |= .Cannon;
-    } else if piece_code == 6 {
+    case 6;
       // search for possible rook battery.
       flags[0] |= .Rook;
       flags[1] |= .Rook;
-    } else if piece_code == 0 then {
-      flying_general = true;
+    case;
+
     }
 
     // consider x-rays
@@ -3110,7 +3112,6 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
     set_bit(*bitboard, from);
     from_r, from_c := moddiv90(from);
     // make sure this is not a diagonal capture.
-
     if from_r != row && from_c == col then {
       arr[0] ^= cast(u64)(1 << from_r);
     } 
@@ -3122,15 +3123,14 @@ see :: (xiangqi: *Xiangqi, move: Move32) -> int {
     // get the next attacker.
     from, flags[flag_index] = = get_attackers(xiangqi, *stack[flag_index], flags[flag_index], turn, to, arr, bitboard, flying_general);
 
-    if from == -1 then break;
+    if from == -1 then {
+      break;
+    }
     piece_code = xiangqi.board[from] >> 2;
   }
 
-  for < i: d-2..0 {
-    gain[i] = -max(-gain[i], gain[i+1]);
-  }
-
-  return gain[0];
+  flag_index ^= 1;
+  return flag_index == 1;
 }
 
 Bitboard128 :: struct {

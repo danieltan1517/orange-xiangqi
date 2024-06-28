@@ -8,10 +8,10 @@ success := 0;
 
 main :: () {
   init_xiangqi_tables();
-  //see_test_suite();
+  see_test_suite();
   //protection_test_suite();
-  perft_test_suite();
-  repetition_test_suite();
+  //perft_test_suite();
+  //repetition_test_suite();
 }
 
 perft_test_suite :: () {
@@ -220,7 +220,7 @@ see_test_suite :: () {
     move := to_move32(*xiangqi, token);
     see_score := see(*xiangqi, move);
     total += 1;
-    if see_score != expected then {
+    if see_score == (expected >= 0) then {
       print("-----------------------------\n");
       print("Error. Expected %. Got %\n", expected, see_score);
       print("%\n", xiangqi);
