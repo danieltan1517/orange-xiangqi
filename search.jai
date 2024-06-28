@@ -1294,7 +1294,9 @@ tt_write :: (x: *Xiangqi, best_move: Move32, score: int, depth: int, flag: Flag)
     e = rand_u32() & 0x3;
   }
 
-  transpositions[index][e] = Entry.{hash, best_move, cast(s32)score, cast(s16) depth, flag};
+  if e != -1 {
+    transpositions[index][e] = Entry.{hash, best_move, cast(s32)score, cast(s16) depth, flag};
+  }
 }
 
 prefetch :: (pointer: *void) #expand {
