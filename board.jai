@@ -3047,9 +3047,9 @@ see :: (xiangqi: *Xiangqi, move: Move32, threshold: int = 0) -> bool {
     return VALUES[vic >> 2] < threshold;
   }
 
-  if vic != 0 && !is_protected(xiangqi, move) then {
+  /*if vic != 0 && !is_protected(xiangqi, move) then {
     return VALUES[vic >> 2] < threshold;
-  }
+  }*/
 
   flag_index := 0;
   flags: [2] SEE_Flags = SEE_Flags.[

@@ -357,14 +357,14 @@ negamax :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alpha: in
         depth_r := max(depth, 0);
         late_quiet_see := -12 * depth_r * depth_r;
         // quiet move.
-        if see(xiangqi, mov) < late_quiet_see {
+        if see(xiangqi, mov, late_quiet_see) {
           continue;
         }
       } else {
         depth_r := max(depth, 0);
         late_quiet_cap := -100 * depth_r;
         // capture move.
-        if see(xiangqi, mov) < late_quiet_cap {
+        if see(xiangqi, mov, late_quiet_cap) {
           continue;
         }
       }
@@ -630,14 +630,14 @@ negascout_sse :: (xiangqi: *Xiangqi, history: *History, depth: int, alpha: int, 
         // quiet move.
         depth_r := max(depth, 0);
         late_quiet_see := -12 * depth_r * depth_r;
-        if see(xiangqi, mov) < late_quiet_see {
+        if see(xiangqi, mov, late_quiet_see) {
           continue;
         }
       } else {
         // capture move.
         depth_r := max(depth, 0);
         late_quiet_cap := -100 * depth_r;
-        if see(xiangqi, mov) < late_quiet_cap {
+        if see(xiangqi, mov, late_quiet_cap) {
           continue;
         }
       }
@@ -745,7 +745,7 @@ quiescene :: (xiangqi: *Xiangqi, history: *History, alpha: int, beta: int) -> ev
       }
 
       // SEE quiescene pruning.
-      if is_capture(mov) && see(xiangqi, mov) < 0 then {
+      if is_capture(mov) && see(xiangqi, mov, 0) then {
         continue;
       }
     }
