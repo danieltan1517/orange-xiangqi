@@ -3051,7 +3051,7 @@ see :: (xiangqi: *Xiangqi, move: Move32, threshold: int = 0) -> bool {
     return VALUES[vic >> 2] < threshold;
   }*/
 
-  flag_index := 0;
+  flag_index: bool = false;
   flags: [2] SEE_Flags = SEE_Flags.[
     SEE_TABLE[SQUARES[turn][to]] | SEE_Flags.Attacking, // ours
     SEE_TABLE[SQUARES[turn ^ 1][to]] | SEE_Flags.Attacking, // opp
@@ -3066,23 +3066,17 @@ see :: (xiangqi: *Xiangqi, move: Move32, threshold: int = 0) -> bool {
 
   piece_code := xiangqi.board[from] >> 2;
   if piece_code == 0 then {
-    flags[flag_index] = 0;
+    flags[xx flag_index] = 0;
   }
   bitboard: Bitboard128;
   set_bit(*bitboard, from);
 
-  gains: int;
-  if vic != 0 then {
-    gains = VALUES[vic >> 2] - threshold;
-  } else {
-    gains = 0 - threshold;
-  }
-
+  gains: int = (ifx vic then VALUES[vic >> 2] else 0) - threshold;
   result := 0;
   while true {
     result ^= 1;
     turn ^= 1;
-    flag_index ^= 1;
+    flag_index = !flag_index;
     if max(-gains, VALUES[piece_code] - gains) < result {
       break;
     }
@@ -3121,7 +3115,7 @@ see :: (xiangqi: *Xiangqi, move: Move32, threshold: int = 0) -> bool {
     }
 
     // get the next attacker.
-    from, flags[flag_index] = = get_attackers(xiangqi, *stack[flag_index], flags[flag_index], turn, to, arr, bitboard, flying_general);
+    from, flags[xx flag_index] = = get_attackers(xiangqi, *stack[xx flag_index], flags[xx flag_index], turn, to, arr, bitboard, flying_general);
 
     if from == -1 then {
       break;
@@ -3129,8 +3123,8 @@ see :: (xiangqi: *Xiangqi, move: Move32, threshold: int = 0) -> bool {
     piece_code = xiangqi.board[from] >> 2;
   }
 
-  flag_index ^= 1;
-  return flag_index == 1;
+  flag_index = !flag_index;
+  return flag_index;
 }
 
 Bitboard128 :: struct {

@@ -1282,12 +1282,16 @@ tt_write :: (x: *Xiangqi, best_move: Move32, score: int, depth: int, flag: Flag)
   hash  := x.hash;
   index := hash % transpositions.count;
   prefetch(*transpositions[index]);
-  e     := rand_u32() % 4;
+  e := -1;
   for entry : transpositions[index] {
     if depth > entry.depth then {
       e = xx it_index;
       break;
     }
+  }
+
+  if e == -1 && (rand_u32() & 0x1F) < 2 then {
+    e = rand_u32() & 0x3;
   }
 
   transpositions[index][e] = Entry.{hash, best_move, cast(s32)score, cast(s16) depth, flag};
