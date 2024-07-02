@@ -202,7 +202,7 @@ go_command :: (command: string, xiangqi: *Xiangqi) {
 
   if time > -1 then {
     movetime_ms = time_management(time, increment);
-    print("info string movetime %\n", movetime_ms);
+    print("info time %\n", movetime_ms);
   }
 
   start_threads(xiangqi, depth, movetime_ms);
