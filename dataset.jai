@@ -15,6 +15,13 @@ main :: () {
   load_grandmaster_games("xiangqi_games.txt");
   load_synthetic_games("game.pgn");
   load_synthetic_games("game2.pgn");
+  load_synthetic_games("game3.pgn");
+  load_synthetic_games("game4.pgn");
+  load_synthetic_games("game5.pgn");
+  load_synthetic_games("game6.pgn");
+  load_synthetic_games("game7.pgn");
+  load_synthetic_games("game8.pgn");
+  load_synthetic_games("game11.pgn");
 }
 
 thread_group: Thread_Group;
@@ -291,7 +298,7 @@ search_best_pv :: (xiangqi: *Xiangqi, search_depth: int, multipv_number: int, se
 
     if is_defensive_move(mov) {
       append_move(*root_moves, mov);
-    } else if num_random_moves < 3 {
+    } else if num_random_moves < 5 {
       append_move(*root_moves, mov);
       num_random_moves += 1;
     }
