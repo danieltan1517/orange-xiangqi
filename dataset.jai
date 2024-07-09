@@ -1,4 +1,4 @@
-#run load_model("orange4_27_24.nnue");
+#run load_model("orange7_8_24.nnue");
 
 main :: () {
   print("info string NNUE Model: %\n", get_nnuename(), to_standard_error=true);
@@ -198,7 +198,7 @@ Xiangqi_Work :: struct {
   status: SearchStatus;
 }
 
-SEARCH_DEPTH :: 7;
+SEARCH_DEPTH :: 9;
 
 // main search evaluation function.
 search_best_pv :: (xiangqi: *Xiangqi, search_depth: int, multipv_number: int, searchtime_ms: int) -> Moves {
@@ -298,7 +298,7 @@ search_best_pv :: (xiangqi: *Xiangqi, search_depth: int, multipv_number: int, se
 
     if is_defensive_move(mov) {
       append_move(*root_moves, mov);
-    } else if num_random_moves < 5 {
+    } else if num_random_moves < 20 {
       append_move(*root_moves, mov);
       num_random_moves += 1;
     }
