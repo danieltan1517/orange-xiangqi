@@ -196,6 +196,7 @@ negamax_root :: (xiangqi: *Xiangqi, history: *History, pv: *PV, depth: int, alph
         R = 1;
       } else {
         // Late Move Reduction. ~30 elo.
+        R = 1;
         if quiet_moves_made < 1 || depth < 3 then {
           R = 1;
         } else {
@@ -871,6 +872,7 @@ pick_quiescene :: (xiangqi: *Xiangqi, att: AttFlags, index: int, stage: Stage, m
       return move, stage;
     }
     stage += 1;
+    #through;
   case .Quiescene_End;
 
   }

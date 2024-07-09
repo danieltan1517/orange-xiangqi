@@ -222,6 +222,8 @@ attackers :: (xiangqi: *Xiangqi) -> AttFlags #must {
   OPP_PAWN := ((S << 2) | (opp << 1) | 1);
   for att : PAWN_ATT[turn] {
     to := att + ksq;
+    // ????? WTF??? Why is this a bug???!?!!
+    //assert(to >= 0 && to <= 89, "to = %, ksq = %, turn = %, xiangqi=\n%\n", to, ksq, turn, xiangqi.*);
     if xiangqi.board[to] == OPP_PAWN {
       attflags |= (.Pawn | .Check);
     }

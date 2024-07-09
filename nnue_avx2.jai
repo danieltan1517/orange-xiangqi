@@ -234,22 +234,18 @@ compute_output_layer :: (turn: int, accum: [2][HIDDEN] s16) -> int {
     pshufd   ones_xmm, ones_xmm, 0x0;
   }
 
-  for 0..7 {
+  for 0..15 {
     #asm SSE {
       movdqa.x     xmm0:, [acc0];
       movdqa.x     xmm1:, [acc1];
-      packsswb.x   xmm0,  [acc0 + 0x10];
-      packsswb.x   xmm1,  [acc1 + 0x10];
-      pmaxsb.x     xmm0,  zeroes;
-      pmaxsb.x     xmm1,  zeroes;
-      pmaddubsw.x  xmm0,  [weights0];
-      pmaddubsw.x  xmm1,  [weights1];
-      pmaddwd.x    xmm0,  ones_xmm;
-      pmaddwd.x    xmm1,  ones_xmm;
+      pmaxsw.x     xmm0,  zeroes;
+      pmaxsw.x     xmm1,  zeroes;
+      pmaddwd.x    xmm0,  [weights0];
+      pmaddwd.x    xmm1,  [weights1];
       paddd.x      sum,   xmm0;
       paddd.x      sum,   xmm1;
-      add          acc0,  0x20;
-      add          acc1,  0x20;
+      add          acc0,  0x10;
+      add          acc1,  0x10;
       add          weights0, 0x10;
       add          weights1, 0x10;
     }
@@ -264,13 +260,13 @@ compute_output_layer :: (turn: int, accum: [2][HIDDEN] s16) -> int {
     add         eax, biases;
   }
 
-  return eax / 32;
+  return eax / 32 / 128;
 }
 
 NNUE :: struct {
   feature_weights: [2][9][90][HIDDEN] s16;
   feature_biases:  [HIDDEN] s16;
-  output_weights:  [2][HIDDEN] s8;
+  output_weights:  [2][HIDDEN] s16;
   output_bias:     s32;
 }
 

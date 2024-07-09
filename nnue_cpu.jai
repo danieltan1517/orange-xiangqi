@@ -188,17 +188,11 @@ get_features :: (ksq: int, ally: Pieces, opp: Pieces, SQ: [90] u8) -> Features {
 
 compute_output_layer :: (turn: int, accum: [2][HIDDEN] s16) -> int {
 
-  relu_multiply :: inline (input: s16, weight: s8) -> int {
-    value: int = 0;
-    if input > 127 then {
-      value = 127;
-    } else if input > 0 then {
-      value = input;
-    }
+  relu_multiply :: inline (input: s16, weight: s16) -> int {
+    value: int = ifx input > 0 then input else 0;
     value *= weight;
     return value;
   }
-
 
   biases: int = nnue.output_bias;
   oppo := turn ^ 1;
@@ -212,13 +206,13 @@ compute_output_layer :: (turn: int, accum: [2][HIDDEN] s16) -> int {
     biases += relu_multiply(acc1[i], weights1[i]);
   }
 
-  return biases / 32;
+  return biases / 32 / 128;
 }
 
 NNUE :: struct {
   feature_weights: [2][9][90][HIDDEN] s16;
   feature_biases:  [HIDDEN] s16;
-  output_weights:  [2][HIDDEN] s8;
+  output_weights:  [2][HIDDEN] s16;
   output_bias:     s32;
 }
 
@@ -232,6 +226,12 @@ load_model :: (filename: string) {
   assert(success, "File % not found.", filename);
   assert(weights.count == size_of(NNUE), "Size of file does not match struct size. Expect % Got %", size_of(NNUE), weights.count);
   memcpy(*nnue, *weights[0], size_of(NNUE));
+  /*
+  print("OUTPUTS: %\n", nnue.feature_weights);
+  print("OUTPUTS: %\n", nnue.feature_biases);
+  print("OUTPUTS: %\n", nnue.output_weights);
+  print("OUTPUTS: %\n", nnue.output_bias);
+  */
   free(weights);
 }
 

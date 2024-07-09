@@ -771,7 +771,6 @@ main :: () {
 
   while render_loop := true {
     dt = looptime_end - looptime_begin;
-    clock_update();
     looptime_begin = looptime_end;
     update_window_events();
     for get_window_resizes() {
@@ -840,6 +839,7 @@ main :: () {
     // sound effects.
     Sound.update();
     draw_popups();  // This draws Subwindows as well.
+    clock_update();
     sleep_milliseconds(20);
     simp.swap_buffers(win);
     reset_temporary_storage();
