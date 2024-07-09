@@ -23,6 +23,7 @@ protocol complaint Xiangqi Engine. This project supports Windows, Mac, and Linux
 * English/Chinese Language Options
 
 ## Xiangqi Artificial Intelligence Engine
+* Approximately 2560+ rating
 * UCCI Protocol
 
 ### Board Representation
@@ -71,7 +72,7 @@ protocol complaint Xiangqi Engine. This project supports Windows, Mac, and Linux
 * Efficiently Updatable Neural Networks with Incremental Update
 * 2 Layer Neural Network (2 x (1620 x 128) -> 1)
 * Supports AVX2, SSE, and CPU without SIMD
-* Trained on 40000 Grandmaster Games
+* Trained on 40000 Grandmaster Games + 20000 Synthetic Games. 90 Million Positions
 
 ### Repetition Rules
 * 100% World Xiangqi Federation Repetition Rules Coverage
