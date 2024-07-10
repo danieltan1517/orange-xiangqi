@@ -2730,8 +2730,12 @@ create_pgn :: (builder: *String_Builder, winner: GameEnd) {
   // TODO: Robustness.
   file, success := file_open(filename_pgn, for_writing=true, keep_existing_content=true);
   if success {
-    data := builder_to_string(builder,, allocator=temp);
-    file_write(*file, data);
+
+    // get around the api issues.
+    #if OS == .WINDOWS {
+      Windows.SetFilePointer(file.handle, 0, null, Windows.FILE_END);
+    }
+    file_write(*file, builder);
     file_close(*file);
   }
 }
@@ -2820,3 +2824,4 @@ Sound :: #import "Sound_Player";
 #import "File";
 #import "Random";
 #import "Process";
+Windows      :: #import "Windows";
