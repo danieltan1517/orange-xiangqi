@@ -2824,4 +2824,7 @@ Sound :: #import "Sound_Player";
 #import "File";
 #import "Random";
 #import "Process";
-Windows      :: #import "Windows";
+
+#if OS == .WINDOWS {
+  Windows      :: #import "Windows";
+}
