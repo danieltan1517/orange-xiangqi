@@ -2160,7 +2160,7 @@ modify_string :: (ps: *string, new_value: string) {
   ps.* = copy_string(new_value);
 }
 
-draw_subwindow_newgame :: (r: Rect, data: *void) {
+draw_subwindow_newgame :: (state: *Subwindow_State, r: Rect, user_data: *void) {
   subwindow_newgame.title_text = get_ui_str().new_game;
 
   time_management_ui :: (rect: *Rect, name: string, time_manager: *TimeManager, k: float, id: int) {
