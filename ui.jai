@@ -1812,7 +1812,7 @@ update_ucci :: (engine: *Engine, id: int, protocol: string) {
   process := *engine.process;
   state := engine.state;
   defer engine.state = state;
-  SIZE :: 32768;
+  SIZE :: 4194304;
   #if OS == .WINDOWS {
     NEWLINE :: "\n"; // normalized line endings.
   } else {
