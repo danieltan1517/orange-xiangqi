@@ -200,7 +200,7 @@ SEE_TABLE : [90] SEE_Flags: SEE_Flags.[
   .Pawn,  .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,     .Pawn,  .Pawn,  .Pawn,
 ];                                                       
 
-attackers :: (xiangqi: *Xiangqi) -> AttFlags #must {
+attackers :: (xiangqi: *Xiangqi) -> AttFlags {
 
   knight_flags :: (xiangqi: *Xiangqi, from: int, to: int, diff: int) -> AttFlags {
     diff += 19;

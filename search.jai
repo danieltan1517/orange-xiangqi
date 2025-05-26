@@ -1,5 +1,5 @@
 // main search evaluation function.
-search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> bestmove: Move32, score: int #must {
+search :: (xiangqi: *Xiangqi, search_depth: int, searchtime_ms: int) -> bestmove: Move32, score: int {
 
   unwrap :: (eval: int) -> int #expand {
     if search_should_stop == true {

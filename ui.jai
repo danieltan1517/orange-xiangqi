@@ -2555,7 +2555,7 @@ get_ui_str :: () -> *UI_String {
   return *English_UI;
 }
 
-parse_uci_option :: (message: string) -> bool, Engine_Option #must {
+parse_uci_option :: (message: string) -> bool, Engine_Option {
   string_to_uci_type :: (token: string) -> UCI_Types, TF: bool = true {
     if token == {
     case "check";
