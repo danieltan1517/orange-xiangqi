@@ -1900,8 +1900,7 @@ Pieces :: struct {
   cannon: Array_u8; // at most 2
   pawn:   Array_u8; // at most 5
 
-  #place king;
-  piece: [7] Array_u8;
+  #overlay (king) piece: [7] Array_u8;
 
 }
 
@@ -2273,8 +2272,7 @@ Move32 :: struct {
   to: u8;
   capture: u8;
   piece: u8;
-  #place from;
-  #as move: u32;
+  #overlay (from) move: u32;
 }
 
 is_null :: (move: Move32) -> bool #expand {
