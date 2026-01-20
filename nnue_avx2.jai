@@ -230,8 +230,6 @@ compute_output_layer :: (turn: int, accum: [2][HIDDEN] s16) -> int {
   #asm SSE {
     pxor.x   zeroes:, zeroes;
     movdqa.x sum:, zeroes;
-    movd     ones_xmm: vec, eax;
-    pshufd   ones_xmm, ones_xmm, 0x0;
   }
 
   for 0..15 {
