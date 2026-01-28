@@ -227,35 +227,58 @@ compute_output_layer :: (turn: int, accum: [2][HIDDEN] s16) -> int {
   weights0 := *nnue.output_weights[0][0];
   weights1 := *nnue.output_weights[1][0];
   eax: s32 = 0x0001_0001;
-  #asm SSE {
-    pxor.x   zeroes:, zeroes;
-    movdqa.x sum:, zeroes;
+  
+  #asm AVX, AVX2 {
+    // Zero out the accumulator using AVX2
+    pxor.y   zeroes:, zeroes, zeroes;
+    pxor.y   sum:,    sum,    sum;
   }
 
-  for 0..15 {
-    #asm SSE {
-      movdqa.x     xmm0:, [acc0];
-      movdqa.x     xmm1:, [acc1];
-      pmaxsw.x     xmm0,  zeroes;
-      pmaxsw.x     xmm1,  zeroes;
-      pmaddwd.x    xmm0,  [weights0];
-      pmaddwd.x    xmm1,  [weights1];
-      paddd.x      sum,   xmm0;
-      paddd.x      sum,   xmm1;
-      add          acc0,  0x10;
-      add          acc1,  0x10;
-      add          weights0, 0x10;
-      add          weights1, 0x10;
+  // Process 8 iterations instead of 16 (since we're using 256-bit registers)
+  for 0..7 {
+    #asm AVX, AVX2 {
+      // Load 16x s16 values (256 bits) from each accumulator
+      movdqa.y     ymm0:, [acc0];
+      movdqa.y     ymm1:, [acc1];
+      
+      // Clamp to zero (ReLU activation): max(0, value)
+      pmaxsw.y     ymm0,  ymm0, zeroes;
+      pmaxsw.y     ymm1,  ymm1, zeroes;
+      
+      // Multiply and add adjacent pairs of s16 values to produce s32 results
+      // This produces 8x s32 values from 16x s16 values
+      pmaddwd.y    ymm0,  ymm0, [weights0];
+      pmaddwd.y    ymm1,  ymm1, [weights1];
+      
+      // Accumulate the results
+      paddd.y      sum,   sum,  ymm0;
+      paddd.y      sum,   sum,  ymm1;
+      
+      // Advance pointers by 32 bytes (16 s16 values)
+      add           acc0,      0x20;
+      add           acc1,      0x20;
+      add           weights0,  0x20;
+      add           weights1,  0x20;
     }
   }
 
-  #asm SSE {
-    pshufd  xmm0:, sum, 0x1b;
-    paddd.x sum, xmm0;
-    movd eax, sum;
-    pextrd val: gpr, sum, 1;
-    add         eax, val;
-    add         eax, biases;
+  // Horizontal addition to sum all 8 s32 values in the YMM register
+  #asm AVX, AVX2 {
+    // Extract high 128 bits and add to low 128 bits
+    extracti128 xmm0:, sum, 1;
+    extracti128 xmm1:, sum, 0;
+    paddd.x       xmm0,  xmm0, xmm1;
+    
+    // Now we have 4 s32 values in xmm0
+    // Shuffle and add to reduce to 2 values
+    pshufd.x      xmm1,  xmm0, 0x1b;
+    paddd.x       xmm0,  xmm0, xmm1;
+    
+    // Extract the two s32 values and add them
+    movd          eax,   xmm0;
+    pextrd        val: gpr, xmm0, 1;
+    add            eax,   val;
+    add            eax,   biases;
   }
 
   return eax / 32 / 128;
