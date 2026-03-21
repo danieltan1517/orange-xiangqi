@@ -2808,6 +2808,224 @@ Engine_Option :: struct {
   string_value_old: string;
 }
 
+// Xiangqi Standard Notation (Chinese Chess Notation)
+//
+// Format: [Piece][FromFile][Direction][ToFile/Steps]
+//
+// Piece characters (Red / Black):
+//   King    : 帅 / 将
+//   Advisor : 仕 / 士
+//   Elephant: 相 / 象
+//   Horse   : 马 / 马
+//   Rook    : 车 / 车
+//   Cannon  : 炮 / 炮
+//   Pawn    : 兵 / 卒
+//
+// File notation:
+//   Red   (turn=0): files 1..9 from Red's right (col 8 = file 1, col 0 = file 9)
+//   Black (turn=1): files 1..9 from Black's right (col 0 = file 1, col 8 = file 9)
+//
+// Direction characters:
+//   + (forward/advance) : 进
+//   - (backward/retreat): 退
+//   . (sideways/flat)   : 平
+//
+// Final field:
+//   For sideways moves (平): destination file number (1..9)
+//   For forward/backward moves of rook/cannon/king/pawn: number of steps
+//   For horse/advisor/elephant: destination file number (1..9)
+//
+// Disambiguation:
+//   When two identical pieces share the same file, the notation prefixes
+//   前 (front/forward) or 后 (rear/backward) instead of the file number.
+
+// Piece code constants (from board.jai)
+// G :: 0; // General / King
+// A :: 1; // Advisor
+// E :: 2; // Elephant
+// H :: 3; // Horse
+// R :: 4; // Rook / Chariot
+// C :: 5; // Cannon
+// S :: 6; // Soldier / Pawn
+
+// Board layout: sq = row + col * 9
+// row 0..8 (left-right), col 0..9 (bottom-top from Red's perspective)
+
+// Convert a square to (row, col) — row is the file axis (0..8), col is the rank axis (0..9)
+sq_to_row_col :: (sq: int) -> row: int, col: int #expand {
+    return sq % 9, sq / 9;
+}
+
+// Convert a square's row to a file number for the given side.
+// Red  (turn=0): file 1 is col 8 (rightmost from red's view), file 9 is col 0
+// Black(turn=1): file 1 is col 0, file 9 is col 8
+row_to_file :: (row: int, turn: int) -> int #expand {
+    if turn == 0 {
+        return 9 - row;   // Red: row 8 -> file 1, row 0 -> file 9
+    } else {
+        return row + 1;   // Black: row 0 -> file 1, row 8 -> file 9
+    }
+}
+
+// Returns how many of the same piece type and color share the same file (row)
+// as the piece on 'sq', and the index of 'sq' among them ordered front-to-back.
+count_same_file :: (xiangqi: *Xiangqi, sq: int, piece_code: int, turn: int) -> count: int, rank_index: int {
+    row, col := sq_to_row_col(sq);
+    count := 0;
+    cols_of_same: [5] int;  // at most 5 pawns
+
+    for p_sq : xiangqi.pieces[turn].piece[piece_code] {
+        p_row, p_col := sq_to_row_col(p_sq);
+        if p_row == row {
+            cols_of_same[count] = p_col;
+            count += 1;
+        }
+    }
+
+    if count <= 1 then return count, 0;
+
+    // Sort the columns so we can find which is "front" vs "back".
+    // For Red (turn=0): larger col is further from Red's side => "front" (前)
+    // For Black (turn=1): smaller col is further from Black's side => "front" (前)
+    sorted: [5] int;
+    for i: 0..count-1 {
+        sorted[i] = cols_of_same[i];
+    }
+
+    // Simple insertion sort for the small array.
+    i := 1;
+    while i < count {
+        key := sorted[i];
+        j   := i - 1;
+        while j >= 0 && sorted[j] > key {
+            sorted[j + 1] = sorted[j];
+            j -= 1;
+        }
+        sorted[j + 1] = key;
+        i += 1;
+    }
+
+    // Find this piece's rank index in the sorted order.
+    rank_index := 0;
+    for i: 0..count-1 {
+        if sorted[i] == col {
+            rank_index = i;
+            break;
+        }
+    }
+
+    // For Red (turn=0): highest col index = front (rank_index 0 in ascending sort = back)
+    // Flip for Red so that rank_index 0 = front piece.
+    if turn == 0 {
+        rank_index = (count - 1) - rank_index;
+    }
+
+    return count, rank_index;
+}
+
+// Piece name strings for Red and Black (UTF-8 encoded Chinese characters).
+PIECE_NAMES_RED   :: string.["帅", "仕", "相", "马", "车", "炮", "兵"];
+PIECE_NAMES_BLACK :: string.["将", "士", "象", "马", "车", "炮", "卒"];
+
+// Disambiguation prefix: 前 (front) or 后 (rear)
+FRONT_PREFIX :: "前";
+REAR_PREFIX  :: "后";
+
+// Direction characters.
+DIRECTION_ADVANCE  :: "进";
+DIRECTION_RETREAT  :: "退";
+DIRECTION_FLAT     :: "平";
+
+move_to_standard_notation :: (xiangqi: *Xiangqi, move: Move32) -> string {
+    builder: String_Builder;
+    builder.allocator = temp;
+
+    from: int = move.from;
+    to:   int = move.to;
+
+    piece_byte := move.piece;
+    piece_code := piece_byte >> 2;
+    turn       := (piece_byte >> 1) & 1;
+
+    from_row, from_col := sq_to_row_col(from);
+    to_row,   to_col   := sq_to_row_col(to);
+
+    // --- Piece name (with optional disambiguation prefix) ---
+    piece_names := ifx turn == 0 then PIECE_NAMES_RED else PIECE_NAMES_BLACK;
+
+    // Check if disambiguation is needed (two same-type pieces on the same file).
+    same_file_count, rank_index := count_same_file(xiangqi, from, piece_code, turn);
+
+    if same_file_count >= 2 {
+        // Use 前/后 prefix instead of piece + file.
+        if rank_index == 0 {
+            append(*builder, FRONT_PREFIX);
+        } else {
+            append(*builder, REAR_PREFIX);
+        }
+        append(*builder, piece_names[piece_code]);
+    } else {
+        // Normal: piece name + from-file.
+        append(*builder, piece_names[piece_code]);
+        from_file := row_to_file(from_row, turn);
+        print_to_builder(*builder, "%", from_file);
+    }
+
+    // --- Direction ---
+    //
+    // "Flat" (平): same col, piece moves along its rank (row changes, col same).
+    // For vertical pieces (Rook, Cannon, King, Pawn forward): col changes.
+    //   Forward (进): col increases toward opponent's side.
+    //   Backward (退): col decreases toward own side.
+    //
+    // Red  (turn=0): opponent is at higher col, so col increasing = 进.
+    // Black(turn=1): opponent is at lower  col, so col decreasing = 进.
+
+    col_delta := to_col - from_col;
+
+    if col_delta == 0 {
+        // Same column — purely sideways move.
+        append(*builder, DIRECTION_FLAT);
+    } else {
+        is_advancing := false;
+        if turn == 0 {
+            is_advancing = col_delta > 0;
+        } else {
+            is_advancing = col_delta < 0;
+        }
+
+        if is_advancing {
+            append(*builder, DIRECTION_ADVANCE);
+        } else {
+            append(*builder, DIRECTION_RETREAT);
+        }
+    }
+
+    // --- Destination field ---
+    //
+    // Rook, Cannon, King, Pawn: number of steps (abs col delta) for vertical moves;
+    //                            destination file for horizontal moves.
+    // Horse, Advisor, Elephant: always destination file (they move diagonally).
+
+    if piece_code == R || piece_code == C || piece_code == G || piece_code == S {
+        if col_delta == 0 {
+            // Flat move — output destination file.
+            to_file := row_to_file(to_row, turn);
+            print_to_builder(*builder, "%", to_file);
+        } else {
+            // Vertical move — output step count.
+            steps := abs(col_delta);
+            print_to_builder(*builder, "%", steps);
+        }
+    } else {
+        // Horse (H), Advisor (A), Elephant (E) — always destination file.
+        to_file := row_to_file(to_row, turn);
+        print_to_builder(*builder, "%", to_file);
+    }
+
+    return builder_to_string(*builder,, allocator=temp);
+}
+
 engine_scroll_value: float;
 engine_name_input: string;
 engine_path_input: string;
